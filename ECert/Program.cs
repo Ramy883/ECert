@@ -17,8 +17,17 @@ builder.Services.AddControllersWithViews()
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     });
 
+var sqliteConn = builder.Configuration.GetConnectionString("DefaultConnection");
+var mysqlConn = builder.Configuration.GetConnectionString("MySqlConnection");
+var useMySql = !string.IsNullOrWhiteSpace(mysqlConn);
+
 builder.Services.AddDbContext<ECertDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    if (useMySql)
+        options.UseMySql(mysqlConn, new MySqlServerVersion(new Version(8, 0, 36)));
+    else
+        options.UseSqlite(sqliteConn);
+});
 
 builder.Services.AddScoped<AuditLogService>();
 builder.Services.AddScoped<NotificationService>();
@@ -79,7 +88,10 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ECertDbContext>();
-    db.Database.Migrate();
+    if (useMySql)
+        db.Database.EnsureCreated();
+    else
+        db.Database.Migrate();
     DbSeeder.Seed(db);
     DbSeeder.SeedHomepageCms(db);
 }
