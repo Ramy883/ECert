@@ -1,0 +1,14 @@
+**/bin/
+**/obj/
+**/publish/
+**/*.db
+**/*.db-shm
+**/*.db-wal
+ECert/wwwroot/uploads/
+ECert/wwwroot/qrcodes/
+.git/
+.vs/
+.vscode/
+cookies.txt
+login.html
+test_resp.html
