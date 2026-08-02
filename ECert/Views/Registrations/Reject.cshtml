@@ -1,0 +1,25 @@
+@model RejectRegistrationViewModel
+@{
+    ViewData["Title"] = "رفض الطلب";
+    Layout = "_AdminLayout";
+}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <h3 class="mb-4 text-danger"><i class="bi bi-x-circle"></i> رفض طلب التسجيل</h3>
+                <form asp-action="Reject" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="RegistrationId" />
+                    <div class="mb-3">
+                        <label asp-for="Reason" class="form-label"></label>
+                        <textarea asp-for="Reason" class="form-control" rows="4" placeholder="اكتب سبب الرفض..."></textarea>
+                        <span asp-validation-for="Reason" class="text-danger"></span>
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100" onclick="return confirm('هل أنت متأكد من رفض هذا الطلب؟')">تأكيد الرفض</button>
+                </form>
+                <a asp-action="Index" class="btn btn-outline-secondary w-100 mt-2">إلغاء</a>
+            </div>
+        </div>
+    </div>
+</div>

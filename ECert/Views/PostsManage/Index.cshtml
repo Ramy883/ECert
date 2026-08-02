@@ -1,0 +1,96 @@
+@model List<Post>
+@{
+    ViewData["Title"] = "إدارة المنشورات";
+    ViewData["PageIcon"] = "bi-newspaper";
+    ViewData["PageDesc"] = "إنشاء ونشر المحتوى الإعلامي للمركز";
+    Layout = "_AdminLayout";
+}
+<div class="page-header">
+    <partial name="_PageHeader" />
+    <div class="page-actions">
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-circle"></i> إضافة منشور</a>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-8">
+                <input type="text" name="search" value="@ViewBag.Search" class="form-control" placeholder="بحث بعنوان المنشور..." />
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> بحث</button>
+                @if (!string.IsNullOrEmpty(ViewBag.Search)) { <a asp-action="Index" class="btn btn-outline-secondary">مسح</a> }
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>العنوان</th>
+                        <th>الكاتب</th>
+                        <th>الحالة</th>
+                        <th>تاريخ النشر</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Any())
+                    {
+                        @foreach (var post in Model)
+                        {
+                            <tr>
+                                <td><strong>@post.Title</strong></td>
+                                <td>@post.Author</td>
+                                <td>
+                                    @switch (post.Status)
+                                    {
+                                        case "Draft": <span class="badge bg-secondary">مسودة</span> break;
+                                        case "Published": <span class="badge bg-success">منشور</span> break;
+                                        case "Archived": <span class="badge bg-warning text-dark">مؤرشف</span> break;
+                                    }
+                                </td>
+                                <td>@(post.PublishedAt?.ToString("yyyy-MM-dd") ?? "-")</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a asp-action="Edit" asp-route-id="@post.PostId" class="btn btn-outline-primary" title="تعديل"><i class="bi bi-pencil"></i></a>
+                                        @if (post.Status != "Published")
+                                        {
+                                            <form asp-action="Publish" method="post" style="display:inline">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@post.PostId" />
+                                                <button type="submit" class="btn btn-outline-success" title="نشر"><i class="bi bi-globe"></i></button>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <form asp-action="Unpublish" method="post" style="display:inline">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@post.PostId" />
+                                                <button type="submit" class="btn btn-outline-warning" title="إلغاء النشر"><i class="bi bi-eye-slash"></i></button>
+                                            </form>
+                                        }
+                                        <form asp-action="Delete" method="post" style="display:inline" onsubmit="return confirm('هل أنت متأكد من حذف هذا المنشور؟')">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@post.PostId" />
+                                            <button type="submit" class="btn btn-outline-danger" title="حذف"><i class="bi bi-trash"></i></button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="5" class="text-center text-muted py-4">لا توجد منشورات بعد</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

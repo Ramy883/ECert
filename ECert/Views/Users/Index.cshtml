@@ -1,0 +1,140 @@
+@model List<User>
+@{
+    ViewData["Title"] = "إدارة المستخدمين";
+    ViewData["PageIcon"] = "bi-people";
+    ViewData["PageDesc"] = "إدارة حسابات موظفي النظام والأدوار والصلاحيات";
+    Layout = "_AdminLayout";
+    var roles = ViewBag.Roles as List<Role> ?? new();
+}
+<div class="page-header">
+    <partial name="_PageHeader" />
+    <div class="page-actions">
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-person-plus"></i> إضافة مستخدم</a>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small mb-1">بحث</label>
+                <input type="text" name="search" value="@ViewBag.Search" class="form-control" placeholder="الاسم أو البريد أو اسم المستخدم..." />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1">الدور</label>
+                <select name="roleId" class="form-select">
+                    <option value="">كل الأدوار</option>
+                    @foreach (var r in roles)
+                    {
+                        <option value="@r.RoleId" selected="@(ViewBag.RoleId == r.RoleId)">@r.RoleName</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">الحالة</label>
+                <select name="status" class="form-select">
+                    <option value="">الكل</option>
+                    <option value="active" selected="@(ViewBag.Status == "active")">نشط</option>
+                    <option value="inactive" selected="@(ViewBag.Status == "inactive")">معطل</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> تصفية</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">مسح</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>اسم المستخدم</th>
+                        <th>الاسم الكامل</th>
+                        <th>البريد الإلكتروني</th>
+                        <th>الأدوار</th>
+                        <th>الحالة</th>
+                        <th>آخر دخول</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Any())
+                    {
+                        @foreach (var user in Model)
+                        {
+                            <tr>
+                                <td><code>@user.Username</code></td>
+                                <td><strong>@user.FullName</strong></td>
+                                <td>@user.Email</td>
+                                <td>
+                                    @foreach (var ur in user.UserRoles)
+                                    {
+                                        <span class="badge bg-info">@ur.Role?.RoleName</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (user.IsActive) { <span class="badge bg-success">نشط</span> }
+                                    else { <span class="badge bg-danger">معطل</span> }
+                                </td>
+                                <td>@(user.LastLoginAt?.ToString("yyyy-MM-dd HH:mm") ?? "لم يسجل دخول")</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <form asp-action="ToggleActive" method="post" style="display:inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@user.UserId" />
+                                            @if (user.IsActive)
+                                            {
+                                                <button type="submit" class="btn btn-outline-warning" title="تعطيل" onclick="return confirm('هل تريد تعطيل هذا المستخدم؟')"><i class="bi bi-pause-circle"></i></button>
+                                            }
+                                            else
+                                            {
+                                                <button type="submit" class="btn btn-outline-success" title="تفعيل"><i class="bi bi-play-circle"></i></button>
+                                            }
+                                        </form>
+                                        <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#resetModal-@user.UserId" title="إعادة تعيين كلمة المرور">
+                                            <i class="bi bi-key"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Reset Password Modal -->
+                            <div class="modal fade" id="resetModal-@user.UserId" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <form asp-action="ResetPassword" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@user.UserId" />
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">إعادة تعيين كلمة المرور - @user.FullName</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="mb-3">
+                                                    <label class="form-label">كلمة المرور الجديدة</label>
+                                                    <input type="password" name="newPassword" class="form-control" required minlength="6" />
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                                                <button type="submit" class="btn btn-primary">إعادة التعيين</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="7" class="text-center text-muted py-4">لا يوجد مستخدمون</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

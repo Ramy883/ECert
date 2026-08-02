@@ -1,0 +1,194 @@
+﻿@{
+    var theme = ViewBag.Theme as ECert.Models.ThemeSetting ?? new ECert.Models.ThemeSetting();
+    var siteSettings = ViewBag.SiteSettings as List<ECert.Models.SiteSetting> ?? new();
+    var socialLinks = ViewBag.SocialLinks as List<ECert.Models.SocialLink> ?? new();
+    var contactInfo = ViewBag.ContactInfo as ECert.Models.ContactInfo;
+    string GetSetting(string key) => siteSettings.FirstOrDefault(s => s.Key == key)?.Value ?? "";
+    string siteName = GetSetting("SiteName");
+    if (string.IsNullOrEmpty(siteName)) siteName = "مركز التدريب المهني";
+    string logoUrl = GetSetting("LogoUrl");
+    string faviconUrl = GetSetting("FaviconUrl");
+    if (string.IsNullOrEmpty(faviconUrl)) faviconUrl = logoUrl; // الشعار كأيقونة افتراضية
+    string copyrightText = GetSetting("CopyrightText");
+    if (string.IsNullOrEmpty(copyrightText)) copyrightText = "© {year} - {site} - جميع الحقوق محفوظة";
+    copyrightText = copyrightText.Replace("{year}", DateTime.Now.Year.ToString()).Replace("{site}", siteName);
+}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="@GetSetting("MetaDescription")" />
+    <meta name="keywords" content="@GetSetting("SeoKeywords")" />
+    <title>@ViewData["Title"] - @siteName</title>
+    @if (!string.IsNullOrEmpty(faviconUrl))
+    {
+        @if (faviconUrl.EndsWith(".ico", StringComparison.OrdinalIgnoreCase))
+        {
+            <link rel="icon" type="image/x-icon" href="@faviconUrl" />
+            <link rel="shortcut icon" type="image/x-icon" href="@faviconUrl" />
+        }
+        else
+        {
+            <link rel="icon" type="image/png" sizes="32x32" href="@faviconUrl" />
+            <link rel="icon" type="image/png" sizes="192x192" href="@faviconUrl" />
+            <link rel="apple-touch-icon" href="@faviconUrl" />
+            <link rel="shortcut icon" href="@faviconUrl" />
+        }
+    }
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet" />
+    <link href="~/css/site.css" rel="stylesheet" />
+    <style>
+        :root {
+            --primary: @theme.PrimaryColor;
+            --secondary: @theme.SecondaryColor;
+            --btn-color: @theme.ButtonColor;
+            --navbar-color: @theme.NavbarColor;
+            --footer-color: @theme.FooterColor;
+        }
+    </style>
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark shadow-sm sticky-top" style="background: var(--navbar-color, #0f172a);">
+        <div class="container">
+            <a class="navbar-brand fw-bold d-flex align-items-center gap-2" asp-controller="Home" asp-action="Index">
+                @if (!string.IsNullOrEmpty(logoUrl))
+                {
+                    <img src="@logoUrl" alt="@siteName" style="height:38px;" />
+                }
+                else
+                {
+                    <span class="d-flex align-items-center justify-content-center" style="width:38px;height:38px;background:rgba(255,255,255,0.1);border-radius:10px;"><i class="bi bi-mortarboard-fill"></i></span>
+                }
+                @siteName
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" asp-controller="Home" asp-action="Index"><i class="bi bi-house"></i> الرئيسية</a></li>
+                    <li class="nav-item"><a class="nav-link" asp-controller="PublicCourses" asp-action="Index"><i class="bi bi-book"></i> الدورات</a></li>
+                    <li class="nav-item"><a class="nav-link" asp-controller="Posts" asp-action="Index"><i class="bi bi-newspaper"></i> الأخبار</a></li>
+                    <li class="nav-item"><a class="nav-link" asp-controller="Certificates" asp-action="Verify"><i class="bi bi-shield-check"></i> التحقق من شهادة</a></li>
+                </ul>
+                <ul class="navbar-nav">
+                    @if (User.Identity != null && User.Identity.IsAuthenticated)
+                    {
+                        <li class="nav-item"><a class="nav-link" asp-controller="Dashboard" asp-action="Index"><i class="bi bi-speedometer2"></i> لوحة التحكم</a></li>
+                        <li class="nav-item">
+                            <span class="nav-link text-light"><i class="bi bi-person-circle"></i> @User.Identity.Name</span>
+                        </li>
+                        <li class="nav-item"><a class="nav-link" asp-controller="Auth" asp-action="Logout"><i class="bi bi-box-arrow-left"></i> خروج</a></li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        @if (TempData["Success"] != null)
+        {
+            <div class="container mt-3">
+                <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle"></i> @TempData["Success"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+            </div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="container mt-3">
+                <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-circle"></i> @TempData["Error"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+            </div>
+        }
+        @if (ViewData["FullWidth"] as bool? == true)
+        {
+            @RenderBody()
+        }
+        else
+        {
+            <div class="container py-4">
+                @RenderBody()
+            </div>
+        }
+    </main>
+
+    <!-- ===== Footer ===== -->
+    <footer class="site-footer pt-5 pb-3 mt-auto" style="background: var(--footer-color, #111827);">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <h5 class="text-white fw-bold mb-3"><i class="bi bi-mortarboard-fill"></i> @siteName</h5>
+                    <p class="mb-3" style="line-height:1.8;">@GetSetting("MetaDescription")</p>
+                    @if (socialLinks.Any())
+                    {
+                        <div class="footer-social d-flex gap-2">
+                            @foreach (var link in socialLinks)
+                            {
+                                <a href="@link.Url" target="_blank" title="@link.PlatformName"><i class="bi @link.IconClass"></i></a>
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="col-lg-2 col-md-4">
+                    <h6>روابط سريعة</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a asp-controller="Home" asp-action="Index"><i class="bi bi-chevron-left small"></i> الرئيسية</a></li>
+                        <li class="mb-2"><a asp-controller="PublicCourses" asp-action="Index"><i class="bi bi-chevron-left small"></i> الدورات</a></li>
+                        <li class="mb-2"><a asp-controller="Posts" asp-action="Index"><i class="bi bi-chevron-left small"></i> الأخبار</a></li>
+                        <li class="mb-2"><a asp-controller="Certificates" asp-action="Verify"><i class="bi bi-chevron-left small"></i> التحقق من شهادة</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-3 col-md-4">
+                    <h6>تواصل معنا</h6>
+                    <ul class="list-unstyled">
+                        @if (contactInfo != null)
+                        {
+                            @if (contactInfo.ShowPhone && !string.IsNullOrEmpty(contactInfo.Phone))
+                            {
+                                <li class="mb-2"><i class="bi bi-telephone me-2"></i> @contactInfo.Phone</li>
+                            }
+                            @if (contactInfo.ShowMobile && !string.IsNullOrEmpty(contactInfo.Mobile))
+                            {
+                                <li class="mb-2"><i class="bi bi-phone me-2"></i> @contactInfo.Mobile</li>
+                            }
+                            @if (contactInfo.ShowEmail && !string.IsNullOrEmpty(contactInfo.Email))
+                            {
+                                <li class="mb-2"><i class="bi bi-envelope me-2"></i> @contactInfo.Email</li>
+                            }
+                            @if (contactInfo.ShowAddress && !string.IsNullOrEmpty(contactInfo.Address))
+                            {
+                                <li class="mb-2"><i class="bi bi-geo-alt me-2"></i> @contactInfo.Address</li>
+                            }
+                            @if (contactInfo.ShowWorkingHours && !string.IsNullOrEmpty(contactInfo.WorkingHours))
+                            {
+                                <li class="mb-2"><i class="bi bi-clock me-2"></i> @contactInfo.WorkingHours</li>
+                            }
+                        }
+                    </ul>
+                </div>
+                <div class="col-lg-3 col-md-4">
+                    <h6>عن المركز</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a asp-controller="Home" asp-action="About"><i class="bi bi-chevron-left small"></i> من نحن</a></li>
+                        <li class="mb-2"><a asp-controller="Home" asp-action="Contact"><i class="bi bi-chevron-left small"></i> اتصل بنا</a></li>
+                        <li class="mb-2"><a href="#"><i class="bi bi-chevron-left small"></i> الشروط والأحكام</a></li>
+                        <li class="mb-2"><a href="#"><i class="bi bi-chevron-left small"></i> سياسة الخصوصية</a></li>
+                    </ul>
+                </div>
+            </div>
+            <hr class="border-secondary mt-4 mb-3" />
+            <div class="text-center">
+                <p class="mb-0 small">@copyrightText</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Back to top -->
+    <button id="backToTop" class="back-to-top" aria-label="الرجوع للأعلى" title="الرجوع للأعلى"><i class="bi bi-arrow-up-short"></i></button>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

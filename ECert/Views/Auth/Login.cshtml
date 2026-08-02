@@ -1,0 +1,36 @@
+@model LoginViewModel
+@{
+    ViewData["Title"] = "تسجيل الدخول";
+}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card shadow-sm border-0 mt-5">
+            <div class="card-body p-4">
+                <h3 class="text-center mb-4"><i class="bi bi-box-arrow-in-right"></i> دخول الموظفين</h3>
+                <div asp-validation-summary="All" class="text-danger"></div>
+                <form asp-action="Login" method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="mb-3">
+                        <label asp-for="Username" class="form-label"></label>
+                        <input asp-for="Username" class="form-control" placeholder="اسم المستخدم" />
+                        <span asp-validation-for="Username" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Password" class="form-label"></label>
+                        <input asp-for="Password" type="password" class="form-control" placeholder="كلمة المرور" />
+                        <span asp-validation-for="Password" class="text-danger"></span>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">دخول</button>
+                </form>
+                <hr />
+                <div class="text-center small text-muted">
+                    <p class="mb-1">حسابات تجريبية:</p>
+                    <p class="mb-0">admin / admin123 (سوبر أدمن)</p>
+                    <p class="mb-0">manager / admin123 (إداري)</p>
+                    <p class="mb-0">media / admin123 (إعلامي)</p>
+                    <p class="mb-0">finance / admin123 (مالي)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

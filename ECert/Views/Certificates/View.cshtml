@@ -1,0 +1,247 @@
+@model Certificate
+@{
+    ViewData["Title"] = "شهادة " + Model.CertificateNumber;
+    Layout = null;
+    var qrBase64 = ViewBag.QrCodeBase64 as string;
+}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <title>شهادة - @Model.CertificateNumber</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet" />
+    <style>
+        body { background: #f5f5f5; font-family: 'Cairo', sans-serif; margin: 0; padding: 20px; }
+
+        .cert-wrapper {
+            max-width: 850px;
+            margin: 20px auto;
+            background: white;
+            padding: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .cert-border {
+            border: 3px solid #2c3e50;
+            padding: 6px;
+            position: relative;
+        }
+
+        .cert-border::before {
+            content: '';
+            position: absolute;
+            top: 3px; left: 3px; right: 3px; bottom: 3px;
+            border: 1px solid #2c3e50;
+            pointer-events: none;
+        }
+
+        .cert-inner {
+            border: 2px solid #8B7355;
+            padding: 40px 50px;
+            text-align: center;
+            position: relative;
+            background: linear-gradient(135deg, #fffef9 0%, #fdf8f0 100%);
+        }
+
+        /* Corner decorations */
+        .cert-inner::before, .cert-inner::after {
+            content: '❋';
+            position: absolute;
+            font-size: 1.5rem;
+            color: #8B7355;
+        }
+        .cert-inner::before { top: 10px; right: 15px; }
+        .cert-inner::after { top: 10px; left: 15px; }
+
+        .corner-bl, .corner-br {
+            position: absolute;
+            font-size: 1.5rem;
+            color: #8B7355;
+        }
+        .corner-bl { bottom: 10px; right: 15px; }
+        .corner-br { bottom: 10px; left: 15px; }
+
+        .cert-header {
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: #2c3e50;
+            margin-bottom: 5px;
+            font-family: 'Amiri', serif;
+        }
+
+        .cert-line {
+            width: 200px;
+            height: 2px;
+            background: linear-gradient(to right, transparent, #8B7355, transparent);
+            margin: 10px auto 25px;
+        }
+
+        .cert-name {
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: #1a1a1a;
+            margin: 15px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #333;
+            display: inline-block;
+            font-family: 'Amiri', serif;
+        }
+
+        .cert-text {
+            font-size: 1.1rem;
+            color: #444;
+            margin: 10px 0;
+        }
+
+        .cert-course {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin: 10px 0;
+        }
+
+        .cert-grade {
+            font-size: 1rem;
+            color: #555;
+            font-style: italic;
+        }
+
+        .cert-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 40px;
+            padding-top: 20px;
+        }
+
+        .cert-seal {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1a5276, #2980b9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-align: center;
+            border: 3px solid #d4ac0d;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            line-height: 1.3;
+        }
+
+        .cert-qr {
+            border: 2px dashed #999;
+            padding: 8px;
+            display: inline-block;
+            background: white;
+        }
+        .cert-qr img {
+            width: 100px;
+            height: 100px;
+            display: block;
+        }
+        .cert-qr-text {
+            font-size: 0.65rem;
+            color: #666;
+            margin-top: 4px;
+            font-family: monospace;
+        }
+
+        .cert-date {
+            text-align: left;
+            font-size: 0.85rem;
+            color: #555;
+        }
+        .cert-date strong {
+            display: block;
+            font-size: 0.75rem;
+            color: #888;
+        }
+
+        .cert-footer-bar {
+            margin-top: 25px;
+            padding-top: 12px;
+            border-top: 1px solid #ddd;
+            font-size: 0.8rem;
+            color: #555;
+            font-family: monospace;
+        }
+        .cert-footer-bar span {
+            margin: 0 10px;
+        }
+
+        .btn-actions {
+            max-width: 850px;
+            margin: 15px auto;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        @@media print {
+            body { background: white; padding: 0; }
+            .cert-wrapper { box-shadow: none; margin: 0; max-width: 100%; }
+            .btn-actions { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="btn-actions">
+        <a asp-action="Index" class="btn btn-outline-secondary px-4">إغلاق</a>
+        <button onclick="window.print()" class="btn btn-primary px-4">طباعة / حفظ PDF</button>
+    </div>
+
+    <div class="cert-wrapper">
+        <div class="cert-border">
+            <div class="cert-inner">
+                <span class="corner-bl">❋</span>
+                <span class="corner-br">❋</span>
+
+                <div class="cert-header">شهادة إتمام دورة</div>
+                <div class="cert-line"></div>
+
+                <div class="cert-name">@Model.TraineeName</div>
+
+                <div class="cert-text">قد أتم بنجاح متطلبات دورة</div>
+                <div class="cert-course">"@Model.CourseName"</div>
+
+                @* Bottom section: Seal | QR Code | Date *@
+                <div class="cert-bottom">
+                    <div class="cert-seal">
+                        <span>معتبر<br />رسمياً</span>
+                    </div>
+
+                    <div class="text-center">
+                        <div class="cert-qr">
+                            @if (!string.IsNullOrEmpty(qrBase64))
+                            {
+                                <img src="data:image/png;base64,@qrBase64" alt="QR Code" />
+                            }
+                            else
+                            {
+                                <div style="width:100px;height:100px;display:flex;align-items:center;justify-content:center;color:#999;font-size:0.7rem">QR</div>
+                            }
+                        </div>
+                        <div class="cert-qr-text">QR: @Model.CertificateNumber</div>
+                    </div>
+
+                    <div class="cert-date">
+                        <strong>تاريخ الإصدار</strong>
+                        @Model.IssueDate.ToString("d MMMM yyyy", new System.Globalization.CultureInfo("ar-SA"))
+                    </div>
+                </div>
+
+                @* Footer bar with certificate number and verification code *@
+                <div class="cert-footer-bar">
+                    <span>رقم الشهادة: @Model.CertificateNumber</span>
+                    <span>|</span>
+                    <span>رمز التحقق: @Model.VerificationCode</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,68 @@
+@model List<Certificate>
+@{
+    ViewData["Title"] = "الشهادات الصادرة";
+    ViewData["PageIcon"] = "bi-award";
+    ViewData["PageDesc"] = "إصدار شهادات المتدربين والتحقق منها";
+    Layout = "_AdminLayout";
+}
+<div class="page-header">
+    <partial name="_PageHeader" />
+    <div class="page-actions">
+        <a asp-action="Issue" class="btn btn-primary"><i class="bi bi-plus-circle"></i> إصدار شهادة</a>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-8">
+                <input type="text" name="search" value="@ViewBag.Search" class="form-control" placeholder="بحث بالاسم أو رقم الشهادة..." />
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> بحث</button>
+                @if (!string.IsNullOrEmpty(ViewBag.Search)) { <a asp-action="Index" class="btn btn-outline-secondary">مسح</a> }
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>رقم الشهادة</th>
+                        <th>اسم المتدرب</th>
+                        <th>الدورة</th>
+                        <th>تاريخ الإصدار</th>
+                        <th>أصدرها</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Any())
+                    {
+                        @foreach (var cert in Model)
+                        {
+                            <tr>
+                                <td><code>@cert.CertificateNumber</code></td>
+                                <td><strong>@cert.TraineeName</strong></td>
+                                <td>@cert.CourseName</td>
+                                <td>@cert.IssueDate.ToString("yyyy-MM-dd")</td>
+                                <td>@cert.IssuedBy</td>
+                                <td>
+                                    <a asp-action="View" asp-route-id="@cert.CertificateId" class="btn btn-sm btn-outline-primary" title="عرض الشهادة"><i class="bi bi-eye"></i> عرض</a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="6" class="text-center text-muted py-4">لا توجد شهادات صادرة بعد</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,35 @@
+@{
+    ViewData["Title"] = "نتيجة التحقق";
+    var cert = ViewBag.Certificate as Certificate;
+    var searchCode = ViewBag.SearchCode as string;
+}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 mt-5">
+            <div class="card-body p-5 text-center">
+                @if (cert != null)
+                {
+                    <i class="bi bi-check-circle-fill text-success" style="font-size:4rem"></i>
+                    <h3 class="mt-3 text-success">شهادة صحيحة</h3>
+                    <hr />
+                    <table class="table table-borderless text-start">
+                        <tr><th class="w-50">رقم الشهادة</th><td><code>@cert.CertificateNumber</code></td></tr>
+                        <tr><th>اسم المتدرب</th><td>@cert.TraineeName</td></tr>
+                        <tr><th>الدورة</th><td>@cert.CourseName</td></tr>
+                        <tr><th>تاريخ الإصدار</th><td>@cert.IssueDate.ToString("yyyy-MM-dd")</td></tr>
+                        <tr><th>أصدرها</th><td>@cert.IssuedBy</td></tr>
+                    </table>
+                }
+                else
+                {
+                    <i class="bi bi-x-circle-fill text-danger" style="font-size:4rem"></i>
+                    <h3 class="mt-3 text-danger">شهادة غير موجودة</h3>
+                    <p class="text-muted">لم يتم العثور على شهادة بالرقم أو الرمز: <code>@searchCode</code></p>
+                    <p class="text-muted small">تأكد من إدخال الرقم أو الرمز بشكل صحيح</p>
+                }
+                <hr />
+                <a asp-action="Verify" class="btn btn-outline-primary"><i class="bi bi-search"></i> تحقق من شهادة أخرى</a>
+            </div>
+        </div>
+    </div>
+</div>

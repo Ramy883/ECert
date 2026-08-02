@@ -1,0 +1,76 @@
+@model Registration
+@{
+    ViewData["Title"] = "تفاصيل التسجيل";
+    Layout = "_AdminLayout";
+}
+<h2 class="mb-4"><i class="bi bi-clipboard-check"></i> تفاصيل التسجيل #@Model.RequestNumber</h2>
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white"><h6 class="mb-0">بيانات المتدرب</h6></div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr><th class="w-50">الاسم</th><td>@Model.FullName</td></tr>
+                    <tr><th>الهاتف</th><td>@Model.Phone</td></tr>
+                    <tr><th>البريد</th><td>@(Model.Email ?? "-")</td></tr>
+                    <tr><th>كيف سمع عنا</th><td>@(Model.HeardFrom ?? "-")</td></tr>
+                    <tr><th>الدورة</th><td>@Model.Course?.CourseName</td></tr>
+                    <tr><th>تاريخ التسجيل</th><td>@Model.RegistrationDate.ToString("yyyy-MM-dd HH:mm")</td></tr>
+                    <tr><th>الحالة</th><td>
+                        @switch (Model.Status)
+                        {
+                            case "Pending": <span class="badge bg-warning text-dark">معلق</span> break;
+                            case "Accepted": <span class="badge bg-success">مقبول</span> break;
+                            case "Rejected": <span class="badge bg-danger">مرفوض</span> break;
+                        }
+                    </td></tr>
+                    @if (Model.Status == "Accepted")
+                    {
+                        <tr><th>تاريخ القبول</th><td>@Model.AcceptedDate?.ToString("yyyy-MM-dd")</td></tr>
+                        <tr><th>الموظف</th><td>@Model.ProcessedBy</td></tr>
+                    }
+                    @if (Model.Status == "Rejected")
+                    {
+                        <tr><th>سبب الرفض</th><td class="text-danger">@Model.RejectionReason</td></tr>
+                        <tr><th>الموظف</th><td>@Model.ProcessedBy</td></tr>
+                    }
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-white"><h6 class="mb-0">الفاتورة</h6></div>
+            <div class="card-body">
+                @if (Model.Invoice != null)
+                {
+                    <p><strong>رقم الفاتورة:</strong> @Model.Invoice.InvoiceNumber</p>
+                    <p><strong>المبلغ:</strong> @Model.Invoice.TotalAmount ريال</p>
+                    <p><strong>المدفوع:</strong> @Model.Invoice.PaidAmount ريال</p>
+                    <p><strong>المتبقي:</strong> @Model.Invoice.RemainingAmount ريال</p>
+                    <a asp-controller="Invoices" asp-action="Details" asp-route-id="@Model.Invoice.InvoiceId" class="btn btn-sm btn-outline-primary">عرض الفاتورة</a>
+                }
+                else
+                {
+                    <p class="text-muted">لا توجد فاتورة</p>
+                    @if (Model.Status == "Accepted")
+                    {
+                        <a asp-controller="Invoices" asp-action="Create" asp-route-registrationId="@Model.RegistrationId" class="btn btn-sm btn-primary"><i class="bi bi-plus"></i> إنشاء فاتورة</a>
+                    }
+                }
+            </div>
+        </div>
+        @if (Model.Status == "Pending")
+        {
+            <div class="d-flex gap-2">
+                <form asp-action="Accept" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.RegistrationId" />
+                    <button type="submit" class="btn btn-success"><i class="bi bi-check"></i> قبول</button>
+                </form>
+                <a asp-action="Reject" asp-route-id="@Model.RegistrationId" class="btn btn-danger"><i class="bi bi-x"></i> رفض</a>
+            </div>
+        }
+    </div>
+</div>
+<a asp-action="Index" class="btn btn-outline-secondary mt-3"><i class="bi bi-arrow-right"></i> العودة</a>

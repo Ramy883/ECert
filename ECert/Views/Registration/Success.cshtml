@@ -1,0 +1,22 @@
+@{
+    ViewData["Title"] = "تم التسجيل بنجاح";
+}
+<div class="row justify-content-center">
+    <div class="col-md-7">
+        <div class="card shadow-sm border-0 text-center">
+            <div class="card-body p-5">
+                <i class="bi bi-check-circle-fill text-success" style="font-size: 5rem;"></i>
+                <h3 class="text-success mt-3">تم استلام طلبك بنجاح!</h3>
+                <p class="lead mt-3">
+                    شكراً <strong>@ViewBag.FullName</strong>! تم استلام طلب تسجيلك في دورة <strong>@ViewBag.CourseName</strong>.
+                </p>
+                <p>ستتم مراجعة طلبك وسيتم إبلاغك بقبوله عبر رسالة نصية على هاتفك.</p>
+                <div class="alert alert-info mt-4">
+                    <h5>رقم طلبك للتتبع:</h5>
+                    <h3 class="fw-bold text-primary">@ViewBag.RequestNumber</h3>
+                </div>
+                <a asp-controller="PublicCourses" asp-action="Index" class="btn btn-outline-primary mt-3">تصفح دورات أخرى</a>
+            </div>
+        </div>
+    </div>
+</div>

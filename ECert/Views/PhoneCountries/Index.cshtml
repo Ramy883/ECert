@@ -1,0 +1,53 @@
+@model List<PhoneCountry>
+@{
+    ViewData["Title"] = "مفاتيح الهواتف";
+    ViewData["PageIcon"] = "bi-phone";
+    ViewData["PageDesc"] = "إدارة مفاتيح أرقام الهواتف الدولية المستخدمة في التسجيلات";
+    Layout = "_AdminLayout";
+}
+<div class="page-header">
+    <partial name="_PageHeader" />
+    <div class="page-actions">
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-circle"></i> إضافة دولة</a>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        @if (Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr><th>الدولة</th><th>المفتاح</th><th>طول الرقم</th><th>البدايات</th><th>الحالة</th><th>إجراءات</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>@item.CountryName</td>
+                                <td><code>@item.CountryCode</code></td>
+                                <td>@item.MinPhoneLength - @item.MaxPhoneLength</td>
+                                <td>@item.Prefixes</td>
+                                <td>
+                                    @if (item.IsActive) { <span class="badge bg-success">نشط</span> }
+                                    else { <span class="badge bg-secondary">معطل</span> }
+                                </td>
+                                <td>
+                                    <a asp-action="Edit" asp-route-id="@item.PhoneCountryId" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                                    <form asp-action="Delete" asp-route-id="@item.PhoneCountryId" method="post" class="d-inline" onsubmit="return confirm('هل أنت متأكد؟')">
+                                        <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <p class="text-center text-muted py-4">لا توجد دول مضافة</p>
+        }
+    </div>
+</div>

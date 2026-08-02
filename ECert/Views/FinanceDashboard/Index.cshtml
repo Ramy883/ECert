@@ -1,0 +1,140 @@
+@{
+    ViewData["Title"] = "لوحة المالي";
+    Layout = "_AdminLayout";
+    var recentPayments = ViewBag.RecentPayments as List<ECert.Models.Payment> ?? new();
+    var recentInvoices = ViewBag.RecentInvoices as List<ECert.Models.Invoice> ?? new();
+}
+<h2 class="mb-4"><i class="bi bi-speedometer2"></i> لوحة تحكم المالي</h2>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4 col-lg-2">
+        <a asp-controller="Reports" asp-action="CourseRevenue" class="text-decoration-none">
+            <div class="card border-0 shadow-sm bg-primary text-white h-100">
+                <div class="card-body text-center">
+                    <h3>@(((decimal)ViewBag.TotalRevenue).ToString("N0"))</h3>
+                    <small><i class="bi bi-cash-stack"></i> إجمالي الإيرادات</small>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4 col-lg-2">
+        <div class="card border-0 shadow-sm bg-success text-white h-100">
+            <div class="card-body text-center">
+                <h3>@(((decimal)ViewBag.TotalPaid).ToString("N0"))</h3>
+                <small><i class="bi bi-check-circle"></i> المبالغ المحصلة</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg-2">
+        <div class="card border-0 shadow-sm bg-danger text-white h-100">
+            <div class="card-body text-center">
+                <h3>@(((decimal)ViewBag.TotalRemaining).ToString("N0"))</h3>
+                <small><i class="bi bi-exclamation-circle"></i> المبالغ المتبقية</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg-2">
+        <a asp-controller="Invoices" asp-action="Index" class="text-decoration-none">
+            <div class="card border-0 shadow-sm bg-warning text-dark h-100">
+                <div class="card-body text-center">
+                    <h3>@ViewBag.UnpaidCount</h3>
+                    <small><i class="bi bi-receipt"></i> فواتير غير مدفوعة</small>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4 col-lg-2">
+        <div class="card border-0 shadow-sm bg-info text-white h-100">
+            <div class="card-body text-center">
+                <h3>@ViewBag.PaidCount</h3>
+                <small><i class="bi bi-check2-all"></i> فواتير مدفوعة</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg-2">
+        <div class="card border-0 shadow-sm bg-secondary text-white h-100">
+            <div class="card-body text-center">
+                <h3>@ViewBag.PartialCount</h3>
+                <small><i class="bi bi-hourglass-split"></i> مدفوعة جزئياً</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="mb-3">إجراءات سريعة</h6>
+                <a asp-controller="Invoices" asp-action="Index" class="btn btn-outline-primary btn-sm me-1"><i class="bi bi-receipt"></i> الفواتير</a>
+                <a asp-controller="Payments" asp-action="Index" class="btn btn-outline-success btn-sm me-1"><i class="bi bi-cash-stack"></i> الدفعات</a>
+                <a asp-controller="Reports" asp-action="CourseRevenue" class="btn btn-outline-dark btn-sm me-1"><i class="bi bi-graph-up"></i> تقرير الإيرادات</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white"><h6 class="mb-0"><i class="bi bi-cash"></i> آخر الدفعات</h6></div>
+            <div class="card-body">
+                @if (recentPayments.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead><tr><th>الفاتورة</th><th>المبلغ</th><th>الطريقة</th><th>التاريخ</th></tr></thead>
+                            <tbody>
+                                @foreach (var p in recentPayments)
+                                {
+                                    <tr>
+                                        <td><code>@p.Invoice?.InvoiceNumber</code></td>
+                                        <td>@p.Amount ريال</td>
+                                        <td>@p.PaymentMethod</td>
+                                        <td>@p.PaymentDate.ToString("MM-dd")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else { <p class="text-muted text-center">لا توجد دفعات</p> }
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white"><h6 class="mb-0"><i class="bi bi-receipt"></i> أحدث الفواتير</h6></div>
+            <div class="card-body">
+                @if (recentInvoices.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead><tr><th>الرقم</th><th>المتدرب</th><th>المبلغ</th><th>الحالة</th></tr></thead>
+                            <tbody>
+                                @foreach (var inv in recentInvoices)
+                                {
+                                    <tr>
+                                        <td><code>@inv.InvoiceNumber</code></td>
+                                        <td>@inv.TraineeName</td>
+                                        <td>@inv.TotalAmount ريال</td>
+                                        <td>
+                                            @switch (inv.Status)
+                                            {
+                                                case "Unpaid": <span class="badge bg-danger">غير مدفوعة</span> break;
+                                                case "PartiallyPaid": <span class="badge bg-warning text-dark">جزئية</span> break;
+                                                case "Paid": <span class="badge bg-success">مدفوعة</span> break;
+                                                case "Cancelled": <span class="badge bg-secondary">ملغية</span> break;
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else { <p class="text-muted text-center">لا توجد فواتير</p> }
+            </div>
+        </div>
+    </div>
+</div>

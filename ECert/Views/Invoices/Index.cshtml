@@ -1,0 +1,86 @@
+@{
+    ViewData["Title"] = "إدارة الفواتير";
+    ViewData["PageIcon"] = "bi-receipt";
+    ViewData["PageDesc"] = "متابعة فواتير المتدربين وحالات السداد";
+    Layout = "_AdminLayout";
+    var invoices = ViewBag.Invoices as List<Invoice> ?? new();
+}
+<div class="page-header">
+    <partial name="_PageHeader" />
+</div>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-8">
+                <input type="text" name="search" value="@ViewBag.Search" class="form-control" placeholder="بحث برقم الفاتورة، اسم المتدرب، الهاتف، الدورة..." />
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> بحث</button>
+                @if (!string.IsNullOrEmpty(ViewBag.Search))
+                {
+                    <a asp-action="Index" class="btn btn-outline-secondary">مسح</a>
+                }
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="mb-3">
+    <a asp-action="Index" class="btn btn-sm @(ViewBag.Status == null ? "btn-primary" : "btn-outline-primary")">الكل</a>
+    <a asp-action="Index" asp-route-status="Unpaid" class="btn btn-sm @(ViewBag.Status == "Unpaid" ? "btn-danger" : "btn-outline-danger")">غير مدفوعة</a>
+    <a asp-action="Index" asp-route-status="PartiallyPaid" class="btn btn-sm @(ViewBag.Status == "PartiallyPaid" ? "btn-warning" : "btn-outline-warning")">جزئية</a>
+    <a asp-action="Index" asp-route-status="Paid" class="btn btn-sm @(ViewBag.Status == "Paid" ? "btn-success" : "btn-outline-success")">مدفوعة</a>
+    <a asp-action="Index" asp-route-status="Cancelled" class="btn btn-sm @(ViewBag.Status == "Cancelled" ? "btn-secondary" : "btn-outline-secondary")">ملغية</a>
+</div>
+<div class="card shadow-sm">
+    <div class="card-body">
+        @if (invoices.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light"><tr><th>الرقم</th><th>المتدرب</th><th>الدورة</th><th>الإجمالي</th><th>المدفوع</th><th>المتبقي</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+                    <tbody>
+                        @foreach (var inv in invoices)
+                        {
+                            <tr>
+                                <td><code>@inv.InvoiceNumber</code></td>
+                                <td>@inv.TraineeName</td>
+                                <td>@inv.CourseName</td>
+                                <td>@inv.TotalAmount ريال</td>
+                                <td>@inv.PaidAmount ريال</td>
+                                <td>@inv.RemainingAmount ريال</td>
+                                <td>
+                                    @switch (inv.Status)
+                                    {
+                                        case "Unpaid": <span class="badge bg-danger">غير مدفوعة</span> break;
+                                        case "PartiallyPaid": <span class="badge bg-warning text-dark">جزئية</span> break;
+                                        case "Paid": <span class="badge bg-success">مدفوعة</span> break;
+                                        case "Cancelled": <span class="badge bg-secondary">ملغية</span> break;
+                                    }
+                                </td>
+                                <td>
+                                    <a asp-action="Details" asp-route-id="@inv.InvoiceId" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
+                                    @if (inv.Status != "Paid" && inv.Status != "Cancelled")
+                                    {
+                                        <a asp-controller="Payments" asp-action="Add" asp-route-invoiceId="@inv.InvoiceId" class="btn btn-sm btn-outline-success"><i class="bi bi-cash"></i> دفعة</a>
+                                        <form asp-action="Cancel" asp-route-id="@inv.InvoiceId" method="post" class="d-inline" onsubmit="return confirm('هل أنت متأكد من إلغاء الفاتورة؟')">
+                                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-x-circle"></i> إلغاء</button>
+                                        </form>
+                                    }
+                                    @if (inv.Status == "Cancelled")
+                                    {
+                                        <form asp-action="Restore" asp-route-id="@inv.InvoiceId" method="post" class="d-inline" onsubmit="return confirm('هل تريد استعادة هذه الفاتورة؟')">
+                                            <button class="btn btn-sm btn-outline-warning"><i class="bi bi-arrow-counterclockwise"></i> استعادة</button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else { <p class="text-center text-muted py-4">لا توجد فواتير</p> }
+    </div>
+</div>

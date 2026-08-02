@@ -1,0 +1,88 @@
+@model AddPaymentViewModel
+@{
+    ViewData["Title"] = "تسجيل دفعة";
+    Layout = "_AdminLayout";
+    var invoice = ViewBag.Invoice as Invoice;
+}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white"><h4 class="mb-0"><i class="bi bi-cash-stack"></i> تسجيل دفعة جديدة</h4></div>
+            <div class="card-body p-4">
+                <div class="alert alert-info">
+                    <strong>الفاتورة:</strong> @invoice?.InvoiceNumber<br />
+                    <strong>المتدرب:</strong> @invoice?.TraineeName<br />
+                    <strong>الدورة:</strong> @invoice?.CourseName<br />
+                    <strong>المتبقي:</strong> <span class="text-danger fw-bold">@invoice?.RemainingAmount ريال</span>
+                </div>
+                <form asp-action="Add" method="post" id="paymentForm">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="InvoiceId" />
+                    <div class="mb-3">
+                        <label asp-for="Amount" class="form-label"></label>
+                        <div class="input-group">
+                            <input asp-for="Amount" type="number" step="0.01" class="form-control" max="@invoice?.RemainingAmount" placeholder="0.00" />
+                            <span class="input-group-text">ريال</span>
+                        </div>
+                        <span asp-validation-for="Amount" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="PaymentMethod" class="form-label"></label>
+                        <select asp-for="PaymentMethod" class="form-select" id="paymentMethod">
+                            <option value="Cash">نقد</option>
+                            <option value="BankTransfer">محافظ إلكترونية</option>
+                            <option value="EWallet">محفظة إلكترونية</option>
+                            <option value="Card">محافظ إلكترونية</option>
+                        </select>
+                        <span asp-validation-for="PaymentMethod" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3" id="referenceGroup" style="display:none;">
+                        <label asp-for="ReferenceNumber" class="form-label"></label>
+                        <input asp-for="ReferenceNumber" class="form-control" placeholder="مثال: TX-98541236" />
+                        <span asp-validation-for="ReferenceNumber" class="text-danger"></span>
+                        <small class="text-muted">رقم السند أو رقم العملية (إجباري للطرق الإلكترونية)</small>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Notes" class="form-label"></label>
+                        <textarea asp-for="Notes" class="form-control" rows="2" placeholder="ملاحظات إضافية (اختياري)"></textarea>
+                    </div>
+                    <hr />
+                    <button type="submit" class="btn btn-success w-100 btn-lg"><i class="bi bi-check-circle"></i> تسجيل الدفعة</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const methodSelect = document.getElementById('paymentMethod');
+    const refGroup = document.getElementById('referenceGroup');
+    const refInput = document.getElementById('ReferenceNumber');
+
+    function toggleReference() {
+        const method = methodSelect.value;
+        if (method === 'Cash') {
+            refGroup.style.display = 'none';
+            refInput.removeAttribute('required');
+        } else {
+            refGroup.style.display = 'block';
+            refInput.setAttribute('required', 'required');
+        }
+    }
+
+    methodSelect.addEventListener('change', toggleReference);
+    toggleReference();
+
+    document.getElementById('paymentForm').addEventListener('submit', function(e) {
+        const method = methodSelect.value;
+        if (method !== 'Cash' && (!refInput.value || refInput.value.trim() === '')) {
+            e.preventDefault();
+            alert('رقم السند مطلوب عند اختيار طريقة دفع إلكترونية');
+            refInput.focus();
+        }
+    });
+});
+</script>
+}

@@ -1,0 +1,52 @@
+@model ECert.Models.Post
+@{
+    ViewData["Title"] = "تعديل خبر";
+    Layout = "_AdminLayout";
+}
+<h2 class="mb-4"><i class="bi bi-pencil"></i> تعديل الخبر</h2>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form asp-action="Edit" method="post" enctype="multipart/form-data">
+            <input type="hidden" asp-for="PostId" />
+            <div asp-validation-summary="All" class="text-danger"></div>
+            <div class="mb-3">
+                <label asp-for="Title" class="form-label"></label>
+                <input asp-for="Title" class="form-control" />
+                <span asp-validation-for="Title" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Content" class="form-label"></label>
+                <textarea asp-for="Content" class="form-control" rows="8"></textarea>
+                <span asp-validation-for="Content" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">الصورة الرئيسية</label>
+                @if (!string.IsNullOrEmpty(Model.ImageUrl))
+                {
+                    <div class="mb-2 text-center">
+                        <img src="@Model.ImageUrl" alt="الصورة الحالية" style="max-width:250px; max-height:150px; object-fit:cover; border-radius:8px; border:2px solid #ddd;" />
+                        <p class="small text-muted mt-1">الصورة الحالية</p>
+                    </div>
+                }
+                <input type="file" name="image" accept="image/*" class="form-control" id="photoInput" onchange="previewPhoto(this)" />
+                <small class="text-muted">اتركه فارغاً إذا لم ترد تغيير الصورة</small>
+                <div class="mt-2 text-center">
+                    <img id="photoPreview" src="" alt="" style="display:none; max-width:300px; max-height:200px; object-fit:cover; border-radius:8px; border:2px solid #ddd;" />
+                </div>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Status" class="form-label">الحالة</label>
+                <select asp-for="Status" class="form-select">
+                    <option value="Draft">مسودة</option>
+                    <option value="Published">منشور</option>
+                    <option value="Archived">مؤرشف</option>
+                </select>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> حفظ التعديلات</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">إلغاء</a>
+            </div>
+        </form>
+    </div>
+</div>

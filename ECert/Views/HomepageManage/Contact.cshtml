@@ -1,0 +1,65 @@
+@model ECert.Models.ContactInfo
+@{
+    ViewData["Title"] = "معلومات التواصل";
+    ViewData["PageIcon"] = "bi-telephone";
+    ViewData["PageDesc"] = "إدارة بيانات التواصل المعروضة في الموقع";
+    Layout = "_AdminLayout";
+}
+
+<a asp-action="Index" class="btn btn-outline-secondary btn-sm mb-3"><i class="bi bi-arrow-right me-1"></i>الرجوع إلى إدارة الصفحة الرئيسية</a>
+
+<div class="page-header">
+    <partial name="_PageHeader" />
+</div>
+
+<form method="post" action="/HomepageManage/SaveContact">
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <label class="form-label">الهاتف الأرضي</label>
+                    <input type="text" name="Phone" value="@Model.Phone" class="form-control" />
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" name="ShowPhone" value="true" id="sp" @(Model.ShowPhone ? "checked" : "") />
+                        <label class="form-check-label" for="sp">إظهار في الموقع</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">الجوال</label>
+                    <input type="text" name="Mobile" value="@Model.Mobile" class="form-control" />
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" name="ShowMobile" value="true" id="sm" @(Model.ShowMobile ? "checked" : "") />
+                        <label class="form-check-label" for="sm">إظهار في الموقع</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">البريد الإلكتروني</label>
+                    <input type="email" name="Email" value="@Model.Email" class="form-control" />
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" name="ShowEmail" value="true" id="se" @(Model.ShowEmail ? "checked" : "") />
+                        <label class="form-check-label" for="se">إظهار في الموقع</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">العنوان</label>
+                    <input type="text" name="Address" value="@Model.Address" class="form-control" />
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" name="ShowAddress" value="true" id="sa" @(Model.ShowAddress ? "checked" : "") />
+                        <label class="form-check-label" for="sa">إظهار في الموقع</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">ساعات العمل</label>
+                    <input type="text" name="WorkingHours" value="@Model.WorkingHours" class="form-control" />
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" name="ShowWorkingHours" value="true" id="sh" @(Model.ShowWorkingHours ? "checked" : "") />
+                        <label class="form-check-label" for="sh">إظهار في الموقع</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="mt-4">
+        <button class="btn btn-primary"><i class="bi bi-check me-1"></i>حفظ معلومات التواصل</button>
+    </div>
+</form>

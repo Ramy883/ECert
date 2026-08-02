@@ -1,0 +1,61 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace ECert.Models;
+
+public class Registration
+{
+    [Key]
+    public int RegistrationId { get; set; }
+
+    [Display(Name = "رقم الطلب")]
+    public string RequestNumber { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "الاسم الكامل مطلوب")]
+    [StringLength(100)]
+    [Display(Name = "الاسم الكامل")]
+    public string FullName { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "رقم الهاتف مطلوب")]
+    [Display(Name = "رقم الهاتف")]
+    public string Phone { get; set; } = string.Empty;
+
+    [Display(Name = "البريد الإلكتروني")]
+    public string? Email { get; set; }
+
+    [Display(Name = "كيف سمعت عنا؟")]
+    public string? HeardFrom { get; set; }
+
+    [Required]
+    public int CourseId { get; set; }
+    public Course? Course { get; set; }
+
+    [Display(Name = "حالة الطلب")]
+    public string Status { get; set; } = "Pending";
+    // Pending, Accepted, Rejected, Archived
+
+    [Display(Name = "تاريخ التسجيل")]
+    public DateTime RegistrationDate { get; set; } = DateTime.Now;
+
+    [Display(Name = "تاريخ القبول")]
+    public DateTime? AcceptedDate { get; set; }
+
+    [Display(Name = "الموظف المسؤول")]
+    public string? ProcessedBy { get; set; }
+
+    [Display(Name = "سبب الرفض")]
+    public string? RejectionReason { get; set; }
+
+    [Display(Name = "تاريخ الرفض")]
+    public DateTime? RejectedDate { get; set; }
+
+    public bool CertificateIssued { get; set; } = false;
+
+    [Display(Name = "تاريخ إعادة الفتح")]
+    public DateTime? ReopenedDate { get; set; }
+
+    [Display(Name = "تاريخ الأرشفة")]
+    public DateTime? ArchivedDate { get; set; }
+
+    public Invoice? Invoice { get; set; }
+    public Certificate? Certificate { get; set; }
+}

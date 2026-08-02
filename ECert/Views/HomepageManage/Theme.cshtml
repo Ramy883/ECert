@@ -1,0 +1,51 @@
+@model ECert.Models.ThemeSetting
+@{
+    ViewData["Title"] = "الألوان والهوية البصرية";
+    ViewData["PageIcon"] = "bi-palette";
+    ViewData["PageDesc"] = "تخصيص ألوان الموقع والهوية البصرية";
+    Layout = "_AdminLayout";
+}
+
+<a asp-action="Index" class="btn btn-outline-secondary btn-sm mb-3"><i class="bi bi-arrow-right me-1"></i>الرجوع إلى إدارة الصفحة الرئيسية</a>
+
+<div class="page-header">
+    <partial name="_PageHeader" />
+</div>
+
+<form method="post" action="/HomepageManage/SaveTheme">
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <label class="form-label">اللون الأساسي</label>
+                    <input type="color" name="PrimaryColor" value="@Model.PrimaryColor" class="form-control form-control-color w-100" style="height:50px" />
+                    <small class="text-muted">يستخدم في العناوين والروابط</small>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">اللون الثانوي</label>
+                    <input type="color" name="SecondaryColor" value="@Model.SecondaryColor" class="form-control form-control-color w-100" style="height:50px" />
+                    <small class="text-muted">يستخدم في التمييز والشارات</small>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">لون الأزرار</label>
+                    <input type="color" name="ButtonColor" value="@Model.ButtonColor" class="form-control form-control-color w-100" style="height:50px" />
+                    <small class="text-muted">يستخدم في أزرار الإجراءات</small>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">لون شريط التنقل</label>
+                    <input type="color" name="NavbarColor" value="@Model.NavbarColor" class="form-control form-control-color w-100" style="height:50px" />
+                    <small class="text-muted">خلفية شريط التنقل العلوي</small>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">لون الفوتر</label>
+                    <input type="color" name="FooterColor" value="@Model.FooterColor" class="form-control form-control-color w-100" style="height:50px" />
+                    <small class="text-muted">خلفية تذييل الصفحة</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="mt-4">
+        <button class="btn btn-primary"><i class="bi bi-check me-1"></i>حفظ الألوان</button>
+        <a href="/" target="_blank" class="btn btn-outline-secondary ms-2"><i class="bi bi-eye me-1"></i>معاينة</a>
+    </div>
+</form>

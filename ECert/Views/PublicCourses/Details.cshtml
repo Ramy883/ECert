@@ -1,0 +1,93 @@
+@model Course
+@{
+    ViewData["Title"] = Model.CourseName;
+}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">الرئيسية</a></li>
+        <li class="breadcrumb-item"><a asp-controller="PublicCourses" asp-action="Index">الدورات</a></li>
+        <li class="breadcrumb-item active">@Model.CourseName</li>
+    </ol>
+</nav>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <h2>@Model.CourseName</h2>
+                    @switch (Model.Status)
+                    {
+                        case "OpenForRegistration": <span class="badge bg-success fs-6">مفتوحة للتسجيل</span> break;
+                        case "Published": <span class="badge bg-primary fs-6">منشورة</span> break;
+                        case "Full": <span class="badge bg-danger fs-6">ممتلئة</span> break;
+                        case "InProgress": <span class="badge bg-warning text-dark fs-6">جارية</span> break;
+                        case "Completed": <span class="badge bg-secondary fs-6">منتهية</span> break;
+                    }
+                </div>
+                <span class="badge bg-info mb-3">@Model.Category?.CategoryName</span>
+
+                @if (!string.IsNullOrEmpty(Model.FullDescription))
+                {
+                    <h5 class="mt-4">وصف الدورة</h5>
+                    <p>@Model.FullDescription</p>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.Objectives))
+                {
+                    <h5 class="mt-4">أهداف الدورة</h5>
+                    <p style="white-space: pre-line;">@Model.Objectives</p>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.Content))
+                {
+                    <h5 class="mt-4">محتوى الدورة</h5>
+                    <p style="white-space: pre-line;">@Model.Content</p>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h5 class="card-title">معلومات الدورة</h5>
+                <hr />
+                <p><i class="bi bi-calendar"></i> <strong>البداية:</strong> @Model.StartDate?.ToString("yyyy-MM-dd")</p>
+                <p><i class="bi bi-calendar-check"></i> <strong>النهاية:</strong> @Model.EndDate?.ToString("yyyy-MM-dd")</p>
+                <p><i class="bi bi-geo-alt"></i> <strong>المكان:</strong> @Model.Location</p>
+                <p><i class="bi bi-people"></i> <strong>المقاعد المتاحة:</strong> @(Model.TotalSeats - Model.BookedSeats) من @Model.TotalSeats</p>
+                @if (!string.IsNullOrEmpty(Model.DiscountType) && Model.DiscountValue > 0)
+                {
+                    <p class="fs-5"><i class="bi bi-tag"></i> <span class="text-muted text-decoration-line-through">@Model.Price ريال</span> <span class="fw-bold text-danger fs-4">@Model.FinalPrice.ToString("N0") ريال</span></p>
+                    <small class="text-danger">(خصم @Model.DiscountValue@(Model.DiscountType == "Percentage" ? "%" : " ريال"))</small>
+                }
+                else
+                {
+                    <p class="fs-4 fw-bold text-primary"><i class="bi bi-tag"></i> @Model.Price ريال</p>
+                }
+                <hr />
+                @if (Model.Status == "OpenForRegistration" && Model.AvailableSeats > 0)
+                {
+                    <a asp-controller="Registration" asp-action="Register" asp-route-courseId="@Model.CourseId" class="btn btn-primary w-100 btn-lg">سجّل الآن</a>
+                }
+                else if (Model.Status == "Full" || Model.AvailableSeats <= 0)
+                {
+                    <button class="btn btn-secondary w-100 btn-lg" disabled><i class="bi bi-x-circle"></i> العدد مكتمل</button>
+                }
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body text-center">
+                <i class="bi bi-person-circle text-primary" style="font-size: 3rem;"></i>
+                <h5 class="mt-2">@Model.Instructor?.FullName</h5>
+                <p class="text-muted small">@Model.Instructor?.Specialization</p>
+                @if (!string.IsNullOrEmpty(Model.Instructor?.Bio))
+                {
+                    <p class="small">@Model.Instructor.Bio</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>

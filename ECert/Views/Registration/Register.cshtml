@@ -1,0 +1,120 @@
+@model PublicRegistrationViewModel
+@{
+    ViewData["Title"] = "التسجيل في الدورة";
+    var countries = ViewBag.Countries as List<ECert.Models.PhoneCountry> ?? new();
+}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <h3 class="text-center mb-2"><i class="bi bi-pencil-square"></i> التسجيل في الدورة</h3>
+                <p class="text-center text-muted mb-4">@Model.CourseName</p>
+                <div asp-validation-summary="All" class="text-danger"></div>
+                <form asp-action="Register" method="post" id="regForm">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="CourseId" />
+                    <div class="mb-3">
+                        <label asp-for="FullName" class="form-label"></label>
+                        <input asp-for="FullName" class="form-control" placeholder="الاسم الكامل" />
+                        <span asp-validation-for="FullName" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="CountryId" class="form-label"></label>
+                        <select asp-for="CountryId" class="form-select" id="countrySelect">
+                            <option value="">اختر الدولة</option>
+                            @foreach (var c in countries)
+                            {
+                                <option value="@c.PhoneCountryId" data-code="@c.CountryCode" data-min="@c.MinPhoneLength" data-max="@c.MaxPhoneLength" data-prefixes="@c.Prefixes">@c.CountryName (@c.CountryCode)</option>
+                            }
+                        </select>
+                        <span asp-validation-for="CountryId" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Phone" class="form-label"></label>
+                        <div class="input-group">
+                            <span class="input-group-text" id="countryCodeDisplay">+---</span>
+                            <input asp-for="Phone" class="form-control" placeholder="أدخل رقم الهاتف" id="phoneInput" />
+                        </div>
+                        <span asp-validation-for="Phone" class="text-danger"></span>
+                        <small class="text-muted" id="phoneHint"></small>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label"></label>
+                        <input asp-for="Email" class="form-control" placeholder="example@email.com (اختياري)" />
+                        <span asp-validation-for="Email" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="HeardFrom" class="form-label"></label>
+                        <select asp-for="HeardFrom" class="form-select">
+                            <option value="">اختر (اختياري)</option>
+                            <option value="Social Media">وسائل التواصل الاجتماعي</option>
+                            <option value="Friend">صديق أو قريب</option>
+                            <option value="Google">محرك البحث</option>
+                            <option value="Advertisement">إعلان</option>
+                            <option value="Other">أخرى</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 btn-lg">إرسال طلب التسجيل</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const countrySelect = document.getElementById('countrySelect');
+    const codeDisplay = document.getElementById('countryCodeDisplay');
+    const phoneInput = document.getElementById('phoneInput');
+    const phoneHint = document.getElementById('phoneHint');
+
+    countrySelect.addEventListener('change', function() {
+        const opt = this.options[this.selectedIndex];
+        const code = opt.dataset.code || '+---';
+        const min = opt.dataset.min || '';
+        const max = opt.dataset.max || '';
+        const prefixes = opt.dataset.prefixes || '';
+
+        codeDisplay.textContent = code;
+
+        if (min && max) {
+            let hint = `الرقم يجب أن يكون ${min === max ? min + ' أرقام' : 'بين ' + min + ' و ' + max + ' أرقام'}`;
+            if (prefixes) hint += ` | يبدأ بـ: ${prefixes}`;
+            phoneHint.textContent = hint;
+        } else {
+            phoneHint.textContent = '';
+        }
+    });
+
+    // Client-side validation on form submit
+    document.getElementById('regForm').addEventListener('submit', function(e) {
+        const opt = countrySelect.options[countrySelect.selectedIndex];
+        if (!opt.value) return; // let server handle required
+
+        const min = parseInt(opt.dataset.min) || 0;
+        const max = parseInt(opt.dataset.max) || 99;
+        const prefixes = (opt.dataset.prefixes || '').split(',').filter(p => p.trim());
+
+        let phone = phoneInput.value.trim();
+        if (phone.startsWith('0')) phone = phone.substring(1);
+
+        if (phone && !/^\d+$/.test(phone)) {
+            e.preventDefault();
+            alert('رقم الهاتف يجب أن يحتوي على أرقام فقط');
+            return;
+        }
+        if (phone && (phone.length < min || phone.length > max)) {
+            e.preventDefault();
+            alert(`رقم الهاتف يجب أن يكون بين ${min} و ${max} أرقام`);
+            return;
+        }
+        if (phone && prefixes.length > 0 && !prefixes.some(p => phone.startsWith(p.trim()))) {
+            e.preventDefault();
+            alert(`رقم الهاتف يجب أن يبدأ بأحد البادئات: ${prefixes.join(', ')}`);
+            return;
+        }
+    });
+});
+</script>
+}

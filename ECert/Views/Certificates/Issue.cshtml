@@ -1,0 +1,59 @@
+@{
+    ViewData["Title"] = "إصدار شهادة";
+    Layout = "_AdminLayout";
+    var eligible = ViewBag.Eligible as List<Registration> ?? new();
+}
+<h2 class="mb-4"><i class="bi bi-award"></i> إصدار شهادة جديدة</h2>
+
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> تظهر هنا فقط المتدربون المقبولون في الدورات المكتملة الذين لم تصدر لهم شهادات بعد.
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white"><h6 class="mb-0">المتدربون المؤهلون للحصول على شهادة</h6></div>
+    <div class="card-body">
+        @if (eligible.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>رقم الطلب</th>
+                            <th>اسم المتدرب</th>
+                            <th>الدورة</th>
+                            <th>تاريخ القبول</th>
+                            <th>إجراء</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var reg in eligible)
+                        {
+                            <tr>
+                                <td><code>@reg.RequestNumber</code></td>
+                                <td><strong>@reg.FullName</strong></td>
+                                <td>@reg.Course?.CourseName</td>
+                                <td>@(reg.AcceptedDate?.ToString("yyyy-MM-dd") ?? "-")</td>
+                                <td>
+                                    <form asp-action="Issue" method="post" onsubmit="return confirm('هل تريد إصدار شهادة لهذا المتدرب؟')">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="registrationId" value="@reg.RegistrationId" />
+                                        <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-award"></i> إصدار شهادة</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-award" style="font-size:3rem"></i>
+                <p class="mt-2">لا يوجد متدربون مؤهلون للحصول على شهادات حالياً</p>
+                <p class="small">تأكد من وجود دورات مكتملة بها متدربون مقبولون لم تصدر لهم شهادات</p>
+            </div>
+        }
+    </div>
+</div>
+<a asp-action="Index" class="btn btn-outline-secondary mt-3"><i class="bi bi-arrow-right"></i> العودة للشهادات</a>

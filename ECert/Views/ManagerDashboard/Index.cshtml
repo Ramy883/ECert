@@ -1,0 +1,112 @@
+@{
+    ViewData["Title"] = "لوحة الإداري";
+    Layout = "_AdminLayout";
+    var recentRegs = ViewBag.RecentRegistrations as List<ECert.Models.Registration> ?? new();
+}
+<h2 class="mb-4"><i class="bi bi-speedometer2"></i> لوحة تحكم الإداري</h2>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4 col-lg-2">
+        <a asp-controller="Registrations" asp-action="Index" asp-route-status="Pending" class="text-decoration-none">
+            <div class="card border-0 shadow-sm bg-warning text-dark h-100">
+                <div class="card-body text-center">
+                    <h3>@ViewBag.PendingRegistrations</h3>
+                    <small><i class="bi bi-hourglass-split"></i> تسجيلات معلقة</small>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4 col-lg-2">
+        <div class="card border-0 shadow-sm bg-success text-white h-100">
+            <div class="card-body text-center">
+                <h3>@ViewBag.TotalTrainees</h3>
+                <small><i class="bi bi-people"></i> متدربين مقبولين</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg-2">
+        <a asp-controller="CoursesManage" asp-action="Index" class="text-decoration-none">
+            <div class="card border-0 shadow-sm bg-primary text-white h-100">
+                <div class="card-body text-center">
+                    <h3>@ViewBag.ActiveCourses</h3>
+                    <small><i class="bi bi-book"></i> دورات نشطة</small>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4 col-lg-2">
+        <div class="card border-0 shadow-sm bg-info text-white h-100">
+            <div class="card-body text-center">
+                <h3>@ViewBag.TotalCourses</h3>
+                <small><i class="bi bi-journal-bookmark"></i> إجمالي الدورات</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg-2">
+        <a asp-controller="Instructors" asp-action="Index" class="text-decoration-none">
+            <div class="card border-0 shadow-sm bg-secondary text-white h-100">
+                <div class="card-body text-center">
+                    <h3>@ViewBag.TotalInstructors</h3>
+                    <small><i class="bi bi-person-badge"></i> المدربون</small>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4 col-lg-2">
+        <a asp-controller="Certificates" asp-action="Index" class="text-decoration-none">
+            <div class="card border-0 shadow-sm bg-dark text-white h-100">
+                <div class="card-body text-center">
+                    <h3>@ViewBag.CertificatesIssued</h3>
+                    <small><i class="bi bi-award"></i> شهادات صادرة</small>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="mb-3">إجراءات سريعة</h6>
+                <a asp-controller="Registrations" asp-action="Index" class="btn btn-outline-primary btn-sm me-1"><i class="bi bi-clipboard-check"></i> التسجيلات</a>
+                <a asp-controller="CoursesManage" asp-action="Index" class="btn btn-outline-info btn-sm me-1"><i class="bi bi-book"></i> الدورات</a>
+                <a asp-controller="Instructors" asp-action="Index" class="btn btn-outline-secondary btn-sm me-1"><i class="bi bi-person-badge"></i> المدربون</a>
+                <a asp-controller="Certificates" asp-action="Index" class="btn btn-outline-warning btn-sm me-1"><i class="bi bi-award"></i> الشهادات</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-white"><h6 class="mb-0"><i class="bi bi-clock-history"></i> أحدث التسجيلات</h6></div>
+    <div class="card-body">
+        @if (recentRegs.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead><tr><th>الاسم</th><th>الدورة</th><th>الحالة</th><th>التاريخ</th></tr></thead>
+                    <tbody>
+                        @foreach (var r in recentRegs)
+                        {
+                            <tr>
+                                <td>@r.FullName</td>
+                                <td>@r.Course?.CourseName</td>
+                                <td>
+                                    @switch (r.Status)
+                                    {
+                                        case "Pending": <span class="badge bg-warning text-dark">معلق</span> break;
+                                        case "Accepted": <span class="badge bg-success">مقبول</span> break;
+                                        case "Rejected": <span class="badge bg-danger">مرفوض</span> break;
+                                    }
+                                </td>
+                                <td>@r.RegistrationDate.ToString("MM-dd")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else { <p class="text-muted text-center">لا توجد تسجيلات</p> }
+    </div>
+</div>

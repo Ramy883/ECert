@@ -1,0 +1,98 @@
+@{
+    ViewData["Title"] = "إدارة الأخبار";
+    ViewData["PageIcon"] = "bi-megaphone";
+    ViewData["PageDesc"] = "نشر أخبار المركز وفعالياته على الموقع العام";
+    Layout = "_AdminLayout";
+    var news = ViewBag.News as List<ECert.Models.Post> ?? new();
+}
+<div class="page-header">
+    <partial name="_PageHeader" />
+    <div class="page-actions">
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-circle"></i> إضافة خبر</a>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-8">
+                <input type="text" name="search" value="@ViewBag.Search" class="form-control" placeholder="بحث بعنوان الخبر..." />
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> بحث</button>
+                @if (!string.IsNullOrEmpty(ViewBag.Search)) { <a asp-action="Index" class="btn btn-outline-secondary">مسح</a> }
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (news.Any())
+{
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr><th>الصورة</th><th>العنوان</th><th>الكاتب</th><th>الحالة</th><th>تاريخ النشر</th><th>إجراءات</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in news)
+                        {
+                            <tr>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(item.ImageUrl))
+                                    {
+                                        <img src="@item.ImageUrl" alt="@item.Title" style="width:60px; height:45px; object-fit:cover; border-radius:6px;" />
+                                    }
+                                    else
+                                    {
+                                        <div style="width:60px; height:45px; background:#e9ecef; border-radius:6px; display:flex; align-items:center; justify-content:center;">
+                                            <i class="bi bi-image text-muted"></i>
+                                        </div>
+                                    }
+                                </td>
+                                <td>@item.Title</td>
+                                <td>@item.Author</td>
+                                <td>
+                                    @switch (item.Status)
+                                    {
+                                        case "Published": <span class="badge bg-success">منشور</span> break;
+                                        case "Draft": <span class="badge bg-warning text-dark">مسودة</span> break;
+                                        case "Archived": <span class="badge bg-secondary">مؤرشف</span> break;
+                                    }
+                                </td>
+                                <td>@item.PublishedAt?.ToString("yyyy-MM-dd")</td>
+                                <td>
+                                    <a asp-action="Edit" asp-route-id="@item.PostId" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                                    @if (item.Status != "Published")
+                                    {
+                                        <form asp-action="Publish" asp-route-id="@item.PostId" method="post" class="d-inline">
+                                            <button class="btn btn-sm btn-outline-success"><i class="bi bi-globe"></i></button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <form asp-action="Unpublish" asp-route-id="@item.PostId" method="post" class="d-inline">
+                                            <button class="btn btn-sm btn-outline-warning"><i class="bi bi-eye-slash"></i></button>
+                                        </form>
+                                    }
+                                    <form asp-action="Delete" asp-route-id="@item.PostId" method="post" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف هذا الخبر؟')">
+                                        <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="text-center py-5">
+        <i class="bi bi-megaphone text-muted" style="font-size: 3rem;"></i>
+        <p class="text-muted mt-3">لا توجد أخبار بعد</p>
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-circle"></i> إضافة أول خبر</a>
+    </div>
+}

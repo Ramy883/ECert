@@ -1,0 +1,130 @@
+@{
+    ViewData["Title"] = "إدارة التسجيلات";
+    ViewData["PageIcon"] = "bi-clipboard-check";
+    ViewData["PageDesc"] = "مراجعة طلبات التسجيل في الدورات وقبولها أو رفضها";
+    Layout = "_AdminLayout";
+    var registrations = ViewBag.Registrations as List<Registration> ?? new();
+    var isSuperAdmin = User.HasClaim(c => c.Type == "Role" && c.Value == "SuperAdmin");
+}
+<div class="page-header">
+    <partial name="_PageHeader" />
+</div>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-4">
+                <input type="text" name="search" value="@ViewBag.Search" class="form-control" placeholder="بحث بالاسم، الهاتف، رقم الطلب..." />
+            </div>
+            <div class="col-md-3">
+                <select name="courseId" class="form-select">
+                    <option value="">كل الدورات</option>
+                    @foreach (var c in (ViewBag.Courses as dynamic) ?? new List<dynamic>())
+                    {
+                        <option value="@c.CourseId" selected="@(ViewBag.CourseId == (int)c.CourseId)">@c.CourseName</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="dateFrom" value="@(((DateTime?)ViewBag.DateFrom)?.ToString("yyyy-MM-dd"))" class="form-control" />
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="dateTo" value="@(((DateTime?)ViewBag.DateTo)?.ToString("yyyy-MM-dd"))" class="form-control" />
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i></button>
+            </div>
+        </form>
+        <div class="mt-2">
+            <a asp-action="ExportXlsx" asp-route-status="@ViewBag.Status" asp-route-search="@ViewBag.Search" asp-route-courseId="@ViewBag.CourseId" asp-route-dateFrom="@(((DateTime?)ViewBag.DateFrom)?.ToString("yyyy-MM-dd"))" asp-route-dateTo="@(((DateTime?)ViewBag.DateTo)?.ToString("yyyy-MM-dd"))" class="btn btn-sm btn-success"><i class="bi bi-file-earmark-excel"></i> تصدير XLSX</a>
+            @if (!string.IsNullOrEmpty(ViewBag.Search) || ViewBag.CourseId != null || ViewBag.DateFrom != null) { <a asp-action="Index" class="btn btn-sm btn-outline-secondary">مسح الفلاتر</a> }
+        </div>
+    </div>
+</div>
+
+<div class="mb-3">
+    <a asp-action="Index" class="btn btn-sm @(ViewBag.Status == null ? "btn-primary" : "btn-outline-primary")">الكل</a>
+    <a asp-action="Index" asp-route-status="Pending" class="btn btn-sm @(ViewBag.Status == "Pending" ? "btn-warning" : "btn-outline-warning")">معلقة</a>
+    <a asp-action="Index" asp-route-status="Accepted" class="btn btn-sm @(ViewBag.Status == "Accepted" ? "btn-success" : "btn-outline-success")">مقبولة</a>
+    <a asp-action="Index" asp-route-status="Rejected" class="btn btn-sm @(ViewBag.Status == "Rejected" ? "btn-danger" : "btn-outline-danger")">مرفوضة</a>
+    <a asp-action="Index" asp-route-status="Archived" class="btn btn-sm @(ViewBag.Status == "Archived" ? "btn-secondary" : "btn-outline-secondary")">مؤرشفة</a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        @if (registrations.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr><th>رقم الطلب</th><th>الاسم</th><th>الهاتف</th><th>الدورة</th><th>التاريخ</th><th>الحالة</th><th>إجراءات</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in registrations)
+                        {
+                            <tr>
+                                <td><code>@r.RequestNumber</code></td>
+                                <td>@r.FullName</td>
+                                <td>@r.Phone</td>
+                                <td>@r.Course?.CourseName</td>
+                                <td>@r.RegistrationDate.ToString("yyyy-MM-dd")</td>
+                                <td>
+                                    @switch (r.Status)
+                                    {
+                                        case "Pending": <span class="badge bg-warning text-dark">معلق</span> break;
+                                        case "Accepted": <span class="badge bg-success">مقبول</span> break;
+                                        case "Rejected": <span class="badge bg-danger">مرفوض</span> break;
+                                        case "Archived": <span class="badge bg-secondary">مؤرشف</span> break;
+                                    }
+                                </td>
+                                <td>
+                                    @if (r.Status == "Pending")
+                                    {
+                                        <form asp-action="Accept" asp-route-id="@r.RegistrationId" method="post" class="d-inline">
+                                            <button class="btn btn-sm btn-success"><i class="bi bi-check"></i> قبول</button>
+                                        </form>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="rejectRegistration(@r.RegistrationId)"><i class="bi bi-x"></i> رفض</button>
+                                    }
+                                    @if (r.Status == "Rejected")
+                                    {
+                                        <form asp-action="Reopen" asp-route-id="@r.RegistrationId" method="post" class="d-inline">
+                                            <button class="btn btn-sm btn-outline-warning"><i class="bi bi-arrow-counterclockwise"></i> إعادة فتح</button>
+                                        </form>
+                                    }
+                                    @if (r.Status == "Accepted" || r.Status == "Rejected")
+                                    {
+                                        <form asp-action="Archive" asp-route-id="@r.RegistrationId" method="post" class="d-inline">
+                                            <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-archive"></i> أرشفة</button>
+                                        </form>
+                                    }
+                                    @if (isSuperAdmin)
+                                    {
+                                        <form asp-action="Delete" asp-route-id="@r.RegistrationId" method="post" class="d-inline" onsubmit="return confirm('هل أنت متأكد من الحذف النهائي؟ لا يمكن التراجع!')">
+                                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                        </form>
+                                    }
+                                    <a asp-action="Details" asp-route-id="@r.RegistrationId" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <p class="text-center text-muted py-4">لا توجد تسجيلات</p>
+        }
+    </div>
+</div>
+
+@section Scripts {
+<script>
+async function rejectRegistration(id) {
+    const reason = prompt('سبب الرفض:');
+    if (!reason) return;
+    const res = await API.post('/registrations/reject/' + id, { reason: reason });
+    API.handleResponse(res, () => setTimeout(() => location.reload(), 1000));
+}
+</script>
+}

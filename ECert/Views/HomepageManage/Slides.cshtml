@@ -1,0 +1,173 @@
+@model List<ECert.Models.HeroSlide>
+@{
+    ViewData["Title"] = "إدارة الشرائح";
+    ViewData["PageIcon"] = "bi-images";
+    ViewData["PageDesc"] = "إدارة شرائح السلايدر في القسم الرئيسي للصفحة";
+    Layout = "_AdminLayout";
+}
+
+<a asp-action="Index" class="btn btn-outline-secondary btn-sm mb-3"><i class="bi bi-arrow-right me-1"></i>الرجوع إلى إدارة الصفحة الرئيسية</a>
+
+<div class="page-header">
+    <partial name="_PageHeader" />
+    <div class="page-actions">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#slideModal" onclick="resetForm()">
+            <i class="bi bi-plus me-1"></i>إضافة شريحة
+        </button>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>الصورة</th>
+                    <th>العنوان</th>
+                    <th>الأزرار</th>
+                    <th>الحالة</th>
+                    <th>الترتيب</th>
+                    <th>إجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (int i = 0; i < Model.Count; i++)
+                {
+                    var s = Model[i];
+                    <tr>
+                        <td>
+                            @if (!string.IsNullOrEmpty(s.ImageUrl))
+                            {
+                                <img src="@s.ImageUrl" style="width:80px;height:45px;object-fit:cover;border-radius:6px" />
+                            }
+                            else
+                            {
+                                <div style="width:80px;height:45px;background:#e2e8f0;border-radius:6px;display:flex;align-items:center;justify-content:center">
+                                    <i class="bi bi-image text-muted"></i>
+                                </div>
+                            }
+                        </td>
+                        <td>@s.Title</td>
+                        <td><small class="text-muted">@s.Button1Text | @s.Button2Text</small></td>
+                        <td>
+                            @if (s.IsActive)
+                            {
+                                <span class="badge bg-success">ظاهر</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">مخفي</span>
+                            }
+                        </td>
+                        <td>
+                            <form method="post" action="/HomepageManage/MoveSlide" class="d-inline">
+                                <input type="hidden" name="id" value="@s.HeroSlideId" />
+                                <input type="hidden" name="direction" value="-1" />
+                                <button class="btn btn-sm btn-outline-secondary" @(i == 0 ? "disabled" : "")><i class="bi bi-arrow-up"></i></button>
+                            </form>
+                            <form method="post" action="/HomepageManage/MoveSlide" class="d-inline">
+                                <input type="hidden" name="id" value="@s.HeroSlideId" />
+                                <input type="hidden" name="direction" value="1" />
+                                <button class="btn btn-sm btn-outline-secondary" @(i == Model.Count - 1 ? "disabled" : "")><i class="bi bi-arrow-down"></i></button>
+                            </form>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="editSlide(@s.HeroSlideId, '@Html.Raw(s.Title?.Replace("'", "\\'"))', '@Html.Raw(s.Description?.Replace("'", "\\'"))', '@s.Button1Text', '@s.Button1Url', '@s.Button2Text', '@s.Button2Url', @(s.IsActive.ToString().ToLower()))">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <form method="post" action="/HomepageManage/DeleteSlide" class="d-inline" onsubmit="return confirm('حذف الشريحة؟')">
+                                <input type="hidden" name="id" value="@s.HeroSlideId" />
+                                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="slideModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" action="/HomepageManage/SaveSlide" enctype="multipart/form-data">
+                <div class="modal-header">
+                    <h5 class="modal-title">شريحة جديدة</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="HeroSlideId" id="f_id" value="0" />
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">العنوان</label>
+                            <input type="text" name="Title" id="f_title" class="form-control" required />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">الوصف</label>
+                            <textarea name="Description" id="f_desc" class="form-control" rows="2"></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">نص الزر الأول</label>
+                            <input type="text" name="Button1Text" id="f_b1t" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">رابط الزر الأول</label>
+                            <input type="text" name="Button1Url" id="f_b1u" class="form-control" placeholder="/Courses" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">نص الزر الثاني</label>
+                            <input type="text" name="Button2Text" id="f_b2t" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">رابط الزر الثاني</label>
+                            <input type="text" name="Button2Url" id="f_b2u" class="form-control" placeholder="/Certificates/Verify" />
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">صورة الشريحة</label>
+                            <input type="file" name="ImageFile" class="form-control" accept="image/*" />
+                            <small class="text-muted">اتركه فارغاً للإبقاء على الصورة الحالية</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">الحالة</label>
+                            <select name="IsActive" id="f_active" class="form-select">
+                                <option value="true">ظاهر</option>
+                                <option value="false">مخفي</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check me-1"></i>حفظ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function resetForm() {
+    document.getElementById('f_id').value = '0';
+    document.getElementById('f_title').value = '';
+    document.getElementById('f_desc').value = '';
+    document.getElementById('f_b1t').value = '';
+    document.getElementById('f_b1u').value = '';
+    document.getElementById('f_b2t').value = '';
+    document.getElementById('f_b2u').value = '';
+    document.getElementById('f_active').value = 'true';
+}
+function editSlide(id, title, desc, b1t, b1u, b2t, b2u, active) {
+    document.getElementById('f_id').value = id;
+    document.getElementById('f_title').value = title;
+    document.getElementById('f_desc').value = desc;
+    document.getElementById('f_b1t').value = b1t;
+    document.getElementById('f_b1u').value = b1u;
+    document.getElementById('f_b2t').value = b2t;
+    document.getElementById('f_b2u').value = b2u;
+    document.getElementById('f_active').value = active.toString();
+    new bootstrap.Modal(document.getElementById('slideModal')).show();
+}
+</script>
+}

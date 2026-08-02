@@ -1,0 +1,163 @@
+@{
+    ViewData["Title"] = "الدورات";
+    var categories = ViewBag.Categories as List<Category> ?? new();
+    var courses = ViewBag.Courses as List<Course> ?? new();
+    int? currentCategoryId = ViewBag.CurrentCategoryId;
+    string? search = ViewBag.Search;
+}
+
+<!-- Search Bar -->
+<div class="mb-4">
+    <form method="get" class="d-flex gap-2">
+        <input type="text" name="search" value="@search" class="form-control form-control-lg" placeholder="ابحث عن دورة..." />
+        @if (currentCategoryId.HasValue)
+        {
+            <input type="hidden" name="categoryId" value="@currentCategoryId" />
+        }
+        <button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-search"></i></button>
+    </form>
+</div>
+
+@if (!currentCategoryId.HasValue && string.IsNullOrEmpty(search))
+{
+    <!-- Categories Grid - First Screen -->
+    <h2 class="mb-4 text-center"><i class="bi bi-grid-3x3-gap"></i> فئات الدورات</h2>
+    <div class="row g-4 justify-content-center">
+        @foreach (var cat in categories)
+        {
+            var courseCount = cat.Courses?.Count ?? 0;
+            <div class="col-6 col-md-4 col-lg-3">
+                <a asp-action="Index" asp-route-categoryId="@cat.CategoryId" class="text-decoration-none">
+                    <div class="card h-100 shadow-sm border-0 text-center category-card">
+                        <div class="card-body d-flex flex-column align-items-center justify-content-center py-5">
+                            @if (!string.IsNullOrEmpty(cat.IconUrl))
+                            {
+                                <img src="@cat.IconUrl" alt="@cat.CategoryName" class="category-icon mb-3" />
+                            }
+                            else
+                            {
+                                <div class="category-icon-placeholder mb-3">
+                                    <i class="bi bi-mortarboard-fill"></i>
+                                </div>
+                            }
+                            <h6 class="card-title text-dark mb-1">@cat.CategoryName</h6>
+                            <small class="text-muted">@courseCount دورة</small>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <!-- Courses List - After selecting a category or searching -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-book"></i>
+            @if (currentCategoryId.HasValue)
+            {
+                var selectedCat = categories.FirstOrDefault(c => c.CategoryId == currentCategoryId.Value);
+                @:دورات: @(selectedCat?.CategoryName ?? "")
+            }
+            else
+            {
+                @:نتائج البحث
+            }
+        </h2>
+        <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-right"></i> العودة للفئات</a>
+    </div>
+
+    @if (courses.Any())
+    {
+        <div class="row g-4">
+            @foreach (var course in courses)
+            {
+                <div class="col-md-4">
+                    <div class="card h-100 shadow-sm">
+                        @if (!string.IsNullOrEmpty(course.ImageUrl))
+                        {
+                            <img src="@course.ImageUrl" class="card-img-top" style="height:180px; object-fit:cover;" alt="@course.CourseName" />
+                        }
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge bg-info">@course.Category?.CategoryName</span>
+                                @switch (course.Status)
+                                {
+                                    case "OpenForRegistration": <span class="badge bg-success">مفتوحة</span> break;
+                                    case "Published": <span class="badge bg-primary">منشورة</span> break;
+                                    case "Full": <span class="badge bg-danger">ممتلئة</span> break;
+                                    case "InProgress": <span class="badge bg-warning text-dark">جارية</span> break;
+                                    case "Completed": <span class="badge bg-secondary">منتهية</span> break;
+                                }
+                            </div>
+                            <h5 class="card-title">@course.CourseName</h5>
+                            <p class="card-text text-muted small">@course.ShortDescription</p>
+                            <hr />
+                            <p class="small mb-1"><i class="bi bi-person"></i> @course.Instructor?.FullName</p>
+                            <p class="small mb-1"><i class="bi bi-calendar"></i> @course.StartDate?.ToString("yyyy-MM-dd") - @course.EndDate?.ToString("yyyy-MM-dd")</p>
+                            <p class="small mb-1"><i class="bi bi-geo-alt"></i> @course.Location</p>
+                            <p class="small mb-1"><i class="bi bi-people"></i> المقاعد: @(course.TotalSeats - course.BookedSeats) / @course.TotalSeats</p>
+                            @if (!string.IsNullOrEmpty(course.DiscountType) && course.DiscountValue > 0)
+                            {
+                                <p class="mb-0"><span class="text-muted text-decoration-line-through small">@course.Price ريال</span> <span class="fw-bold text-danger fs-5">@course.FinalPrice.ToString("N0") ريال</span></p>
+                            }
+                            else
+                            {
+                                <p class="fw-bold text-primary fs-5 mb-0">@course.Price ريال</p>
+                            }
+                        </div>
+                        <div class="card-footer bg-white">
+                            <a asp-controller="PublicCourses" asp-action="Details" asp-route-id="@course.CourseId" class="btn btn-outline-primary btn-sm">التفاصيل</a>
+                            @if (course.Status == "OpenForRegistration" && course.AvailableSeats > 0)
+                            {
+                                <a asp-controller="Registration" asp-action="Register" asp-route-courseId="@course.CourseId" class="btn btn-primary btn-sm">سجّل الآن</a>
+                            }
+                            else if (course.Status == "Full" || course.AvailableSeats <= 0)
+                            {
+                                <span class="btn btn-secondary btn-sm disabled"><i class="bi bi-x-circle"></i> العدد مكتمل</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-search text-muted" style="font-size: 3rem;"></i>
+            <p class="text-muted mt-3">لا توجد دورات مطابقة</p>
+        </div>
+    }
+}
+
+@section Styles {
+<style>
+    .category-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: pointer;
+    }
+    .category-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+    }
+    .category-icon {
+        width: 80px;
+        height: 80px;
+        object-fit: contain;
+        border-radius: 12px;
+    }
+    .category-icon-placeholder {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        color: white;
+    }
+</style>
+}

@@ -1,0 +1,62 @@
+@model Instructor
+@{
+    ViewData["Title"] = "تعديل بيانات المدرب";
+    Layout = "_AdminLayout";
+}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white"><h4 class="mb-0"><i class="bi bi-pencil"></i> تعديل: @Model.FullName</h4></div>
+            <div class="card-body p-4">
+                <form asp-action="Edit" method="post" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="InstructorId" />
+                    <div class="mb-3">
+                        <label asp-for="FullName" class="form-label"></label>
+                        <input asp-for="FullName" class="form-control" />
+                        <span asp-validation-for="FullName" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Specialization" class="form-label"></label>
+                        <input asp-for="Specialization" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Bio" class="form-label"></label>
+                        <textarea asp-for="Bio" class="form-control" rows="4"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Phone" class="form-label"></label>
+                        <input asp-for="Phone" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label"></label>
+                        <input asp-for="Email" type="email" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">صورة المدرب</label>
+                        @if (!string.IsNullOrEmpty(Model.PhotoUrl))
+                        {
+                            <div class="mb-2 text-center">
+                                <img src="@Model.PhotoUrl" alt="الصورة الحالية" style="max-width:120px; max-height:120px; border-radius:50%; object-fit:cover; border:3px solid #ddd;" />
+                                <p class="small text-muted mt-1">الصورة الحالية</p>
+                            </div>
+                        }
+                        <input type="file" name="photo" accept="image/*" class="form-control" id="photoInput" onchange="previewPhoto(this)" />
+                        <small class="text-muted">اتركه فارغاً إذا لم ترد تغيير الصورة</small>
+                        <div class="mt-2 text-center">
+                            <img id="photoPreview" src="" alt="" style="display:none; max-width:150px; max-height:150px; border-radius:50%; object-fit:cover; border:3px solid #ddd;" />
+                        </div>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input asp-for="IsActive" class="form-check-input" />
+                        <label asp-for="IsActive" class="form-check-label">نشط</label>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> حفظ التعديلات</button>
+                        <a asp-action="Index" class="btn btn-outline-secondary">إلغاء</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

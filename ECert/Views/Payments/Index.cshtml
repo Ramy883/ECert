@@ -1,0 +1,130 @@
+@{
+    ViewData["Title"] = "إدارة الدفعات";
+    ViewData["PageIcon"] = "bi-cash-stack";
+    ViewData["PageDesc"] = "متابعة سجل دفعات المتدربين وطرق السداد";
+    Layout = "_AdminLayout";
+    var payments = ViewBag.Payments as List<ECert.Models.Payment> ?? new();
+}
+<div class="page-header">
+    <partial name="_PageHeader" />
+</div>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body py-3">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small">اسم الطالب</label>
+                <input type="text" name="studentName" value="@ViewBag.StudentName" class="form-control form-control-sm" placeholder="اسم الطالب..." />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">اسم الدورة</label>
+                <input type="text" name="courseName" value="@ViewBag.CourseName" class="form-control form-control-sm" placeholder="اسم الدورة..." />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">رقم الفاتورة</label>
+                <input type="text" name="invoiceNumber" value="@ViewBag.InvoiceNumber" class="form-control form-control-sm" placeholder="INV-..." />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">طريقة الدفع</label>
+                <select name="method" class="form-select form-select-sm">
+                    <option value="">الكل</option>
+                    <option value="Cash" selected="@(ViewBag.Method == "Cash")">نقد</option>
+                    <option value="BankTransfer" selected="@(ViewBag.Method == "BankTransfer")">محافظ إلكترونية</option>
+                    <option value="EWallet" selected="@(ViewBag.Method == "EWallet")">محفظة إلكترونية</option>
+                    <option value="Card" selected="@(ViewBag.Method == "Card")">محافظ إلكترونية</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">حالة الدفعة</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">الكل</option>
+                    <option value="Active" selected="@(ViewBag.Status == "Active")">نشطة</option>
+                    <option value="Cancelled" selected="@(ViewBag.Status == "Cancelled")">ملغية</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">من تاريخ</label>
+                <input type="date" name="dateFrom" value="@(((DateTime?)ViewBag.DateFrom)?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">إلى تاريخ</label>
+                <input type="date" name="dateTo" value="@(((DateTime?)ViewBag.DateTo)?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-search"></i> بحث</button>
+            </div>
+            <div class="col-md-2">
+                <a asp-action="Index" class="btn btn-outline-secondary btn-sm w-100">مسح الفلاتر</a>
+            </div>
+        </form>
+        <div class="mt-2">
+            <a asp-action="ExportXlsx" asp-route-search="@ViewBag.Search" asp-route-method="@ViewBag.Method" asp-route-dateFrom="@(((DateTime?)ViewBag.DateFrom)?.ToString("yyyy-MM-dd"))" asp-route-dateTo="@(((DateTime?)ViewBag.DateTo)?.ToString("yyyy-MM-dd"))" class="btn btn-sm btn-success"><i class="bi bi-file-earmark-excel"></i> تصدير XLSX</a>
+        </div>
+    </div>
+</div>
+
+@if (payments.Any())
+{
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr><th>الفاتورة</th><th>اسم الطالب</th><th>المبلغ</th><th>طريقة الدفع</th><th>التاريخ</th><th>الموظف</th><th>ملاحظات</th><th>الحالة</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in payments)
+                        {
+                            <tr>
+                                <td><code>@p.Invoice?.InvoiceNumber</code></td>
+                                <td>@p.Invoice?.TraineeName</td>
+                                <td class="fw-bold">@p.Amount ريال</td>
+                                <td>
+                                    @switch (p.PaymentMethod)
+                                    {
+                                        case "Cash": <span><i class="bi bi-cash"></i> نقد</span> break;
+                                        case "BankTransfer": <span><i class="bi bi-wallet2"></i> محافظ إلكترونية</span> break;
+                                        case "EWallet": <span><i class="bi bi-wallet2"></i> محفظة</span> break;
+                                        case "Card": <span><i class="bi bi-wallet2"></i> محافظ إلكترونية</span> break;
+                                        default: <span>@p.PaymentMethod</span> break;
+                                    }
+                                    @if (!string.IsNullOrEmpty(p.ReferenceNumber))
+                                    {
+                                        <br /><small class="text-muted"><code>@p.ReferenceNumber</code></small>
+                                    }
+                                </td>
+                                <td>@p.PaymentDate.ToString("yyyy-MM-dd")</td>
+                                <td>@p.RecordedBy</td>
+                                <td class="small text-muted">@p.Notes</td>
+                                <td>
+                                    @if (p.IsCancelled)
+                                    {
+                                        <span class="badge bg-danger">ملغية</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success">نشطة</span>
+                                    }
+                                </td>
+                                <td>
+                                    <form asp-action="Delete" method="post" style="display:inline" onsubmit="return confirm('هل أنت متأكد من حذف هذه الدفعة؟ سيتم تحديث رصيد الفاتورة تلقائياً.')">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@p.PaymentId" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="حذف"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="text-center py-5">
+        <i class="bi bi-cash-stack text-muted" style="font-size: 3rem;"></i>
+        <p class="text-muted mt-3">لا توجد دفعات مسجلة</p>
+    </div>
+}

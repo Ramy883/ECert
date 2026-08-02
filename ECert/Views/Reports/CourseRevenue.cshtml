@@ -1,0 +1,85 @@
+@{
+    ViewData["Title"] = "تقرير إيرادات الدورات";
+    ViewData["PageIcon"] = "bi-graph-up-arrow";
+    ViewData["PageDesc"] = "تحليل الإيرادات والمدفوعات لكل دورة تدريبية";
+    Layout = "_AdminLayout";
+    var data = ViewBag.Data as dynamic;
+    var courses = ViewBag.Courses as dynamic;
+}
+<div class="page-header">
+    <partial name="_PageHeader" />
+    <div class="page-actions">
+        <a asp-action="ExportCourseRevenueXlsx" class="btn btn-success"><i class="bi bi-file-earmark-excel"></i> تصدير XLSX</a>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label small mb-1">اسم الدورة</label>
+                <select name="courseId" class="form-select">
+                    <option value="">كل الدورات</option>
+                    @if (courses != null)
+                    {
+                        @foreach (var c in courses)
+                        {
+                            <option value="@c.CourseId" selected="@(ViewBag.CourseId == c.CourseId)">@c.CourseName</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> تصفية</button>
+                <a asp-action="CourseRevenue" class="btn btn-outline-secondary">مسح</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        @if (data != null && data.Count > 0)
+        {
+            <div class="table-responsive">
+                <table class="table table-hover table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>الدورة</th>
+                            <th>المسجلين</th>
+                            <th>المتوقع</th>
+                            <th>المدفوع</th>
+                            <th>المتبقي</th>
+                            <th>كامل</th>
+                            <th>جزئي</th>
+                            <th>غير مسدد</th>
+                            <th>نقدي</th>
+                            <th>محافظ إلكترونية</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in data)
+                        {
+                            <tr>
+                                <td class="fw-bold">@item.CourseName</td>
+                                <td>@item.Registrations</td>
+                                <td>@(((decimal)item.Expected).ToString("N0")) ريال</td>
+                                <td class="text-success">@(((decimal)item.Paid).ToString("N0")) ريال</td>
+                                <td class="text-danger">@(((decimal)item.Remaining).ToString("N0")) ريال</td>
+                                <td><span class="badge bg-success">@item.FullPaid</span></td>
+                                <td><span class="badge bg-warning text-dark">@item.Partial</span></td>
+                                <td><span class="badge bg-danger">@item.Unpaid</span></td>
+                                <td>@(((decimal)item.Cash).ToString("N0")) ريال</td>
+                                <td>@(((decimal)item.Bank).ToString("N0")) ريال</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <p class="text-center text-muted py-4">لا توجد بيانات</p>
+        }
+    </div>
+</div>

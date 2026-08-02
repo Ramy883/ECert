@@ -1,0 +1,81 @@
+@model List<Instructor>
+@{
+    ViewData["Title"] = "إدارة المدربين";
+    ViewData["PageIcon"] = "bi-person-badge";
+    ViewData["PageDesc"] = "إضافة وإدارة بيانات المدربين وصورهم الشخصية";
+    Layout = "_AdminLayout";
+}
+<div class="page-header">
+    <partial name="_PageHeader" />
+    <div class="page-actions">
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-circle"></i> إضافة مدرب</a>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-8">
+                <input type="text" name="search" value="@ViewBag.Search" class="form-control" placeholder="بحث بالاسم أو التخصص..." />
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> بحث</button>
+                @if (!string.IsNullOrEmpty(ViewBag.Search)) { <a asp-action="Index" class="btn btn-outline-secondary">مسح</a> }
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-4">
+    @if (Model.Any())
+    {
+        @foreach (var inst in Model)
+        {
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            @if (!string.IsNullOrEmpty(inst.PhotoUrl))
+                            {
+                                <img src="@inst.PhotoUrl" class="rounded-circle" width="80" height="80" style="object-fit:cover" alt="@inst.FullName" />
+                            }
+                            else
+                            {
+                                <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width:80px;height:80px;font-size:2rem">
+                                    @inst.FullName[0]
+                                </div>
+                            }
+                        </div>
+                        <h5>@inst.FullName</h5>
+                        <p class="text-muted mb-1"><i class="bi bi-award"></i> @inst.Specialization</p>
+                        <p class="text-muted small mb-2">عدد الدورات: @inst.Courses.Count</p>
+                        @if (!string.IsNullOrEmpty(inst.Phone))
+                        {
+                            <p class="small mb-0"><i class="bi bi-telephone"></i> @inst.Phone</p>
+                        }
+                        @if (!string.IsNullOrEmpty(inst.Email))
+                        {
+                            <p class="small mb-0"><i class="bi bi-envelope"></i> @inst.Email</p>
+                        }
+                        <div class="mt-2">
+                            @if (inst.IsActive) { <span class="badge bg-success">نشط</span> }
+                            else { <span class="badge bg-secondary">غير نشط</span> }
+                        </div>
+                    </div>
+                    <div class="card-footer bg-white text-center">
+                        <a asp-action="Edit" asp-route-id="@inst.InstructorId" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i> تعديل</a>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="col-12">
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-person-badge" style="font-size:3rem"></i>
+                <p class="mt-2">لا يوجد مدربون بعد</p>
+            </div>
+        </div>
+    }
+</div>

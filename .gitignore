@@ -1,0 +1,29 @@
+# Build results
+bin/
+obj/
+publish/
+
+# SQLite database
+*.db
+*.db-shm
+*.db-wal
+
+# User uploads (runtime data)
+ECert/wwwroot/uploads/
+ECert/wwwroot/qrcodes/
+ECert/logs/
+
+# IDE / user files
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Temp / test files
+cookies.txt
+login.html
+test_resp.html
+
+# OS files
+Thumbs.db
+desktop.ini

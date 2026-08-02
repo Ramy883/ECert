@@ -1,0 +1,70 @@
+@model List<ECert.Models.HeroAnimatedText>
+@{
+    ViewData["Title"] = "النصوص المتحركة";
+    ViewData["PageIcon"] = "bi-type";
+    ViewData["PageDesc"] = "نصوص تتناوب في العرض داخل القسم الرئيسي";
+    Layout = "_AdminLayout";
+}
+
+<a asp-action="Index" class="btn btn-outline-secondary btn-sm mb-3"><i class="bi bi-arrow-right me-1"></i>الرجوع إلى إدارة الصفحة الرئيسية</a>
+
+<div class="page-header">
+    <partial name="_PageHeader" />
+</div>
+
+<div class="row">
+    <div class="col-md-7">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white"><strong>النصوص الحالية</strong></div>
+            <div class="card-body p-0">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr><th>النص</th><th>الحالة</th><th>إجراءات</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var t in Model)
+                        {
+                            <tr>
+                                <td>@t.Text</td>
+                                <td>
+                                    @if (t.IsActive)
+                                    {
+                                        <span class="badge bg-success">فعال</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">معطل</span>
+                                    }
+                                </td>
+                                <td>
+                                    <form method="post" action="/HomepageManage/ToggleAnimatedText" class="d-inline">
+                                        <input type="hidden" name="id" value="@t.HeroAnimatedTextId" />
+                                        <button class="btn btn-sm btn-outline-warning"><i class="bi bi-toggle-on"></i></button>
+                                    </form>
+                                    <form method="post" action="/HomepageManage/DeleteAnimatedText" class="d-inline" onsubmit="return confirm('حذف؟')">
+                                        <input type="hidden" name="id" value="@t.HeroAnimatedTextId" />
+                                        <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-5">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white"><strong>إضافة نص جديد</strong></div>
+            <div class="card-body">
+                <form method="post" action="/HomepageManage/AddAnimatedText">
+                    <div class="mb-3">
+                        <label class="form-label">النص</label>
+                        <input type="text" name="text" class="form-control" placeholder="مثال: طور مهاراتك" required />
+                    </div>
+                    <button class="btn btn-primary w-100"><i class="bi bi-plus me-1"></i>إضافة</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

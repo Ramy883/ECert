@@ -1,0 +1,51 @@
+@model PhoneCountry
+@{
+    ViewData["Title"] = "إضافة دولة";
+    Layout = "_AdminLayout";
+}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white"><h4 class="mb-0"><i class="bi bi-plus-circle"></i> إضافة دولة</h4></div>
+            <div class="card-body p-4">
+                <form asp-action="Create" method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="mb-3">
+                        <label asp-for="CountryName" class="form-label"></label>
+                        <input asp-for="CountryName" class="form-control" />
+                        <span asp-validation-for="CountryName" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="CountryCode" class="form-label"></label>
+                        <input asp-for="CountryCode" class="form-control" placeholder="+967" />
+                        <span asp-validation-for="CountryCode" class="text-danger"></span>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label asp-for="MinPhoneLength" class="form-label"></label>
+                            <input asp-for="MinPhoneLength" type="number" class="form-control" />
+                        </div>
+                        <div class="col-6">
+                            <label asp-for="MaxPhoneLength" class="form-label"></label>
+                            <input asp-for="MaxPhoneLength" type="number" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Prefixes" class="form-label"></label>
+                        <input asp-for="Prefixes" class="form-control" placeholder="70,71,73,77,78" />
+                        <small class="text-muted">افصل بين البدايات بفاصلة</small>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input asp-for="IsActive" class="form-check-input" />
+                        <label asp-for="IsActive" class="form-check-label"></label>
+                    </div>
+                    <hr />
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> حفظ</button>
+                        <a asp-action="Index" class="btn btn-outline-secondary">إلغاء</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,456 @@
+﻿@{
+    ViewData["Title"] = "الرئيسية";
+    ViewData["FullWidth"] = true;
+    var slides = ViewBag.Slides as List<HeroSlide> ?? new();
+    var animatedTexts = ViewBag.AnimatedTexts as List<string> ?? new();
+    var sections = ViewBag.Sections as List<HomepageSection> ?? new();
+    var statCards = ViewBag.StatCards as List<StatCard> ?? new();
+    var categories = ViewBag.Categories as dynamic ?? new List<dynamic>();
+    var courses = ViewBag.LatestCourses as List<Course> ?? new();
+    var news = ViewBag.LatestNews as List<Post> ?? new();
+    var instructors = ViewBag.Instructors as List<Instructor> ?? new();
+    int statsCourses = ViewBag.StatsCourses;
+    int statsInstructors = ViewBag.StatsInstructors;
+    int statsTrainees = ViewBag.StatsTrainees;
+    int statsCertificates = ViewBag.StatsCertificates;
+
+    int GetStatValue(StatCard card)
+    {
+        if (!card.IsDynamic) return card.StaticValue;
+        return card.DynamicSource switch
+        {
+            "Courses" => statsCourses,
+            "Instructors" => statsInstructors,
+            "Trainees" => statsTrainees,
+            "Certificates" => statsCertificates,
+            _ => card.StaticValue
+        };
+    }
+}
+
+<!-- ===== HERO SLIDER ===== -->
+<section class="hero-section position-relative">
+    @if (slides.Count > 1)
+    {
+        <div class="hero-slider">
+            @for (int i = 0; i < slides.Count; i++)
+            {
+                var slide = slides[i];
+                <div class="hero-slide @(i == 0 ? "active" : "")" @( !string.IsNullOrEmpty(slide.ImageUrl) ? $"style=background-image:url('{slide.ImageUrl}')" : "")>
+                    <div class="container position-relative" style="z-index:2;">
+                        <div class="row align-items-center">
+                            <div class="col-lg-7 text-center text-lg-start">
+                                @if (animatedTexts.Any())
+                                {
+                                    <div class="hero-badge">
+                                        <i class="bi bi-stars"></i>
+                                        <span class="animated-text-rotate" data-texts='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(animatedTexts))'>@animatedTexts[0]</span>
+                                    </div>
+                                }
+                                <h1 class="hero-title mb-3">@slide.Title</h1>
+                                <p class="hero-subtitle mb-4">@slide.Description</p>
+                                <div class="d-flex gap-3 justify-content-center justify-content-lg-start flex-wrap">
+                                    @if (!string.IsNullOrEmpty(slide.Button1Text))
+                                    {
+                                        <a href="@slide.Button1Url" class="btn btn-light btn-lg px-4 rounded-pill shadow">
+                                            <i class="bi bi-grid-3x3-gap-fill"></i> @slide.Button1Text
+                                        </a>
+                                    }
+                                    @if (!string.IsNullOrEmpty(slide.Button2Text))
+                                    {
+                                        <a href="@slide.Button2Url" class="btn btn-outline-light btn-lg px-4 rounded-pill">
+                                            <i class="bi bi-shield-check"></i> @slide.Button2Text
+                                        </a>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            <div class="hero-slider-dots">
+                @for (int i = 0; i < slides.Count; i++)
+                {
+                    <button class="dot @(i == 0 ? "active" : "")" data-slide="@i"></button>
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        var slide = slides.FirstOrDefault();
+        <div class="container position-relative" style="z-index:2;">
+            <div class="row align-items-center">
+                <div class="col-lg-7 text-center text-lg-start">
+                    @if (animatedTexts.Any())
+                    {
+                        <div class="hero-badge">
+                            <i class="bi bi-stars"></i>
+                            <span class="animated-text-rotate" data-texts='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(animatedTexts))'>@animatedTexts[0]</span>
+                        </div>
+                    }
+                    <h1 class="hero-title mb-3">@(slide?.Title ?? "مرحباً بكم")</h1>
+                    <p class="hero-subtitle mb-4">@(slide?.Description ?? "")</p>
+                    <div class="d-flex gap-3 justify-content-center justify-content-lg-start flex-wrap mb-4">
+                        @if (slide != null && !string.IsNullOrEmpty(slide.Button1Text))
+                        {
+                            <a href="@slide.Button1Url" class="btn btn-light btn-lg px-4 rounded-pill shadow">
+                                <i class="bi bi-grid-3x3-gap-fill"></i> @slide.Button1Text
+                            </a>
+                        }
+                        @if (slide != null && !string.IsNullOrEmpty(slide.Button2Text))
+                        {
+                            <a href="@slide.Button2Url" class="btn btn-outline-light btn-lg px-4 rounded-pill">
+                                <i class="bi bi-shield-check"></i> @slide.Button2Text
+                            </a>
+                        }
+                    </div>
+                    <div class="hero-stats justify-content-center justify-content-lg-start">
+                        <div class="hero-stat">
+                            <span class="hero-stat-number counter" data-target="@statsCourses">0</span>
+                            <span class="hero-stat-label">دورة تدريبية</span>
+                        </div>
+                        <div class="hero-stat">
+                            <span class="hero-stat-number counter" data-target="@statsTrainees">0</span>
+                            <span class="hero-stat-label">متدرب مسجل</span>
+                        </div>
+                        <div class="hero-stat">
+                            <span class="hero-stat-number counter" data-target="@statsCertificates">0</span>
+                            <span class="hero-stat-label">شهادة صادرة</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-5 d-none d-lg-flex justify-content-center">
+                    <div class="hero-icon-wrapper">
+                        <i class="bi bi-mortarboard-fill"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    <div class="hero-wave">
+        <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M0 120L60 105C120 90 240 60 360 45C480 30 600 30 720 37.5C840 45 960 60 1080 67.5C1200 75 1320 75 1380 75L1440 75V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z" fill="var(--gray-50)"/>
+        </svg>
+    </div>
+</section>
+
+<!-- ===== DYNAMIC SECTIONS ===== -->
+@foreach (var section in sections)
+{
+    @switch (section.SectionKey)
+    {
+        case "Categories":
+            <section class="py-5">
+                <div class="container">
+                    <div class="section-header text-center">
+                        <span class="section-badge"><i class="bi bi-grid"></i> التصنيفات</span>
+                        <h2 class="section-title">فئات الدورات التدريبية</h2>
+                        <p class="section-subtitle">اختر المجال الذي يناسب طموحك واستكشف الدورات المتاحة</p>
+                    </div>
+                    <div class="row g-4">
+                        @foreach (var cat in categories)
+                        {
+                            <div class="col-6 col-md-4 col-lg-3 fade-up">
+                                <a asp-controller="PublicCourses" asp-action="Index" asp-route-categoryId="@cat.CategoryId" class="text-decoration-none">
+                                    <div class="category-card text-center p-4 rounded-4 h-100">
+                                        <div class="category-icon mb-3">
+                                            @if (!string.IsNullOrEmpty((string)cat.IconUrl))
+                                            {
+                                                <img src="@cat.IconUrl" alt="@cat.CategoryName" class="category-img" loading="lazy" />
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-journal-bookmark-fill"></i>
+                                            }
+                                        </div>
+                                        <h6 class="fw-bold mb-1 text-dark">@cat.CategoryName</h6>
+                                        <small class="text-muted">@cat.CourseCount دورة متاحة</small>
+                                    </div>
+                                </a>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </section>
+            break;
+
+        case "Courses":
+            <section class="py-5 bg-white">
+                <div class="container">
+                    <div class="section-header text-center">
+                        <span class="section-badge"><i class="bi bi-fire"></i> الأحدث</span>
+                        <h2 class="section-title">أحدث الدورات المتاحة</h2>
+                        <p class="section-subtitle">دورات حضورية مع مدربين معتمدين وشهادات موثقة</p>
+                    </div>
+                    <div class="row g-4">
+                        @foreach (var course in courses)
+                        {
+                            <div class="col-md-6 col-lg-4 fade-up">
+                                <div class="course-card card h-100 border-0 shadow-sm rounded-4 overflow-hidden">
+                                    <div class="position-relative overflow-hidden">
+                                        @if (!string.IsNullOrEmpty(course.ImageUrl))
+                                        {
+                                            <img src="@course.ImageUrl" class="card-img-top course-img" alt="@course.CourseName" loading="lazy" />
+                                        }
+                                        else
+                                        {
+                                            <div class="course-img-placeholder d-flex align-items-center justify-content-center">
+                                                <i class="bi bi-book-half"></i>
+                                            </div>
+                                        }
+                                        <span class="badge course-badge">@course.Category?.CategoryName</span>
+                                        @if (course.Status == "OpenForRegistration" && course.AvailableSeats > 0)
+                                        {
+                                            <span class="badge bg-success status-badge"><i class="bi bi-check-circle-fill"></i> متاح للتسجيل</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary status-badge"><i class="bi bi-x-circle-fill"></i> مكتمل</span>
+                                        }
+                                    </div>
+                                    <div class="card-body p-4">
+                                        <h6 class="card-title fw-bold mb-3" style="font-size:1.05rem;">@course.CourseName</h6>
+                                        <div class="course-meta small text-muted mb-3">
+                                            <span><i class="bi bi-person-fill"></i> @course.Instructor?.FullName</span>
+                                            <span><i class="bi bi-calendar3"></i> @course.StartDate?.ToString("yyyy/MM/dd")</span>
+                                            <span><i class="bi bi-geo-alt-fill"></i> @course.Location</span>
+                                        </div>
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            @if (!string.IsNullOrEmpty(course.DiscountType) && course.DiscountValue > 0)
+                                            {
+                                                <div>
+                                                    <span class="text-muted text-decoration-line-through small">@course.Price.ToString("N0")</span>
+                                                    <span class="fw-bold text-danger fs-5 me-1">@course.FinalPrice.ToString("N0") ريال</span>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <span class="fw-bold text-primary fs-5">@course.Price.ToString("N0") ريال</span>
+                                            }
+                                            <small class="text-muted"><i class="bi bi-people-fill"></i> @course.AvailableSeats مقعد</small>
+                                        </div>
+                                        @{
+                                            var totalSeats = course.TotalSeats > 0 ? course.TotalSeats : 1;
+                                            var bookedPercent = (int)((double)course.BookedSeats / totalSeats * 100);
+                                        }
+                                        <div class="seats-bar">
+                                            <div class="seats-bar-fill" style="width: @(100 - bookedPercent)%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="card-footer bg-white border-0 px-4 pb-4 pt-0">
+                                        <div class="d-flex gap-2">
+                                            <a asp-controller="PublicCourses" asp-action="Details" asp-route-id="@course.CourseId" class="btn btn-outline-primary btn-sm flex-fill rounded-pill">التفاصيل</a>
+                                            @if (course.Status == "OpenForRegistration" && course.AvailableSeats > 0)
+                                            {
+                                                <a asp-controller="Registration" asp-action="Register" asp-route-courseId="@course.CourseId" class="btn btn-primary btn-sm flex-fill rounded-pill">سجّل الآن</a>
+                                            }
+                                            else
+                                            {
+                                                <span class="btn btn-secondary btn-sm flex-fill rounded-pill disabled">مكتمل</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div class="text-center mt-5">
+                        <a asp-controller="PublicCourses" asp-action="Index" class="btn btn-primary btn-lg rounded-pill px-5 shadow">
+                            عرض جميع الدورات <i class="bi bi-arrow-left"></i>
+                        </a>
+                    </div>
+                </div>
+            </section>
+            break;
+
+        case "Stats":
+            <section class="stats-section py-5">
+                <div class="container position-relative" style="z-index:2;">
+                    <div class="row g-4 text-center">
+                        @foreach (var stat in statCards)
+                        {
+                            <div class="col-6 col-md-3 fade-up">
+                                <div class="stat-item">
+                                    <div class="stat-icon" style="color:@stat.Color"><i class="bi @stat.IconClass"></i></div>
+                                    <div class="stat-number counter" data-target="@GetStatValue(stat)">0</div>
+                                    <div class="stat-label">@stat.Label</div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </section>
+            break;
+
+        case "News":
+            @if (news.Any())
+            {
+                <section class="py-5">
+                    <div class="container">
+                        <div class="section-header text-center">
+                            <span class="section-badge"><i class="bi bi-newspaper"></i> الأخبار</span>
+                            <h2 class="section-title">آخر أخبار المركز</h2>
+                            <p class="section-subtitle">تابع آخر الفعاليات والإعلانات والأخبار</p>
+                        </div>
+                        <div class="row g-4">
+                            @foreach (var post in news)
+                            {
+                                <div class="col-md-4 fade-up">
+                                    <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden news-card">
+                                        <div class="position-relative overflow-hidden">
+                                            @if (!string.IsNullOrEmpty(post.ImageUrl))
+                                            {
+                                                <img src="@post.ImageUrl" class="card-img-top news-img" alt="@post.Title" loading="lazy" />
+                                            }
+                                            else
+                                            {
+                                                <div class="news-img-placeholder d-flex align-items-center justify-content-center">
+                                                    <i class="bi bi-newspaper"></i>
+                                                </div>
+                                            }
+                                            <span class="news-date-badge"><i class="bi bi-calendar3"></i> @post.PublishedAt?.ToString("yyyy/MM/dd")</span>
+                                        </div>
+                                        <div class="card-body p-4">
+                                            <h6 class="card-title fw-bold mb-2">@post.Title</h6>
+                                            <p class="card-text small text-muted mb-0">@(post.Content.Length > 120 ? post.Content[..120] + "..." : post.Content)</p>
+                                        </div>
+                                        <div class="card-footer bg-white border-0 px-4 pb-4 pt-0">
+                                            <a asp-controller="Posts" asp-action="Details" asp-route-id="@post.PostId" class="btn btn-sm btn-outline-primary rounded-pill">
+                                                اقرأ المزيد <i class="bi bi-arrow-left"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </section>
+            }
+            break;
+
+        case "Instructors":
+            @if (instructors.Any())
+            {
+                <section class="py-5 bg-white">
+                    <div class="container">
+                        <div class="section-header text-center">
+                            <span class="section-badge"><i class="bi bi-person-badge"></i> الفريق</span>
+                            <h2 class="section-title">نخبة مدربينا</h2>
+                            <p class="section-subtitle">مدربون معتمدون وذوو خبرة عالية في مجالاتهم</p>
+                        </div>
+                        <div class="row g-4">
+                            @foreach (var inst in instructors)
+                            {
+                                <div class="col-6 col-lg-3 fade-up">
+                                    <div class="instructor-card text-center p-4 rounded-4 h-100">
+                                        <div class="instructor-avatar mx-auto mb-3">
+                                            @if (!string.IsNullOrEmpty(inst.PhotoUrl))
+                                            {
+                                                <img src="@inst.PhotoUrl" alt="@inst.FullName" class="rounded-circle w-100 h-100" style="object-fit:cover" loading="lazy" />
+                                            }
+                                            else
+                                            {
+                                                <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center w-100 h-100">
+                                                    <i class="bi bi-person-fill"></i>
+                                                </div>
+                                            }
+                                        </div>
+                                        <h6 class="fw-bold mb-1 text-dark">@inst.FullName</h6>
+                                        <small class="text-primary d-block mb-2 fw-bold">@inst.Specialization</small>
+                                        <p class="small text-muted mb-0">@(inst.Bio?.Length > 80 ? inst.Bio[..80] + "..." : inst.Bio)</p>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </section>
+            }
+            break;
+
+        case "Testimonials":
+            <section class="py-5">
+                <div class="container">
+                    <div class="section-header text-center">
+                        <span class="section-badge"><i class="bi bi-chat-quote"></i> الآراء</span>
+                        <h2 class="section-title">ماذا يقول متدربونا</h2>
+                        <p class="section-subtitle">تجارب حقيقية من متدربين استفادوا من دوراتنا</p>
+                    </div>
+                    <div class="row g-4">
+                        <div class="col-md-4 fade-up">
+                            <div class="testimonial-card p-4 rounded-4 h-100">
+                                <div class="mb-3"><i class="bi bi-star-fill text-warning"></i><i class="bi bi-star-fill text-warning"></i><i class="bi bi-star-fill text-warning"></i><i class="bi bi-star-fill text-warning"></i><i class="bi bi-star-fill text-warning"></i></div>
+                                <p class="mb-4" style="line-height:1.9;">"تجربة تدريبية ممتازة، المدربون محترفون والمحتوى عملي ومفيد جداً."</p>
+                                <div class="d-flex align-items-center">
+                                    <div class="testimonial-avatar me-3"><i class="bi bi-person-fill"></i></div>
+                                    <div><strong class="d-block small">أحمد محمد</strong><small class="text-muted">دورة إدارة المشاريع</small></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 fade-up">
+                            <div class="testimonial-card p-4 rounded-4 h-100">
+                                <div class="mb-3"><i class="bi bi-star-fill text-warning"></i><i class="bi bi-star-fill text-warning"></i><i class="bi bi-star-fill text-warning"></i><i class="bi bi-star-fill text-warning"></i><i class="bi bi-star-fill text-warning"></i></div>
+                                <p class="mb-4" style="line-height:1.9;">"القاعات مجهزة بأحدث التقنيات والبيئة التدريبية محفزة. أنصح الجميع بالتسجيل."</p>
+                                <div class="d-flex align-items-center">
+                                    <div class="testimonial-avatar me-3"><i class="bi bi-person-fill"></i></div>
+                                    <div><strong class="d-block small">سارة علي</strong><small class="text-muted">دورة التصميم الجرافيكي</small></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 fade-up">
+                            <div class="testimonial-card p-4 rounded-4 h-100">
+                                <div class="mb-3"><i class="bi bi-star-fill text-warning"></i><i class="bi bi-star-fill text-warning"></i><i class="bi bi-star-fill text-warning"></i><i class="bi bi-star-fill text-warning"></i><i class="bi bi-star-half text-warning"></i></div>
+                                <p class="mb-4" style="line-height:1.9;">"التسجيل كان سهلاً وسريعاً، والتواصل من فريق المركز ممتاز."</p>
+                                <div class="d-flex align-items-center">
+                                    <div class="testimonial-avatar me-3"><i class="bi bi-person-fill"></i></div>
+                                    <div><strong class="d-block small">خالد عبدالله</strong><small class="text-muted">دورة البرمجة</small></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            break;
+
+        case "Partners":
+            <section class="py-5 bg-white">
+                <div class="container">
+                    <div class="section-header text-center">
+                        <span class="section-badge"><i class="bi bi-handshake"></i> الشركاء</span>
+                        <h2 class="section-title">شركاء النجاح</h2>
+                        <p class="section-subtitle">نتعاون مع أفضل الجهات والمؤسسات</p>
+                    </div>
+                    <div class="row g-4 align-items-center justify-content-center">
+                        <div class="col-4 col-md-2 fade-up"><div class="partner-logo d-flex align-items-center justify-content-center p-3"><i class="bi bi-building fs-1 text-muted"></i></div></div>
+                        <div class="col-4 col-md-2 fade-up"><div class="partner-logo d-flex align-items-center justify-content-center p-3"><i class="bi bi-bank fs-1 text-muted"></i></div></div>
+                        <div class="col-4 col-md-2 fade-up"><div class="partner-logo d-flex align-items-center justify-content-center p-3"><i class="bi bi-hospital fs-1 text-muted"></i></div></div>
+                        <div class="col-4 col-md-2 fade-up"><div class="partner-logo d-flex align-items-center justify-content-center p-3"><i class="bi bi-cpu fs-1 text-muted"></i></div></div>
+                        <div class="col-4 col-md-2 fade-up"><div class="partner-logo d-flex align-items-center justify-content-center p-3"><i class="bi bi-globe fs-1 text-muted"></i></div></div>
+                    </div>
+                </div>
+            </section>
+            break;
+
+        case "CTA":
+            <section class="cta-section py-5">
+                <div class="container position-relative" style="z-index:2;">
+                    <div class="row align-items-center">
+                        <div class="col-lg-8 text-center text-lg-start text-white mb-4 mb-lg-0">
+                            <h3 class="fw-bold mb-2">هل أنت مستعد لتطوير مهاراتك؟</h3>
+                            <p class="mb-0 opacity-75">سجّل الآن في إحدى دوراتنا الحضورية واحصل على شهادة معتمدة</p>
+                        </div>
+                        <div class="col-lg-4 text-center text-lg-end">
+                            <a asp-controller="PublicCourses" asp-action="Index" class="btn btn-light btn-lg rounded-pill px-5 shadow">
+                                <i class="bi bi-rocket-takeoff"></i> ابدأ الآن
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            break;
+    }
+}
+
+@section Scripts {
+<script src="~/js/homepage.js"></script>
+}

@@ -1,0 +1,104 @@
+@model List<Course>
+@{
+    ViewData["Title"] = "إدارة الدورات";
+    ViewData["PageIcon"] = "bi-book";
+    ViewData["PageDesc"] = "إضافة وتعديل الدورات التدريبية ومتابعة المقاعد والأسعار";
+    Layout = "_AdminLayout";
+}
+<div class="page-header">
+    <partial name="_PageHeader" />
+    <div class="page-actions">
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-circle"></i> إضافة دورة</a>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-8">
+                <input type="text" name="search" value="@ViewBag.Search" class="form-control" placeholder="بحث باسم الدورة..." />
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> بحث</button>
+                @if (!string.IsNullOrEmpty(ViewBag.Search)) { <a asp-action="Index" class="btn btn-outline-secondary">مسح</a> }
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>الدورة</th>
+                        <th>الفئة</th>
+                        <th>المدرب</th>
+                        <th>السعر</th>
+                        <th>المقاعد</th>
+                        <th>الحالة</th>
+                        <th>التاريخ</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Any())
+                    {
+                        @foreach (var course in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@course.CourseName</strong>
+                                    @if (course.IsFeatured) { <i class="bi bi-star-fill text-warning" title="مميزة"></i> }
+                                </td>
+                                <td>@course.Category?.CategoryName</td>
+                                <td>@course.Instructor?.FullName</td>
+                                <td>@course.Price.ToString("N0") ريال</td>
+                                <td>
+                                    <span class="@(course.AvailableSeats <= 0 ? "text-danger" : "text-success")">
+                                        @course.BookedSeats / @course.TotalSeats
+                                    </span>
+                                </td>
+                                <td>
+                                    @switch (course.Status)
+                                    {
+                                        case "Draft": <span class="badge bg-secondary">مسودة</span> break;
+                                        case "Published": <span class="badge bg-info">منشورة</span> break;
+                                        case "OpenForRegistration": <span class="badge bg-success">مفتوحة للتسجيل</span> break;
+                                        case "Full": <span class="badge bg-danger">ممتلئة</span> break;
+                                        case "InProgress": <span class="badge bg-primary">جارية</span> break;
+                                        case "Completed": <span class="badge bg-dark">مكتملة</span> break;
+                                        case "Archived": <span class="badge bg-warning text-dark">مؤرشفة</span> break;
+                                    }
+                                </td>
+                                <td>@(course.StartDate?.ToString("yyyy-MM-dd") ?? "-")</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a asp-action="Edit" asp-route-id="@course.CourseId" class="btn btn-outline-primary" title="تعديل"><i class="bi bi-pencil"></i></a>
+                                        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" title="تغيير الحالة">
+                                            <i class="bi bi-gear"></i>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><form asp-action="ChangeStatus" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@course.CourseId" /><input type="hidden" name="status" value="Draft" /><button class="dropdown-item">مسودة</button></form></li>
+                                            <li><form asp-action="ChangeStatus" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@course.CourseId" /><input type="hidden" name="status" value="Published" /><button class="dropdown-item">نشر</button></form></li>
+                                            <li><form asp-action="ChangeStatus" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@course.CourseId" /><input type="hidden" name="status" value="OpenForRegistration" /><button class="dropdown-item">فتح التسجيل</button></form></li>
+                                            <li><form asp-action="ChangeStatus" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@course.CourseId" /><input type="hidden" name="status" value="InProgress" /><button class="dropdown-item">جارية</button></form></li>
+                                            <li><form asp-action="ChangeStatus" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@course.CourseId" /><input type="hidden" name="status" value="Completed" /><button class="dropdown-item">مكتملة</button></form></li>
+                                            <li><hr class="dropdown-divider" /></li>
+                                            <li><form asp-action="Delete" method="post" onsubmit="return confirm('هل أنت متأكد من أرشفة هذه الدورة؟')">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@course.CourseId" /><button class="dropdown-item text-danger">أرشفة</button></form></li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="8" class="text-center text-muted py-4">لا توجد دورات بعد</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

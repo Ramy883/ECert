@@ -1,0 +1,71 @@
+@{
+    ViewData["Title"] = "إعدادات الموقع";
+    ViewData["PageIcon"] = "bi-gear";
+    ViewData["PageDesc"] = "اسم الموقع والشعار ووصف SEO والكلمات المفتاحية";
+    Layout = "_AdminLayout";
+    var settings = ViewBag.Settings as List<ECert.Models.SiteSetting> ?? new List<ECert.Models.SiteSetting>();
+    string GetVal(string key) => settings.FirstOrDefault(s => s.Key == key)?.Value ?? "";
+}
+
+<a asp-action="Index" class="btn btn-outline-secondary btn-sm mb-3"><i class="bi bi-arrow-right me-1"></i>الرجوع إلى إدارة الصفحة الرئيسية</a>
+
+<div class="page-header">
+    <partial name="_PageHeader" />
+</div>
+
+<form method="post" action="/HomepageManage/SaveSiteSettings" enctype="multipart/form-data">
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white"><strong>معلومات عامة</strong></div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">اسم المركز</label>
+                        <input type="text" name="siteName" value="@GetVal("SiteName")" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">الشعار (Logo)</label>
+                        <input type="file" name="LogoFile" class="form-control" accept="image/*" />
+                        @if (!string.IsNullOrEmpty(GetVal("LogoUrl")))
+                        {
+                            <img src="@GetVal("LogoUrl")" class="mt-2" style="max-height:50px" />
+                        }
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">أيقونة الموقع (Favicon)</label>
+                        <input type="file" name="FaviconFile" class="form-control" accept="image/*,.ico" />
+                        <small class="text-muted">يدعم ملفات ICO و PNG — تظهر في تبويب المتصفح والمفضلة</small>
+                        @if (!string.IsNullOrEmpty(GetVal("FaviconUrl")))
+                        {
+                            <img src="@GetVal("FaviconUrl")" class="mt-2" style="max-height:32px" />
+                        }
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">نص حقوق النشر</label>
+                        <input type="text" name="copyrightText" value="@GetVal("CopyrightText")" class="form-control" placeholder="© {year} - {site} - جميع الحقوق محفوظة" />
+                        <small class="text-muted">اتركه فارغاً للنص الافتراضي — استخدم <code>{year}</code> للسنة الحالية و <code>{site}</code> لاسم المركز</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white"><strong>تحسين محركات البحث (SEO)</strong></div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">وصف الموقع (Meta Description)</label>
+                        <textarea name="metaDescription" class="form-control" rows="3">@GetVal("MetaDescription")</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">الكلمات المفتاحية (SEO Keywords)</label>
+                        <input type="text" name="seoKeywords" value="@GetVal("SeoKeywords")" class="form-control" />
+                        <small class="text-muted">افصل بين الكلمات بفاصلة</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="mt-4">
+        <button class="btn btn-primary"><i class="bi bi-check me-1"></i>حفظ الإعدادات</button>
+    </div>
+</form>
