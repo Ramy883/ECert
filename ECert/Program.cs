@@ -1,4 +1,4 @@
-﻿ using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using ECert.Data;
 using ECert.Services;
@@ -18,17 +18,17 @@ builder.Services.AddControllersWithViews()
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     });
 
-var sqliteConn = builder.Configuration.GetConnectionString("DefaultConnection");
+// MySQL is the ONLY supported database provider. SQLite fallback is disabled.
 var mysqlConn = builder.Configuration.GetConnectionString("MySqlConnection");
-var useMySql = !string.IsNullOrWhiteSpace(mysqlConn);
+if (string.IsNullOrWhiteSpace(mysqlConn))
+{
+    throw new InvalidOperationException(
+        "Connection string 'MySqlConnection' is not configured. " +
+        "MySQL is mandatory — SQLite fallback has been disabled.");
+}
 
 builder.Services.AddDbContext<ECertDbContext>(options =>
-{
-    if (useMySql)
-        options.UseMySql(mysqlConn, new MySqlServerVersion(new Version(8, 0, 36)));
-    else
-        options.UseSqlite(sqliteConn);
-});
+    options.UseMySql(mysqlConn, new MySqlServerVersion(new Version(8, 0, 36))));
 
 builder.Services.AddScoped<AuditLogService>();
 builder.Services.AddScoped<NotificationService>();
@@ -97,10 +97,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ECertDbContext>();
-    if (useMySql)
-        db.Database.EnsureCreated();
-    else
-        db.Database.Migrate();
+    db.Database.EnsureCreated();
     DbSeeder.Seed(db);
     DbSeeder.SeedHomepageCms(db);
 }
