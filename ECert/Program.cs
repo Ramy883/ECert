@@ -18,17 +18,11 @@ builder.Services.AddControllersWithViews()
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     });
 
-// MySQL is the ONLY supported database provider. SQLite fallback is disabled.
-var mysqlConn = builder.Configuration.GetConnectionString("MySqlConnection");
-if (string.IsNullOrWhiteSpace(mysqlConn))
-{
-    throw new InvalidOperationException(
-        "Connection string 'MySqlConnection' is not configured. " +
-        "MySQL is mandatory — SQLite fallback has been disabled.");
-}
+var rawMySqlConn = ResolveMySqlConnectionString(builder.Configuration);
+var mysqlConn = NormalizeMySqlConnectionString(rawMySqlConn);
 
 builder.Services.AddDbContext<ECertDbContext>(options =>
-    options.UseMySql(mysqlConn, new MySqlServerVersion(new Version(8, 0, 36))));
+    options.UseMySql(mysqlConn, ServerVersion.AutoDetect(mysqlConn)));
 
 builder.Services.AddScoped<AuditLogService>();
 builder.Services.AddScoped<NotificationService>();
@@ -77,14 +71,12 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddAuthorization();
 
-// Response Compression (Performance)
 builder.Services.AddResponseCompression(options =>
 {
     options.EnableForHttps = true;
     options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[] { "image/svg+xml", "application/json" });
 });
 
-// Forwarded Headers (for reverse proxies like Render)
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
@@ -96,10 +88,19 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<ECertDbContext>();
-    db.Database.EnsureCreated();
-    DbSeeder.Seed(db);
-    DbSeeder.SeedHomepageCms(db);
+    try
+    {
+        var db = scope.ServiceProvider.GetRequiredService<ECertDbContext>();
+        db.Database.EnsureCreated();
+        DbSeeder.Seed(db);
+        DbSeeder.SeedHomepageCms(db);
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine("Database initialization failed.");
+        Console.Error.WriteLine(ex.ToString());
+        throw;
+    }
 }
 
 app.UseForwardedHeaders();
@@ -113,12 +114,11 @@ if (!app.Environment.IsDevelopment())
 
 app.UseResponseCompression();
 
-// Static files caching (Performance)
 app.UseStaticFiles(new StaticFileOptions
 {
     OnPrepareResponse = ctx =>
     {
-        var path = ctx.File.PhysicalPath;
+        var path = ctx.File.PhysicalPath ?? string.Empty;
         if (path.EndsWith(".js") || path.EndsWith(".css") || path.EndsWith(".woff2"))
             ctx.Context.Response.Headers[HeaderNames.CacheControl] = "public,max-age=604800";
         else if (path.EndsWith(".jpg") || path.EndsWith(".png") || path.EndsWith(".webp") || path.EndsWith(".svg") || path.EndsWith(".ico"))
@@ -126,7 +126,6 @@ app.UseStaticFiles(new StaticFileOptions
     }
 });
 
-// Security Headers (Production)
 if (!app.Environment.IsDevelopment())
 {
     app.Use(async (context, next) =>
@@ -138,6 +137,7 @@ if (!app.Environment.IsDevelopment())
         await next();
     });
 }
+
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -147,3 +147,115 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
+
+static string ResolveMySqlConnectionString(IConfiguration configuration)
+{
+    var candidates = new[]
+    {
+        configuration.GetConnectionString("MySqlConnection"),
+        configuration["ConnectionStrings:MySqlConnection"],
+        configuration["ConnectionStrings__MySqlConnection"],
+        configuration["MySqlConnection"],
+        configuration["DATABASE_URL"]
+    };
+
+    var value = candidates.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
+    if (string.IsNullOrWhiteSpace(value))
+    {
+        throw new InvalidOperationException(
+            "MySQL connection string is missing. Supported keys: " +
+            "ConnectionStrings:MySqlConnection, ConnectionStrings__MySqlConnection, MySqlConnection, DATABASE_URL.");
+    }
+
+    return value.Trim();
+}
+
+static string NormalizeMySqlConnectionString(string value)
+{
+    if (value.Contains("Server=", StringComparison.OrdinalIgnoreCase) ||
+        value.Contains("Host=", StringComparison.OrdinalIgnoreCase))
+    {
+        return value;
+    }
+
+    if (value.StartsWith("mysql://", StringComparison.OrdinalIgnoreCase) ||
+        value.StartsWith("mariadb://", StringComparison.OrdinalIgnoreCase))
+    {
+        return ConvertMySqlUrlToAdoNet(value);
+    }
+
+    throw new InvalidOperationException(
+        "Unsupported MySQL connection string format. Use ADO.NET format or a mysql:// URL.");
+}
+
+static string ConvertMySqlUrlToAdoNet(string url)
+{
+    var uri = new Uri(url);
+    var database = uri.AbsolutePath.Trim('/');
+    if (string.IsNullOrWhiteSpace(database))
+        throw new InvalidOperationException("MySQL URL must include a database name.");
+
+    var userInfo = uri.UserInfo.Split(':', 2);
+    var user = userInfo.Length > 0 ? Uri.UnescapeDataString(userInfo[0]) : string.Empty;
+    var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : string.Empty;
+
+    if (string.IsNullOrWhiteSpace(user))
+        throw new InvalidOperationException("MySQL URL must include a username.");
+
+    var options = ParseQueryString(uri.Query);
+    var sslMode = options.TryGetValue("sslmode", out var ssl)
+        ? MapSslMode(ssl)
+        : options.TryGetValue("ssl-mode", out var sslDash)
+            ? MapSslMode(sslDash)
+            : "None";
+
+    var parts = new List<string>
+    {
+        $"Server={uri.Host}",
+        $"Port={(uri.IsDefaultPort ? 3306 : uri.Port)}",
+        $"Database={database}",
+        $"User ID={user}",
+        $"Password={password}",
+        $"SslMode={sslMode}",
+        "AllowPublicKeyRetrieval=True"
+    };
+
+    if (options.TryGetValue("charset", out var charset) && !string.IsNullOrWhiteSpace(charset))
+        parts.Add($"Character Set={charset}");
+
+    return string.Join(';', parts) + ";";
+}
+
+static Dictionary<string, string> ParseQueryString(string query)
+{
+    var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    if (string.IsNullOrWhiteSpace(query))
+        return result;
+
+    var trimmed = query.TrimStart('?');
+    foreach (var pair in trimmed.Split('&', StringSplitOptions.RemoveEmptyEntries))
+    {
+        var pieces = pair.Split('=', 2);
+        var key = Uri.UnescapeDataString(pieces[0]);
+        var value = pieces.Length > 1 ? Uri.UnescapeDataString(pieces[1]) : string.Empty;
+        result[key] = value;
+    }
+
+    return result;
+}
+
+static string MapSslMode(string value)
+{
+    return value.Trim().ToLowerInvariant() switch
+    {
+        "required" => "Required",
+        "require" => "Required",
+        "preferred" => "Preferred",
+        "verifyca" => "VerifyCA",
+        "verifyfull" => "VerifyFull",
+        "disabled" => "None",
+        "disable" => "None",
+        "none" => "None",
+        _ => "None"
+    };
+}
