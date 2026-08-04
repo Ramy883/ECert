@@ -1,59 +1,179 @@
+@model CertificateIssuePageViewModel
 @{
-    ViewData["Title"] = "إصدار شهادة";
+    ViewData["Title"] = "إصدار الشهادات";
+    ViewData["PageIcon"] = "bi-award";
+    ViewData["PageDesc"] = "إصدار جماعي للشهادات مع فلاتر الدورة وتاريخ التسجيل";
     Layout = "_AdminLayout";
-    var eligible = ViewBag.Eligible as List<Registration> ?? new();
 }
-<h2 class="mb-4"><i class="bi bi-award"></i> إصدار شهادة جديدة</h2>
 
-<div class="alert alert-info">
-    <i class="bi bi-info-circle"></i> تظهر هنا فقط المتدربون المقبولون في الدورات المكتملة الذين لم تصدر لهم شهادات بعد.
-</div>
-
-<div class="card shadow-sm border-0">
-    <div class="card-header bg-white"><h6 class="mb-0">المتدربون المؤهلون للحصول على شهادة</h6></div>
-    <div class="card-body">
-        @if (eligible.Any())
-        {
-            <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>رقم الطلب</th>
-                            <th>اسم المتدرب</th>
-                            <th>الدورة</th>
-                            <th>تاريخ القبول</th>
-                            <th>إجراء</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var reg in eligible)
-                        {
-                            <tr>
-                                <td><code>@reg.RequestNumber</code></td>
-                                <td><strong>@reg.FullName</strong></td>
-                                <td>@reg.Course?.CourseName</td>
-                                <td>@(reg.AcceptedDate?.ToString("yyyy-MM-dd") ?? "-")</td>
-                                <td>
-                                    <form asp-action="Issue" method="post" onsubmit="return confirm('هل تريد إصدار شهادة لهذا المتدرب؟')">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="registrationId" value="@reg.RegistrationId" />
-                                        <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-award"></i> إصدار شهادة</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        }
-        else
-        {
-            <div class="text-center py-5 text-muted">
-                <i class="bi bi-award" style="font-size:3rem"></i>
-                <p class="mt-2">لا يوجد متدربون مؤهلون للحصول على شهادات حالياً</p>
-                <p class="small">تأكد من وجود دورات مكتملة بها متدربون مقبولون لم تصدر لهم شهادات</p>
-            </div>
-        }
+<div class="page-header mb-4">
+    <partial name="_PageHeader" />
+    <div class="page-actions d-flex flex-wrap gap-2 mt-3">
+        <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-right"></i> العودة إلى الشهادات</a>
     </div>
 </div>
-<a asp-action="Index" class="btn btn-outline-secondary mt-3"><i class="bi bi-arrow-right"></i> العودة للشهادات</a>
+
+<div class="alert alert-info border-0 shadow-sm">
+    <i class="bi bi-info-circle"></i>
+    ستظهر هنا فقط التسجيلات المقبولة في الدورات المكتملة والتي لم تُصدر لها شهادات بعد. يمكنك تحديد عدة متدربين وإصدار الشهادات دفعة واحدة.
+</div>
+
+<div class="card shadow-sm mb-3 border-0">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-lg-4">
+                <label class="form-label">الدورة</label>
+                <select name="courseId" class="form-select">
+                    <option value="">كل الدورات المكتملة</option>
+                    @foreach (var course in Model.Courses)
+                    {
+                        if (Model.CourseId == course.CourseId)
+                        {
+                            <option value="@course.CourseId" selected>@course.CourseName</option>
+                        }
+                        else
+                        {
+                            <option value="@course.CourseId">@course.CourseName</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-lg-3">
+                <label class="form-label">تاريخ التسجيل من</label>
+                <input type="date" name="registrationFrom" value="@(Model.RegistrationFrom?.ToString("yyyy-MM-dd"))" class="form-control" />
+            </div>
+            <div class="col-lg-3">
+                <label class="form-label">إلى</label>
+                <input type="date" name="registrationTo" value="@(Model.RegistrationTo?.ToString("yyyy-MM-dd"))" class="form-control" />
+            </div>
+            <div class="col-lg-2 d-grid">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> تطبيق</button>
+            </div>
+            <div class="col-12 d-flex flex-wrap gap-2">
+                <a asp-action="Issue" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x-circle"></i> مسح الفلاتر</a>
+                <span class="small text-muted align-self-center">عدد المؤهلين حالياً: <strong>@Model.EligibleRegistrations.Count</strong></span>
+            </div>
+        </form>
+    </div>
+</div>
+
+<form asp-action="IssueBulk" method="post" id="bulkIssueForm">
+    @Html.AntiForgeryToken()
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+                <h6 class="mb-1">المتدربون المؤهلون للحصول على شهادة</h6>
+                <small class="text-muted">الإصدار من داخل النظام سينتج بيانات الشهادة فقط، ثم يمكنك تصديرها لاحقاً مع رابط QR للاستخدام في برامج التصميم الخارجية.</small>
+            </div>
+            <button type="submit" class="btn btn-success" id="issueSelectedBtn" disabled>
+                <i class="bi bi-award"></i> إصدار الشهادات للمحدد
+            </button>
+        </div>
+        <div class="card-body">
+            @if (Model.EligibleRegistrations.Any())
+            {
+                <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="selectAllBtn"><i class="bi bi-check2-square"></i> تحديد الكل</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="clearSelectionBtn"><i class="bi bi-square"></i> إلغاء التحديد</button>
+                    <span class="small text-muted">العناصر المحددة: <strong id="selectedCount">0</strong></span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:50px;"><input type="checkbox" id="toggleAllRows" /></th>
+                                <th>رقم الطلب</th>
+                                <th>اسم المتدرب</th>
+                                <th>الدورة</th>
+                                <th>تاريخ التسجيل</th>
+                                <th>تاريخ القبول</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var reg in Model.EligibleRegistrations)
+                            {
+                                <tr>
+                                    <td><input type="checkbox" class="row-checkbox" name="registrationIds" value="@reg.RegistrationId" /></td>
+                                    <td><code>@reg.RequestNumber</code></td>
+                                    <td><strong>@reg.FullName</strong></td>
+                                    <td>@reg.Course?.CourseName</td>
+                                    <td>@reg.RegistrationDate.ToString("yyyy-MM-dd")</td>
+                                    <td>@(reg.AcceptedDate?.ToString("yyyy-MM-dd") ?? "-")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-award" style="font-size:3rem"></i>
+                    <p class="mt-3 mb-0">لا يوجد متدربون مؤهلون حسب الفلاتر الحالية.</p>
+                </div>
+            }
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+<script>
+    (function () {
+        const toggleAll = document.getElementById('toggleAllRows');
+        const checkboxes = Array.from(document.querySelectorAll('.row-checkbox'));
+        const selectedCount = document.getElementById('selectedCount');
+        const issueBtn = document.getElementById('issueSelectedBtn');
+        const selectAllBtn = document.getElementById('selectAllBtn');
+        const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+        const form = document.getElementById('bulkIssueForm');
+
+        function updateSelectionState() {
+            const checked = checkboxes.filter(x => x.checked).length;
+            if (selectedCount) selectedCount.textContent = checked;
+            if (issueBtn) issueBtn.disabled = checked === 0;
+            if (toggleAll) toggleAll.checked = checkboxes.length > 0 && checked === checkboxes.length;
+        }
+
+        if (toggleAll) {
+            toggleAll.addEventListener('change', function () {
+                checkboxes.forEach(cb => cb.checked = toggleAll.checked);
+                updateSelectionState();
+            });
+        }
+
+        checkboxes.forEach(cb => cb.addEventListener('change', updateSelectionState));
+
+        if (selectAllBtn) {
+            selectAllBtn.addEventListener('click', function () {
+                checkboxes.forEach(cb => cb.checked = true);
+                updateSelectionState();
+            });
+        }
+
+        if (clearSelectionBtn) {
+            clearSelectionBtn.addEventListener('click', function () {
+                checkboxes.forEach(cb => cb.checked = false);
+                updateSelectionState();
+            });
+        }
+
+        if (form) {
+            form.addEventListener('submit', function (event) {
+                const checked = checkboxes.filter(x => x.checked).length;
+                if (checked === 0) {
+                    event.preventDefault();
+                    return;
+                }
+
+                const confirmed = confirm(`هل تريد إصدار ${checked} شهادة الآن؟`);
+                if (!confirmed) {
+                    event.preventDefault();
+                }
+            });
+        }
+
+        updateSelectionState();
+    })();
+</script>
+}

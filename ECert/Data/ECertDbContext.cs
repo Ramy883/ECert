@@ -98,5 +98,17 @@ public class ECertDbContext : DbContext
             .WithOne(r => r.Certificate)
             .HasForeignKey<Certificate>(c => c.RegistrationId);
 
+        modelBuilder.Entity<Certificate>()
+            .HasIndex(c => c.CertificateNumber)
+            .IsUnique();
+
+        modelBuilder.Entity<Certificate>()
+            .HasIndex(c => c.PublicId)
+            .IsUnique();
+
+        modelBuilder.Entity<Certificate>()
+            .HasIndex(c => c.VerificationCode)
+            .IsUnique();
+
     }
 }

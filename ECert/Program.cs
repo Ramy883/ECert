@@ -24,8 +24,13 @@ var mysqlConn = NormalizeMySqlConnectionString(rawMySqlConn);
 builder.Services.AddDbContext<ECertDbContext>(options =>
     options.UseMySql(mysqlConn, ServerVersion.AutoDetect(mysqlConn)));
 
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient();
 builder.Services.AddScoped<AuditLogService>();
 builder.Services.AddScoped<NotificationService>();
+builder.Services.AddSingleton<CertificateSecurityService>();
+builder.Services.AddSingleton<VerifyRequestGuardService>();
+builder.Services.AddScoped<CertificateSchemaMigrationService>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -94,6 +99,8 @@ using (var scope = app.Services.CreateScope())
         db.Database.EnsureCreated();
         DbSeeder.Seed(db);
         DbSeeder.SeedHomepageCms(db);
+        var certificateMigration = scope.ServiceProvider.GetRequiredService<CertificateSchemaMigrationService>();
+        await certificateMigration.EnsureAsync();
     }
     catch (Exception ex)
     {

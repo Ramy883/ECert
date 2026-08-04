@@ -1,68 +1,213 @@
-@model List<Certificate>
+@model CertificateIndexPageViewModel
 @{
     ViewData["Title"] = "الشهادات الصادرة";
     ViewData["PageIcon"] = "bi-award";
-    ViewData["PageDesc"] = "إصدار شهادات المتدربين والتحقق منها";
+    ViewData["PageDesc"] = "إدارة بيانات الشهادات وتصدير روابط التحقق الخاصة بالـ QR";
     Layout = "_AdminLayout";
 }
-<div class="page-header">
+
+<div class="page-header mb-4">
     <partial name="_PageHeader" />
-    <div class="page-actions">
-        <a asp-action="Issue" class="btn btn-primary"><i class="bi bi-plus-circle"></i> إصدار شهادة</a>
+    <div class="page-actions d-flex flex-wrap gap-2 mt-3">
+        <a asp-action="Issue" class="btn btn-primary"><i class="bi bi-plus-circle"></i> إصدار شهادات</a>
+        <a asp-action="ExportFiltered"
+           asp-route-search="@Model.Search"
+           asp-route-courseId="@Model.CourseId"
+           asp-route-issueFrom="@(Model.IssueFrom?.ToString("yyyy-MM-dd"))"
+           asp-route-issueTo="@(Model.IssueTo?.ToString("yyyy-MM-dd"))"
+           class="btn btn-outline-success">
+            <i class="bi bi-file-earmark-excel"></i> تصدير النتائج الحالية
+        </a>
     </div>
 </div>
 
-<div class="card shadow-sm mb-3">
-    <div class="card-body py-2">
-        <form method="get" class="row g-2 align-items-center">
-            <div class="col-md-8">
-                <input type="text" name="search" value="@ViewBag.Search" class="form-control" placeholder="بحث بالاسم أو رقم الشهادة..." />
+<div class="card shadow-sm mb-3 border-0">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-lg-4">
+                <label class="form-label">بحث</label>
+                <input type="text" name="search" value="@Model.Search" class="form-control" placeholder="اسم الطالب أو رقم الشهادة أو المعرف العام" />
             </div>
-            <div class="col-md-4">
-                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> بحث</button>
-                @if (!string.IsNullOrEmpty(ViewBag.Search)) { <a asp-action="Index" class="btn btn-outline-secondary">مسح</a> }
+            <div class="col-lg-3">
+                <label class="form-label">الدورة</label>
+                <select name="courseId" class="form-select">
+                    <option value="">كل الدورات</option>
+                    @foreach (var course in Model.Courses)
+                    {
+                        if (Model.CourseId == course.CourseId)
+                        {
+                            <option value="@course.CourseId" selected>@course.CourseName</option>
+                        }
+                        else
+                        {
+                            <option value="@course.CourseId">@course.CourseName</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-lg-2">
+                <label class="form-label">تاريخ الإصدار من</label>
+                <input type="date" name="issueFrom" value="@(Model.IssueFrom?.ToString("yyyy-MM-dd"))" class="form-control" />
+            </div>
+            <div class="col-lg-2">
+                <label class="form-label">إلى</label>
+                <input type="date" name="issueTo" value="@(Model.IssueTo?.ToString("yyyy-MM-dd"))" class="form-control" />
+            </div>
+            <div class="col-lg-1 d-grid">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i></button>
+            </div>
+            <div class="col-12 d-flex flex-wrap gap-2">
+                <a asp-action="Index" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x-circle"></i> مسح الفلاتر</a>
+                <span class="text-muted small align-self-center">عدد النتائج: <strong>@Model.Certificates.Count</strong></span>
             </div>
         </form>
     </div>
 </div>
 
-<div class="card shadow-sm border-0">
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th>رقم الشهادة</th>
-                        <th>اسم المتدرب</th>
-                        <th>الدورة</th>
-                        <th>تاريخ الإصدار</th>
-                        <th>أصدرها</th>
-                        <th>إجراءات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (Model.Any())
-                    {
-                        @foreach (var cert in Model)
-                        {
+<form asp-action="ExportSelected" method="post" id="selectedExportForm">
+    @Html.AntiForgeryToken()
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+                <h6 class="mb-1">بيانات الشهادات المصدرة</h6>
+                <small class="text-muted">لا توجد صفحة معاينة أو طباعة داخل النظام، ويتم تصدير بيانات الشهادة ورابط QR فقط لاستخدامها في البرامج الخارجية.</small>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="submit" class="btn btn-success btn-sm" id="exportSelectedBtn" disabled>
+                    <i class="bi bi-file-earmark-excel"></i> تصدير المحدد
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            @if (Model.Certificates.Any())
+            {
+                <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="selectAllBtn"><i class="bi bi-check2-square"></i> تحديد الكل</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="clearSelectionBtn"><i class="bi bi-square"></i> إلغاء التحديد</button>
+                    <span class="small text-muted">المحدد حالياً: <strong id="selectedCount">0</strong></span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
                             <tr>
-                                <td><code>@cert.CertificateNumber</code></td>
-                                <td><strong>@cert.TraineeName</strong></td>
-                                <td>@cert.CourseName</td>
-                                <td>@cert.IssueDate.ToString("yyyy-MM-dd")</td>
-                                <td>@cert.IssuedBy</td>
-                                <td>
-                                    <a asp-action="View" asp-route-id="@cert.CertificateId" class="btn btn-sm btn-outline-primary" title="عرض الشهادة"><i class="bi bi-eye"></i> عرض</a>
-                                </td>
+                                <th style="width:50px;"><input type="checkbox" id="toggleAllRows" /></th>
+                                <th>رقم الشهادة</th>
+                                <th>اسم المتدرب</th>
+                                <th>الدورة</th>
+                                <th>تاريخ الإصدار</th>
+                                <th>الحالة</th>
+                                <th>رابط QR</th>
                             </tr>
-                        }
-                    }
-                    else
-                    {
-                        <tr><td colspan="6" class="text-center text-muted py-4">لا توجد شهادات صادرة بعد</td></tr>
-                    }
-                </tbody>
-            </table>
+                        </thead>
+                        <tbody>
+                            @foreach (var cert in Model.Certificates)
+                            {
+                                var verificationUrl = Model.VerificationUrls.TryGetValue(cert.CertificateId, out var url) ? url : "#";
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" class="row-checkbox" name="certificateIds" value="@cert.CertificateId" />
+                                    </td>
+                                    <td>
+                                        <div><code>@cert.CertificateNumber</code></div>
+                                        <div class="small text-muted">@cert.PublicId</div>
+                                    </td>
+                                    <td><strong>@cert.TraineeName</strong></td>
+                                    <td>@cert.CourseName</td>
+                                    <td>@cert.IssueDate.ToString("yyyy-MM-dd")</td>
+                                    <td>
+                                        @if (cert.Status == "Revoked")
+                                        {
+                                            <span class="badge text-bg-danger">ملغية</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge text-bg-success">سارية</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-column gap-2">
+                                            <a href="@verificationUrl" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-box-arrow-up-right"></i> فتح الرابط
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary copy-url-btn" data-url="@verificationUrl">
+                                                <i class="bi bi-clipboard"></i> نسخ الرابط
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-award" style="font-size: 3rem;"></i>
+                    <p class="mt-3 mb-0">لا توجد شهادات مطابقة للبحث أو الفلاتر الحالية.</p>
+                </div>
+            }
         </div>
     </div>
-</div>
+</form>
+
+@section Scripts {
+<script>
+    (function () {
+        const toggleAll = document.getElementById('toggleAllRows');
+        const checkboxes = Array.from(document.querySelectorAll('.row-checkbox'));
+        const selectedCount = document.getElementById('selectedCount');
+        const exportBtn = document.getElementById('exportSelectedBtn');
+        const selectAllBtn = document.getElementById('selectAllBtn');
+        const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+
+        function updateSelectionState() {
+            const checked = checkboxes.filter(x => x.checked).length;
+            if (selectedCount) selectedCount.textContent = checked;
+            if (exportBtn) exportBtn.disabled = checked === 0;
+            if (toggleAll) toggleAll.checked = checkboxes.length > 0 && checked === checkboxes.length;
+        }
+
+        if (toggleAll) {
+            toggleAll.addEventListener('change', function () {
+                checkboxes.forEach(cb => cb.checked = toggleAll.checked);
+                updateSelectionState();
+            });
+        }
+
+        checkboxes.forEach(cb => cb.addEventListener('change', updateSelectionState));
+
+        if (selectAllBtn) {
+            selectAllBtn.addEventListener('click', function () {
+                checkboxes.forEach(cb => cb.checked = true);
+                updateSelectionState();
+            });
+        }
+
+        if (clearSelectionBtn) {
+            clearSelectionBtn.addEventListener('click', function () {
+                checkboxes.forEach(cb => cb.checked = false);
+                updateSelectionState();
+            });
+        }
+
+        document.querySelectorAll('.copy-url-btn').forEach(btn => {
+            btn.addEventListener('click', async function () {
+                const url = btn.getAttribute('data-url') || '';
+                if (!url) return;
+                try {
+                    await navigator.clipboard.writeText(url);
+                    const original = btn.innerHTML;
+                    btn.innerHTML = '<i class="bi bi-check2"></i> تم النسخ';
+                    setTimeout(() => btn.innerHTML = original, 1500);
+                } catch {
+                    alert('تعذر نسخ الرابط تلقائياً.');
+                }
+            });
+        });
+
+        updateSelectionState();
+    })();
+</script>
+}

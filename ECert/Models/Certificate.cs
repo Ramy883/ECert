@@ -7,27 +7,57 @@ public class Certificate
     [Key]
     public int CertificateId { get; set; }
 
+    [Required]
+    [StringLength(40)]
     [Display(Name = "رقم الشهادة")]
     public string CertificateNumber { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(32)]
+    [Display(Name = "المعرف العام")]
+    public string PublicId { get; set; } = string.Empty;
 
     [Required]
     public int RegistrationId { get; set; }
     public Registration? Registration { get; set; }
 
+    [Required]
+    [StringLength(150)]
     [Display(Name = "اسم المتدرب")]
     public string TraineeName { get; set; } = string.Empty;
 
+    [Required]
+    [StringLength(200)]
     [Display(Name = "اسم الدورة")]
     public string CourseName { get; set; } = string.Empty;
 
     [Display(Name = "تاريخ الإصدار")]
     public DateTime IssueDate { get; set; } = DateTime.Now;
 
+    [Required]
+    [StringLength(100)]
     [Display(Name = "أصدرها")]
     public string IssuedBy { get; set; } = string.Empty;
 
+    [Required]
+    [StringLength(24)]
     [Display(Name = "رمز التحقق")]
     public string VerificationCode { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(20)]
+    [Display(Name = "حالة الشهادة")]
+    public string Status { get; set; } = "Valid";
+
+    [Display(Name = "تاريخ الإلغاء")]
+    public DateTime? RevokedAt { get; set; }
+
+    [StringLength(500)]
+    [Display(Name = "سبب الإلغاء")]
+    public string? RevokedReason { get; set; }
+
+    [Display(Name = "إصدار التوقيع")]
+    public int SignatureVersion { get; set; } = 1;
 
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 }

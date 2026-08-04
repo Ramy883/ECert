@@ -114,3 +114,35 @@ public class ReportsViewModel
     public List<Invoice> Invoices { get; set; } = new();
     public string Period { get; set; } = "month";
 }
+
+public class CertificateIssuePageViewModel
+{
+    public int? CourseId { get; set; }
+    public DateTime? RegistrationFrom { get; set; }
+    public DateTime? RegistrationTo { get; set; }
+    public List<Course> Courses { get; set; } = new();
+    public List<Registration> EligibleRegistrations { get; set; } = new();
+}
+
+public class CertificateIndexPageViewModel
+{
+    public string? Search { get; set; }
+    public int? CourseId { get; set; }
+    public DateTime? IssueFrom { get; set; }
+    public DateTime? IssueTo { get; set; }
+    public List<Course> Courses { get; set; } = new();
+    public List<Certificate> Certificates { get; set; } = new();
+    public Dictionary<int, string> VerificationUrls { get; set; } = new();
+}
+
+public class PublicCertificateVerificationViewModel
+{
+    public bool IsValid { get; set; }
+    public string SearchCode { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+    public string? CertificateNumber { get; set; }
+    public string? TraineeName { get; set; }
+    public string? CourseName { get; set; }
+    public DateTime? IssueDate { get; set; }
+    public string? Status { get; set; }
+}
