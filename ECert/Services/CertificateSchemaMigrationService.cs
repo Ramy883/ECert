@@ -1,3 +1,4 @@
+using System.Data;
 using ECert.Data;
 using ECert.Models;
 using Microsoft.EntityFrameworkCore;
@@ -32,8 +33,7 @@ public class CertificateSchemaMigrationService
 
     private async Task EnsureColumnAsync(string columnName, string definitionSql)
     {
-        var exists = await ColumnExistsAsync(columnName);
-        if (exists)
+        if (await ColumnExistsAsync(columnName))
             return;
 
         await _db.Database.ExecuteSqlRawAsync($"ALTER TABLE `Certificates` ADD COLUMN `{columnName}` {definitionSql};");
@@ -41,48 +41,68 @@ public class CertificateSchemaMigrationService
 
     private async Task<bool> ColumnExistsAsync(string columnName)
     {
-        await using var connection = _db.Database.GetDbConnection();
-        if (connection.State != System.Data.ConnectionState.Open)
-            await connection.OpenAsync();
+        var connection = _db.Database.GetDbConnection();
+        var shouldCloseConnection = connection.State != ConnectionState.Open;
 
-        await using var command = connection.CreateCommand();
-        command.CommandText = @"
+        try
+        {
+            if (shouldCloseConnection)
+                await connection.OpenAsync();
+
+            await using var command = connection.CreateCommand();
+            command.CommandText = @"
 SELECT COUNT(*)
 FROM INFORMATION_SCHEMA.COLUMNS
 WHERE TABLE_SCHEMA = DATABASE()
   AND TABLE_NAME = 'Certificates'
   AND COLUMN_NAME = @columnName;";
 
-        var parameter = command.CreateParameter();
-        parameter.ParameterName = "@columnName";
-        parameter.Value = columnName;
-        command.Parameters.Add(parameter);
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = "@columnName";
+            parameter.Value = columnName;
+            command.Parameters.Add(parameter);
 
-        var result = await command.ExecuteScalarAsync();
-        return Convert.ToInt32(result) > 0;
+            var result = await command.ExecuteScalarAsync();
+            return Convert.ToInt32(result) > 0;
+        }
+        finally
+        {
+            if (shouldCloseConnection && connection.State == ConnectionState.Open)
+                await connection.CloseAsync();
+        }
     }
 
     private async Task<bool> IndexExistsAsync(string indexName)
     {
-        await using var connection = _db.Database.GetDbConnection();
-        if (connection.State != System.Data.ConnectionState.Open)
-            await connection.OpenAsync();
+        var connection = _db.Database.GetDbConnection();
+        var shouldCloseConnection = connection.State != ConnectionState.Open;
 
-        await using var command = connection.CreateCommand();
-        command.CommandText = @"
+        try
+        {
+            if (shouldCloseConnection)
+                await connection.OpenAsync();
+
+            await using var command = connection.CreateCommand();
+            command.CommandText = @"
 SELECT COUNT(*)
 FROM INFORMATION_SCHEMA.STATISTICS
 WHERE TABLE_SCHEMA = DATABASE()
   AND TABLE_NAME = 'Certificates'
   AND INDEX_NAME = @indexName;";
 
-        var parameter = command.CreateParameter();
-        parameter.ParameterName = "@indexName";
-        parameter.Value = indexName;
-        command.Parameters.Add(parameter);
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = "@indexName";
+            parameter.Value = indexName;
+            command.Parameters.Add(parameter);
 
-        var result = await command.ExecuteScalarAsync();
-        return Convert.ToInt32(result) > 0;
+            var result = await command.ExecuteScalarAsync();
+            return Convert.ToInt32(result) > 0;
+        }
+        finally
+        {
+            if (shouldCloseConnection && connection.State == ConnectionState.Open)
+                await connection.CloseAsync();
+        }
     }
 
     private async Task EnsureUniqueIndexAsync(string indexName, string columnName)
