@@ -24,6 +24,11 @@ public class CertificateSchemaMigrationService
         await EnsureColumnAsync("RevokedReason", "VARCHAR(500) NULL");
         await EnsureColumnAsync("SignatureVersion", "INT NOT NULL DEFAULT 1");
 
+        await EnsureColumnTypeAsync("CertificateNumber", "VARCHAR(40) NULL");
+        await EnsureColumnTypeAsync("PublicId", "VARCHAR(32) NULL");
+        await EnsureColumnTypeAsync("VerificationCode", "VARCHAR(24) NULL");
+        await EnsureColumnTypeAsync("Status", "VARCHAR(20) NOT NULL DEFAULT 'Valid'");
+
         await NormalizeCertificateDataAsync();
 
         await EnsureUniqueIndexAsync("IX_Certificates_CertificateNumber", "CertificateNumber");
@@ -105,6 +110,14 @@ WHERE TABLE_SCHEMA = DATABASE()
         }
     }
 
+    private async Task EnsureColumnTypeAsync(string columnName, string definitionSql)
+    {
+        if (!await ColumnExistsAsync(columnName))
+            return;
+
+        await _db.Database.ExecuteSqlRawAsync($"ALTER TABLE `Certificates` MODIFY COLUMN `{columnName}` {definitionSql};");
+    }
+
     private async Task EnsureUniqueIndexAsync(string indexName, string columnName)
     {
         if (await IndexExistsAsync(indexName))
@@ -168,7 +181,7 @@ WHERE TABLE_SCHEMA = DATABASE()
         var changed = false;
         var duplicates = certificates
             .Where(c => !string.IsNullOrWhiteSpace(selector(c)))
-            .GroupBy(selector)
+            .GroupBy(selector, StringComparer.OrdinalIgnoreCase)
             .Where(g => g.Count() > 1)
             .ToList();
 
