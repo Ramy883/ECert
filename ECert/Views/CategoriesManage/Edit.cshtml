@@ -1,7 +1,8 @@
-@model ECert.Models.Category
+@using ECert.Services
 @{
     ViewData["Title"] = "تعديل فئة";
     Layout = "_AdminLayout";
+    ViewData["CurrentIcon"] = CategoryIconCatalog.IsAllowed(Model.IconUrl) ? Model.IconUrl : null;
 }
 <h2 class="mb-4"><i class="bi bi-pencil-square"></i> تعديل الفئة: @Model.CategoryName</h2>
 
@@ -17,20 +18,32 @@
                 <label class="form-label">الوصف</label>
                 <textarea name="Description" class="form-control" rows="3">@Model.Description</textarea>
             </div>
-            <div class="mb-3">
-                <label class="form-label">أيقونة الفئة (صورة)</label>
+
+            <partial name="_PresetIconPicker" />
+
+            <div class="mb-3 pt-3 border-top">
+                <label class="form-label fw-semibold" for="categoryImage">أو ارفع صورة أو أيقونة مخصصة</label>
                 @if (!string.IsNullOrEmpty(Model.IconUrl))
                 {
-                    <div class="mb-2">
-                        <img src="@Model.IconUrl" alt="الأيقونة الحالية" style="width:80px;height:80px;object-fit:contain;border-radius:12px;border:2px solid #ddd;padding:5px;" />
-                        <small class="text-muted d-block">الأيقونة الحالية</small>
+                    <div class="mb-2 d-flex align-items-center gap-2">
+                        @if (CategoryIconCatalog.IsAllowed(Model.IconUrl))
+                        {
+                            <span class="d-inline-flex align-items-center justify-content-center rounded border bg-light" style="width:80px;height:80px;">
+                                <i class="@Model.IconUrl text-primary" style="font-size:2rem;"></i>
+                            </span>
+                        }
+                        else
+                        {
+                            <img src="@Model.IconUrl" alt="الأيقونة الحالية" style="width:80px;height:80px;object-fit:contain;border-radius:12px;border:2px solid #ddd;padding:5px;" />
+                        }
+                        <small class="text-muted">الأيقونة الحالية</small>
                     </div>
                 }
-                <input type="file" name="icon" accept="image/*" class="form-control" onchange="previewIcon(this)" />
+                <input id="categoryImage" type="file" name="icon" accept="image/*" class="form-control" onchange="previewIcon(this)" />
                 <div class="mt-2 text-center">
-                    <img id="iconPreview" src="" alt="" style="display:none; max-width:100px; max-height:100px; object-fit:contain; border-radius:12px; border:2px solid #ddd; padding:5px;" />
+                    <img id="iconPreview" src="" alt="معاينة الصورة المختارة" style="display:none; max-width:100px; max-height:100px; object-fit:contain; border-radius:12px; border:2px solid #ddd; padding:5px;" />
                 </div>
-                <small class="text-muted">اختر صورة جديدة لتغيير الأيقونة (اتركها فارغة للإبقاء على الحالية)</small>
+                <small class="text-muted">اترك الحقل فارغاً للإبقاء على الأيقونة الحالية. عند رفع صورة، تكون الصورة هي المعتمدة.</small>
             </div>
             <div class="mb-3 form-check">
                 <input type="checkbox" name="IsActive" value="true" class="form-check-input" @(Model.IsActive ? "checked" : "") />
@@ -49,6 +62,8 @@
 function previewIcon(input) {
     const preview = document.getElementById('iconPreview');
     if (input.files && input.files[0]) {
+        document.querySelectorAll('.preset-icon-input').forEach(item => item.checked = false);
+        document.querySelectorAll('.preset-icon-option').forEach(item => item.classList.remove('is-selected'));
         const reader = new FileReader();
         reader.onload = function(e) {
             preview.src = e.target.result;

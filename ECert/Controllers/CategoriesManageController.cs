@@ -33,20 +33,30 @@ public class CategoriesManageController : Controller
     public IActionResult Create()
     {
         if (!HasPermission("manage-courses")) return Forbid();
+        PrepareIconOptions();
         return View();
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(Category category, IFormFile? icon)
+    public async Task<IActionResult> Create([Bind("CategoryName,Description,IsActive")] Category category, IFormFile? icon, string? presetIcon)
     {
         if (!HasPermission("manage-courses")) return Forbid();
         if (string.IsNullOrWhiteSpace(category.CategoryName))
         {
             TempData["Error"] = "اسم الفئة مطلوب.";
+            PrepareIconOptions();
             return View(category);
         }
 
+        if (!TryApplyPresetIcon(category, presetIcon))
+        {
+            TempData["Error"] = "الأيقونة الجاهزة المختارة غير صالحة.";
+            PrepareIconOptions();
+            return View(category);
+        }
+
+        // الصورة المرفوعة تتقدم على الأيقونة الجاهزة عند اختيار الخيارين معاً.
         if (icon != null && icon.Length > 0)
             category.IconUrl = await SaveIcon(icon);
 
@@ -63,21 +73,39 @@ public class CategoriesManageController : Controller
         if (!HasPermission("manage-courses")) return Forbid();
         var category = await _db.Categories.FindAsync(id);
         if (category == null) return NotFound();
+        PrepareIconOptions();
         return View(category);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, Category category, IFormFile? icon)
+    public async Task<IActionResult> Edit(int id, [Bind("CategoryName,Description,IsActive")] Category category, IFormFile? icon, string? presetIcon)
     {
         if (!HasPermission("manage-courses")) return Forbid();
         var existing = await _db.Categories.FindAsync(id);
         if (existing == null) return NotFound();
 
+        if (string.IsNullOrWhiteSpace(category.CategoryName))
+        {
+            TempData["Error"] = "اسم الفئة مطلوب.";
+            category.IconUrl = existing.IconUrl;
+            PrepareIconOptions();
+            return View(category);
+        }
+
+        if (!TryApplyPresetIcon(existing, presetIcon))
+        {
+            TempData["Error"] = "الأيقونة الجاهزة المختارة غير صالحة.";
+            category.IconUrl = existing.IconUrl;
+            PrepareIconOptions();
+            return View(category);
+        }
+
         existing.CategoryName = category.CategoryName;
         existing.Description = category.Description;
         existing.IsActive = category.IsActive;
 
+        // الصورة المرفوعة تتقدم على الأيقونة الجاهزة عند اختيار الخيارين معاً.
         if (icon != null && icon.Length > 0)
             existing.IconUrl = await SaveIcon(icon);
 
@@ -106,6 +134,17 @@ public class CategoriesManageController : Controller
         await _audit.LogAsync(User.Identity?.Name ?? "", "Delete", "Category", id);
         TempData["Success"] = "تم حذف الفئة.";
         return RedirectToAction("Index");
+    }
+
+    private void PrepareIconOptions() => ViewBag.PresetIcons = CategoryIconCatalog.Options;
+
+    private static bool TryApplyPresetIcon(Category category, string? presetIcon)
+    {
+        if (string.IsNullOrWhiteSpace(presetIcon)) return true;
+        if (!CategoryIconCatalog.IsAllowed(presetIcon)) return false;
+
+        category.IconUrl = presetIcon;
+        return true;
     }
 
     private async Task<string> SaveIcon(IFormFile icon)

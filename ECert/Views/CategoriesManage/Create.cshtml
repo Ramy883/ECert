@@ -1,7 +1,7 @@
-@model ECert.Models.Category
 @{
     ViewData["Title"] = "إضافة فئة";
     Layout = "_AdminLayout";
+    ViewData["CurrentIcon"] = null;
 }
 <h2 class="mb-4"><i class="bi bi-plus-circle"></i> إضافة فئة جديدة</h2>
 
@@ -17,13 +17,16 @@
                 <label class="form-label">الوصف</label>
                 <textarea name="Description" class="form-control" rows="3"></textarea>
             </div>
-            <div class="mb-3">
-                <label class="form-label">أيقونة الفئة (صورة)</label>
-                <input type="file" name="icon" accept="image/*" class="form-control" onchange="previewIcon(this)" />
+
+            <partial name="_PresetIconPicker" />
+
+            <div class="mb-3 pt-3 border-top">
+                <label class="form-label fw-semibold" for="categoryImage">أو ارفع صورة أو أيقونة مخصصة</label>
+                <input id="categoryImage" type="file" name="icon" accept="image/*" class="form-control" onchange="previewIcon(this)" />
                 <div class="mt-2 text-center">
-                    <img id="iconPreview" src="" alt="" style="display:none; max-width:100px; max-height:100px; object-fit:contain; border-radius:12px; border:2px solid #ddd; padding:5px;" />
+                    <img id="iconPreview" src="" alt="معاينة الصورة المختارة" style="display:none; max-width:100px; max-height:100px; object-fit:contain; border-radius:12px; border:2px solid #ddd; padding:5px;" />
                 </div>
-                <small class="text-muted">اختر صورة أو أيقونة تمثل الفئة (مثلاً: سماعة طبيب لفئة الطب)</small>
+                <small class="text-muted">رفع صورة اختياري. إذا اخترت صورة وأيقونة جاهزة معاً، ستُستخدم الصورة المرفوعة.</small>
             </div>
             <div class="mb-3 form-check">
                 <input type="checkbox" name="IsActive" value="true" class="form-check-input" checked />
@@ -42,6 +45,8 @@
 function previewIcon(input) {
     const preview = document.getElementById('iconPreview');
     if (input.files && input.files[0]) {
+        document.querySelectorAll('.preset-icon-input').forEach(item => item.checked = false);
+        document.querySelectorAll('.preset-icon-option').forEach(item => item.classList.remove('is-selected'));
         const reader = new FileReader();
         reader.onload = function(e) {
             preview.src = e.target.result;

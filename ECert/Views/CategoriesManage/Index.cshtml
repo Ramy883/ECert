@@ -1,4 +1,5 @@
 @model List<ECert.Models.Category>
+@using ECert.Services
 @{
     ViewData["Title"] = "إدارة الفئات";
     ViewData["PageIcon"] = "bi-grid-3x3-gap";
@@ -45,7 +46,13 @@
                     {
                         <tr>
                             <td>
-                                @if (!string.IsNullOrEmpty(cat.IconUrl))
+                                @if (CategoryIconCatalog.IsAllowed(cat.IconUrl))
+                                {
+                                    <span class="d-inline-flex align-items-center justify-content-center rounded bg-light text-primary" style="width:40px;height:40px;">
+                                        <i class="@cat.IconUrl" style="font-size:1.35rem;"></i>
+                                    </span>
+                                }
+                                else if (!string.IsNullOrEmpty(cat.IconUrl))
                                 {
                                     <img src="@cat.IconUrl" alt="@cat.CategoryName" style="width:40px;height:40px;object-fit:contain;border-radius:8px;" />
                                 }

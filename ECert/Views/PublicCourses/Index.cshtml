@@ -1,3 +1,4 @@
+@using ECert.Services
 @{
     ViewData["Title"] = "الدورات";
     var categories = ViewBag.Categories as List<Category> ?? new();
@@ -30,7 +31,13 @@
                 <a asp-action="Index" asp-route-categoryId="@cat.CategoryId" class="text-decoration-none">
                     <div class="card h-100 shadow-sm border-0 text-center category-card">
                         <div class="card-body d-flex flex-column align-items-center justify-content-center py-5">
-                            @if (!string.IsNullOrEmpty(cat.IconUrl))
+                            @if (CategoryIconCatalog.IsAllowed(cat.IconUrl))
+                            {
+                                <div class="category-icon-placeholder mb-3">
+                                    <i class="@cat.IconUrl"></i>
+                                </div>
+                            }
+                            else if (!string.IsNullOrEmpty(cat.IconUrl))
                             {
                                 <img src="@cat.IconUrl" alt="@cat.CategoryName" class="category-icon mb-3" />
                             }
