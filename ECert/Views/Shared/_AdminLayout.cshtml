@@ -94,23 +94,83 @@
             min-width: 0;
         }
         .admin-topbar {
+            min-height: 72px;
             background: #fff;
-            padding: 14px 28px;
+            padding: 12px 28px;
             border-bottom: 1px solid #e5e9f0;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 16px;
             position: sticky;
             top: 0;
             z-index: 1020;
             box-shadow: 0 1px 4px rgba(0,0,0,0.03);
         }
+        .admin-topbar__group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .admin-icon-button {
+            width: 42px;
+            height: 42px;
+            padding: 0;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #fff;
+            color: #475569;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            line-height: 1;
+            text-decoration: none;
+            cursor: pointer;
+            transition: transform .2s ease, background-color .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease;
+        }
+        .admin-icon-button:hover {
+            color: #1d4ed8;
+            background: #eff6ff;
+            border-color: #bfdbfe;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(37,99,235,.12);
+        }
+        .admin-icon-button:focus-visible {
+            outline: 3px solid rgba(37,99,235,.32);
+            outline-offset: 2px;
+        }
+        .admin-icon-button--danger:hover {
+            color: #dc2626;
+            background: #fef2f2;
+            border-color: #fecaca;
+            box-shadow: 0 4px 12px rgba(220,38,38,.12);
+        }
+        .admin-user-indicator {
+            background: #f8fafc;
+            color: #64748b;
+            cursor: default;
+        }
+        .admin-user-indicator:hover {
+            color: #475569;
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+            transform: none;
+            box-shadow: none;
+        }
         .admin-body { padding: 28px; }
         @@media (max-width: 992px) {
-            .admin-sidebar { transform: translateX(100%); }
+            .admin-sidebar { width: min(280px, 88vw); transform: translateX(100%); }
             .admin-sidebar.show { transform: translateX(0); }
             .admin-content { margin-right: 0; }
+            .admin-topbar { padding: 10px 16px; }
             .admin-body { padding: 16px; }
+        }
+        @@media (max-width: 575.98px) {
+            .admin-topbar { min-height: 64px; padding: 10px 12px; gap: 8px; }
+            .admin-topbar__group { gap: 8px; }
+            .admin-icon-button { width: 42px; height: 42px; border-radius: 11px; }
+            .admin-body { padding: 12px; }
         }
     </style>
 </head>
@@ -283,22 +343,24 @@
 
         <!-- Main Content -->
         <div class="admin-content">
-            <div class="admin-topbar">
-                <div>
-                    <button class="btn btn-sm btn-outline-secondary d-md-none" onclick="document.getElementById('sidebar').classList.toggle('show')">
-                        <i class="bi bi-list"></i>
+            <header class="admin-topbar" aria-label="شريط إجراءات لوحة الإدارة">
+                <div class="admin-topbar__group">
+                    <button type="button" id="sidebarToggle" class="admin-icon-button d-lg-none" aria-controls="sidebar" aria-expanded="false" aria-label="فتح وإغلاق القائمة" title="القائمة">
+                        <i class="bi bi-list" aria-hidden="true"></i>
                     </button>
-                    <a asp-controller="@dashController" asp-action="Index" class="btn btn-sm btn-outline-primary me-2">
-                        <i class="bi bi-house"></i> لوحة التحكم
+                    <a asp-controller="@dashController" asp-action="Index" class="admin-icon-button" aria-label="لوحة التحكم" title="لوحة التحكم">
+                        <i class="bi bi-house-door" aria-hidden="true"></i>
                     </a>
                 </div>
-                <div class="d-flex align-items-center gap-3">
-                    <span class="text-muted small"><i class="bi bi-person-circle"></i> @User.Identity?.Name</span>
-                    <a asp-controller="Auth" asp-action="Logout" class="btn btn-sm btn-outline-danger">
-                        <i class="bi bi-box-arrow-left"></i> خروج
+                <div class="admin-topbar__group">
+                    <span class="admin-icon-button admin-user-indicator" role="img" aria-label="المستخدم الحالي: @User.Identity?.Name" title="@User.Identity?.Name">
+                        <i class="bi bi-person-circle" aria-hidden="true"></i>
+                    </span>
+                    <a asp-controller="Auth" asp-action="Logout" class="admin-icon-button admin-icon-button--danger" aria-label="تسجيل الخروج" title="تسجيل الخروج">
+                        <i class="bi bi-box-arrow-left" aria-hidden="true"></i>
                     </a>
                 </div>
-            </div>
+            </header>
 
             <div class="admin-body">
                 @if (TempData["Success"] != null)
@@ -317,6 +379,27 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/api.js"></script>
     <script src="~/js/site.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const sidebar = document.getElementById('sidebar');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            if (!sidebar || !sidebarToggle) return;
+
+            sidebarToggle.addEventListener('click', function () {
+                sidebar.classList.toggle('show');
+                sidebarToggle.setAttribute('aria-expanded', sidebar.classList.contains('show').toString());
+            });
+
+            sidebar.querySelectorAll('a').forEach(function (link) {
+                link.addEventListener('click', function () {
+                    if (window.innerWidth < 993) {
+                        sidebar.classList.remove('show');
+                        sidebarToggle.setAttribute('aria-expanded', 'false');
+                    }
+                });
+            });
+        });
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
