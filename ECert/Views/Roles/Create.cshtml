@@ -1,0 +1,31 @@
+@model RoleFormViewModel
+@{
+    ViewData["Title"] = "إنشاء دور مخصص";
+    ViewData["PageIcon"] = "bi-shield-plus";
+    ViewData["PageDesc"] = "كوّن دوراً جديداً عبر اختيار الصلاحيات المناسبة لمهام الموظف";
+    Layout = "_AdminLayout";
+}
+
+<div class="page-header">
+    <partial name="_PageHeader" />
+    <div class="page-actions">
+        <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-right"></i> العودة للأدوار</a>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+        <div class="alert alert-light border d-flex gap-2 align-items-start" role="note">
+            <i class="bi bi-lightbulb text-warning mt-1"></i>
+            <div>سمِّ الدور بحسب الوظيفة، مثل <strong>مشرف التسجيلات</strong> أو <strong>منسق المحتوى</strong>، ثم امنح أقل مجموعة صلاحيات لازمة لتنفيذ مهامه.</div>
+        </div>
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+            <partial name="_RoleForm" model="Model" />
+            <div class="d-flex flex-wrap gap-2 border-top mt-4 pt-4">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-shield-check"></i> إنشاء الدور</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">إلغاء</a>
+            </div>
+        </form>
+    </div>
+</div>

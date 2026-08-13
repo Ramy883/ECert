@@ -2,7 +2,7 @@
 @{
     ViewData["Title"] = "إدارة المستخدمين";
     ViewData["PageIcon"] = "bi-people";
-    ViewData["PageDesc"] = "إدارة حسابات موظفي النظام والأدوار والصلاحيات";
+    ViewData["PageDesc"] = "إنشاء حسابات موظفي النظام وإدارتها وربطها بالأدوار المتاحة";
     Layout = "_AdminLayout";
     var roles = ViewBag.Roles as List<Role> ?? new();
 }
@@ -10,6 +10,10 @@
     <partial name="_PageHeader" />
     <div class="page-actions">
         <a asp-action="Create" class="btn btn-primary"><i class="bi bi-person-plus"></i> إضافة مستخدم</a>
+        @if (User.IsInRole("SuperAdmin"))
+        {
+            <a asp-controller="Roles" asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-shield-lock"></i> الأدوار والصلاحيات</a>
+        }
     </div>
 </div>
 

@@ -150,3 +150,18 @@ public class PublicCertificateVerificationViewModel
     public DateTime? IssueDate { get; set; }
     public string? Status { get; set; }
 }
+
+public class RoleFormViewModel
+{
+    [Required(ErrorMessage = "اسم الدور مطلوب")]
+    [StringLength(50, ErrorMessage = "اسم الدور لا يمكن أن يتجاوز 50 حرفاً")]
+    [Display(Name = "اسم الدور")]
+    public string RoleName { get; set; } = string.Empty;
+
+    [StringLength(250, ErrorMessage = "الوصف لا يمكن أن يتجاوز 250 حرفاً")]
+    [Display(Name = "وصف الدور")]
+    public string? Description { get; set; }
+
+    [MinLength(1, ErrorMessage = "اختر صلاحية واحدة على الأقل لهذا الدور")]
+    public List<int> PermissionIds { get; set; } = new();
+}

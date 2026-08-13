@@ -1,0 +1,95 @@
+@model List<Role>
+@{
+    ViewData["Title"] = "الأدوار والصلاحيات";
+    ViewData["PageIcon"] = "bi-shield-lock";
+    ViewData["PageDesc"] = "إنشاء الأدوار المخصصة وتحديد الصلاحيات الممنوحة لكل دور";
+    Layout = "_AdminLayout";
+}
+
+<div class="page-header">
+    <partial name="_PageHeader" />
+    <div class="page-actions">
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-shield-plus"></i> إنشاء دور مخصص</a>
+        <a asp-controller="Users" asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-people"></i> إدارة المستخدمين</a>
+    </div>
+</div>
+
+<div class="alert alert-info border-0 shadow-sm d-flex gap-2 align-items-start" role="note">
+    <i class="bi bi-info-circle-fill mt-1"></i>
+    <div>
+        <strong>إدارة آمنة للصلاحيات.</strong> الأدوار المخصصة تسمح بتجميع الصلاحيات حسب مهام الموظفين. أدوار النظام محمية، وأي تغيير على دور مخصص يسري عند تسجيل دخول مستخدميه مرة أخرى.
+    </div>
+</div>
+
+<div class="row g-3">
+    @foreach (var role in Model)
+    {
+        var permissionCount = role.RolePermissions.Count;
+        var userCount = role.UserRoles.Count;
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                        <div>
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <h5 class="mb-0">@role.RoleName</h5>
+                                @if (role.IsSystem)
+                                {
+                                    <span class="badge text-bg-secondary"><i class="bi bi-lock-fill"></i> دور نظام</span>
+                                }
+                                else
+                                {
+                                    <span class="badge text-bg-primary"><i class="bi bi-sliders"></i> دور مخصص</span>
+                                }
+                            </div>
+                            <p class="text-muted mb-0 small">@(string.IsNullOrWhiteSpace(role.Description) ? "لا يوجد وصف لهذا الدور." : role.Description)</p>
+                        </div>
+                        <i class="bi @(role.IsSystem ? "bi-shield-check text-secondary" : "bi-shield-lock text-primary") fs-3"></i>
+                    </div>
+
+                    <div class="row text-center g-2 mb-3">
+                        <div class="col-6"><div class="bg-light rounded p-2"><strong class="d-block">@permissionCount</strong><small class="text-muted">صلاحيات</small></div></div>
+                        <div class="col-6"><div class="bg-light rounded p-2"><strong class="d-block">@userCount</strong><small class="text-muted">مستخدمون</small></div></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <small class="text-muted d-block mb-2">الصلاحيات الممنوحة</small>
+                        @if (role.RolePermissions.Any())
+                        {
+                            <div class="d-flex flex-wrap gap-1">
+                                @foreach (var rolePermission in role.RolePermissions.OrderBy(rp => rp.Permission?.Description))
+                                {
+                                    <span class="badge text-bg-light border text-dark fw-normal">@(rolePermission.Permission?.Description ?? rolePermission.Permission?.PermissionName)</span>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <span class="text-muted small">لا توجد صلاحيات مرتبطة.</span>
+                        }
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 border-top pt-3">
+                        @if (role.IsSystem)
+                        {
+                            <span class="text-muted small align-self-center"><i class="bi bi-lock"></i> دور محمي</span>
+                        }
+                        else
+                        {
+                            <a asp-action="Edit" asp-route-id="@role.RoleId" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-square"></i> تعديل الصلاحيات</a>
+                            <form asp-action="Delete" asp-route-id="@role.RoleId" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('سيتم حذف الدور المخصص إذا لم يكن مرتبطاً بمستخدمين. هل تريد المتابعة؟')"><i class="bi bi-trash"></i> حذف</button>
+                            </form>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@if (!Model.Any())
+{
+    <div class="text-center text-muted py-5">لا توجد أدوار حتى الآن.</div>
+}

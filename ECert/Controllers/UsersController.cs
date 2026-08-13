@@ -16,6 +16,8 @@ public class UsersController : Controller
     public UsersController(ECertDbContext db, AuditLogService audit) { _db = db; _audit = audit; }
 
     private bool HasPermission(string perm) => User.HasClaim(c => c.Type == "Permission" && c.Value == perm);
+    private bool IsSuperAdmin => User.IsInRole("SuperAdmin");
+    private IQueryable<Role> AssignableRolesQuery() => IsSuperAdmin ? _db.Roles : _db.Roles.Where(r => !r.IsSystem);
 
     public async Task<IActionResult> Index(string? search, int? roleId, string? status)
     {
@@ -41,7 +43,7 @@ public class UsersController : Controller
     public async Task<IActionResult> Create()
     {
         if (!HasPermission("manage-users")) return Forbid();
-        ViewBag.Roles = await _db.Roles.ToListAsync();
+        ViewBag.Roles = await AssignableRolesQuery().OrderBy(r => r.RoleName).ToListAsync();
         return View();
     }
 
@@ -50,10 +52,23 @@ public class UsersController : Controller
     public async Task<IActionResult> Create(CreateUserViewModel model)
     {
         if (!HasPermission("manage-users")) return Forbid();
+
+        var assignableRoles = await AssignableRolesQuery().OrderBy(r => r.RoleName).ToListAsync();
+        if (!ModelState.IsValid)
+        {
+            ViewBag.Roles = assignableRoles;
+            return View(model);
+        }
+        if (!assignableRoles.Any(r => r.RoleId == model.RoleId))
+        {
+            ModelState.AddModelError(nameof(model.RoleId), "اختر دوراً متاحاً للمستخدم الجديد");
+            ViewBag.Roles = assignableRoles;
+            return View(model);
+        }
         if (await _db.Users.AnyAsync(u => u.Username == model.Username))
         {
             ModelState.AddModelError("Username", "اسم المستخدم مستخدم مسبقاً");
-            ViewBag.Roles = await _db.Roles.ToListAsync();
+            ViewBag.Roles = assignableRoles;
             return View(model);
         }
 

@@ -316,6 +316,14 @@
                         </a>
                     </li>
                 }
+                @if (IsSuperAdmin)
+                {
+                    <li class="nav-item">
+                        <a class="nav-link @IsActive("Roles")" asp-controller="Roles" asp-action="Index">
+                            <i class="bi bi-shield-lock"></i> الأدوار والصلاحيات
+                        </a>
+                    </li>
+                }
                 @if (IsSuperAdmin || HasPerm("view-audit-log"))
                 {
                     <li class="nav-item">
