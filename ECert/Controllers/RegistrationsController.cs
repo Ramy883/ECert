@@ -23,7 +23,7 @@ public class RegistrationsController : Controller
     public async Task<IActionResult> Index(string? status, string? search, int? courseId, DateTime? dateFrom, DateTime? dateTo)
     {
         if (!HasPermission("manage-registrations")) return Forbid();
-        var query = _db.Registrations.Include(r => r.Course).AsQueryable();
+        var query = _db.Registrations.Include(r => r.Course).Include(r => r.Invoice).AsQueryable();
         if (!string.IsNullOrEmpty(status)) query = query.Where(r => r.Status == status);
         if (!string.IsNullOrEmpty(search))
             query = query.Where(r => r.FullName.Contains(search) || r.Phone.Contains(search) || r.RequestNumber.Contains(search));
@@ -162,10 +162,53 @@ public class RegistrationsController : Controller
         return RedirectToAction("Index");
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> BulkAction(int[] ids, string action, string? note)
+    {
+        if (!HasPermission("manage-registrations")) return Forbid();
+        var selectedIds = (ids ?? Array.Empty<int>()).Where(id => id > 0).Distinct().ToArray();
+        if (selectedIds.Length == 0)
+        {
+            TempData["Error"] = "الرجاء تحديد طلب واحد على الأقل.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var registrations = await _db.Registrations.Include(r => r.Course)
+            .Where(r => selectedIds.Contains(r.RegistrationId))
+            .ToListAsync();
+        var changed = 0;
+        foreach (var reg in registrations)
+        {
+            if (action.Equals("approve", StringComparison.OrdinalIgnoreCase) && reg.Status == "Pending")
+            {
+                reg.Status = "Accepted";
+                reg.AcceptedDate = DateTime.Now;
+                reg.ProcessedBy = User.Identity?.Name ?? "System";
+                changed++;
+            }
+            else if (action.Equals("reject", StringComparison.OrdinalIgnoreCase) && reg.Status != "Rejected" && reg.Status != "Archived")
+            {
+                reg.Status = "Rejected";
+                reg.RejectionReason = string.IsNullOrWhiteSpace(note) ? "تم الرفض ضمن إجراء جماعي" : note.Trim();
+                reg.RejectedDate = DateTime.Now;
+                reg.ProcessedBy = User.Identity?.Name ?? "System";
+                var course = await _db.Courses.FindAsync(reg.CourseId);
+                if (course != null && course.BookedSeats > 0) course.BookedSeats--;
+                changed++;
+            }
+        }
+
+        await _db.SaveChangesAsync();
+        await _audit.LogAsync(User.Identity?.Name ?? "", "BulkAction", "Registration", null, null, $"Action: {action}; Count: {changed}");
+        TempData[changed > 0 ? "Success" : "Error"] = changed > 0 ? $"تم تنفيذ الإجراء على {changed} طلب." : "لم توجد طلبات مؤهلة للإجراء المحدد.";
+        return RedirectToAction(nameof(Index));
+    }
+
     public async Task<IActionResult> ExportXlsx(string? status, string? search, int? courseId, DateTime? dateFrom, DateTime? dateTo)
     {
         if (!HasPermission("manage-registrations")) return Forbid();
-        var query = _db.Registrations.Include(r => r.Course).AsQueryable();
+        var query = _db.Registrations.Include(r => r.Course).Include(r => r.Invoice).AsQueryable();
         if (!string.IsNullOrEmpty(status)) query = query.Where(r => r.Status == status);
         if (!string.IsNullOrEmpty(search))
             query = query.Where(r => r.FullName.Contains(search) || r.Phone.Contains(search) || r.RequestNumber.Contains(search));

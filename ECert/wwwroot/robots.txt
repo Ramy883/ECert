@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /Dashboard
+Disallow: /Admin
+Disallow: /Auth
+Sitemap: https://ecert-fu5s.onrender.com/sitemap.xml

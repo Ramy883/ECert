@@ -34,6 +34,9 @@ public class PublicRegistrationViewModel
     [Display(Name = "كيف سمعت عنا؟ (اختياري)")]
     public string? HeardFrom { get; set; }
 
+    // Honeypot: must remain empty for real visitors.
+    public string? WebsiteUrl { get; set; }
+
     public int CourseId { get; set; }
     public string? CourseName { get; set; }
 }

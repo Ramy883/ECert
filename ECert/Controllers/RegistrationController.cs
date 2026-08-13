@@ -38,6 +38,12 @@ public class RegistrationController : Controller
         var course = await _db.Courses.FindAsync(model.CourseId);
         if (course == null) return NotFound();
 
+        if (!string.IsNullOrWhiteSpace(model.WebsiteUrl))
+        {
+            // Silently accept the request without persisting bot submissions.
+            return View("Success");
+        }
+
         ViewBag.Countries = await _db.PhoneCountries.Where(c => c.IsActive).OrderBy(c => c.CountryName).ToListAsync();
 
         if (!ModelState.IsValid)

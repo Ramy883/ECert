@@ -50,24 +50,51 @@
     <a asp-action="Index" asp-route-status="Archived" class="btn btn-sm @(ViewBag.Status == "Archived" ? "btn-secondary" : "btn-outline-secondary")">مؤرشفة</a>
 </div>
 
-<div class="card shadow-sm">
+<form asp-action="BulkAction" method="post" id="bulkRegistrationsForm">
+    @Html.AntiForgeryToken()
+    <div id="bulkToolbar" class="alert alert-primary d-none sticky-top shadow-sm" style="top: 4.5rem; z-index: 10;">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <strong><span id="selectedRegistrationsCount">0</span> محدد</strong>
+            <button type="submit" name="action" value="approve" class="btn btn-success btn-sm" onclick="return confirmBulk('approve')"><i class="bi bi-check2-all"></i> قبول المحدد</button>
+            <button type="submit" name="action" value="reject" class="btn btn-danger btn-sm" onclick="return confirmBulk('reject')"><i class="bi bi-x-circle"></i> رفض المحدد</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearRegistrationSelection()">إلغاء التحديد</button>
+            <input type="hidden" name="note" id="bulkNote" />
+        </div>
+    </div>
+    <div class="card shadow-sm">
     <div class="card-body">
         @if (registrations.Any())
         {
             <div class="table-responsive">
                 <table class="table table-hover">
                     <thead class="table-light">
-                        <tr><th>رقم الطلب</th><th>الاسم</th><th>الهاتف</th><th>الدورة</th><th>التاريخ</th><th>الحالة</th><th>إجراءات</th></tr>
+                        <tr><th><input type="checkbox" id="toggleAllRegistrations" aria-label="تحديد كل الطلبات" /></th><th>رقم الطلب</th><th>الاسم</th><th>الهاتف</th><th>الدورة</th><th>التاريخ</th><th>حالة الدفع</th><th>الحالة</th><th>إجراءات</th></tr>
                     </thead>
                     <tbody>
                         @foreach (var r in registrations)
                         {
                             <tr>
+                                <td><input type="checkbox" name="ids" value="@r.RegistrationId" class="registration-checkbox" aria-label="تحديد طلب @r.RequestNumber" /></td>
                                 <td><code>@r.RequestNumber</code></td>
                                 <td>@r.FullName</td>
                                 <td>@r.Phone</td>
                                 <td>@r.Course?.CourseName</td>
                                 <td>@r.RegistrationDate.ToString("yyyy-MM-dd")</td>
+                                <td>
+                                    @if (r.Invoice == null || r.Invoice.PaidAmount <= 0)
+                                    {
+                                        <span class="badge bg-danger" title="لم يتم تسجيل أي دفعة">غير مدفوع</span>
+                                    }
+                                    else if (r.Invoice.PaidAmount < r.Invoice.TotalAmount)
+                                    {
+                                        var paidPercent = r.Invoice.TotalAmount > 0 ? (int)Math.Round(r.Invoice.PaidAmount / r.Invoice.TotalAmount * 100) : 0;
+                                        <span class="badge bg-warning text-dark" title="المدفوع: @r.Invoice.PaidAmount من @r.Invoice.TotalAmount">جزئي @paidPercent%</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success">مدفوع بالكامل</span>
+                                    }
+                                </td>
                                 <td>
                                     @switch (r.Status)
                                     {
@@ -116,15 +143,38 @@
             <p class="text-center text-muted py-4">لا توجد تسجيلات</p>
         }
     </div>
-</div>
+    </div>
+</form>
 
 @section Scripts {
 <script>
-async function rejectRegistration(id) {
-    const reason = prompt('سبب الرفض:');
-    if (!reason) return;
-    const res = await API.post('/registrations/reject/' + id, { reason: reason });
-    API.handleResponse(res, () => setTimeout(() => location.reload(), 1000));
+const bulkForm = document.getElementById('bulkRegistrationsForm');
+const bulkToolbar = document.getElementById('bulkToolbar');
+const countLabel = document.getElementById('selectedRegistrationsCount');
+const checkboxes = Array.from(document.querySelectorAll('.registration-checkbox'));
+const toggleAll = document.getElementById('toggleAllRegistrations');
+function updateRegistrationSelection() {
+    const count = checkboxes.filter(x => x.checked).length;
+    countLabel.textContent = count;
+    bulkToolbar.classList.toggle('d-none', count === 0);
+    toggleAll.checked = checkboxes.length > 0 && count === checkboxes.length;
+}
+function clearRegistrationSelection() { checkboxes.forEach(x => x.checked = false); updateRegistrationSelection(); }
+function confirmBulk(action) {
+    const count = checkboxes.filter(x => x.checked).length;
+    if (!count) return false;
+    if (action === 'reject') {
+        const note = prompt('سبب الرفض الجماعي (اختياري):') || '';
+        document.getElementById('bulkNote').value = note;
+    }
+    return confirm(`هل تريد تنفيذ هذا الإجراء على ${count} طلب؟`);
+}
+toggleAll?.addEventListener('change', () => { checkboxes.forEach(x => x.checked = toggleAll.checked); updateRegistrationSelection(); });
+checkboxes.forEach(x => x.addEventListener('change', updateRegistrationSelection));
+updateRegistrationSelection();
+
+function rejectRegistration(id) {
+    window.location.href = '/Registrations/Reject/' + id;
 }
 </script>
 }

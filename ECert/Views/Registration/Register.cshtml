@@ -54,6 +54,10 @@
                             <option value="Other">أخرى</option>
                         </select>
                     </div>
+                    <div class="d-none" aria-hidden="true">
+                        <label asp-for="WebsiteUrl">موقع الويب</label>
+                        <input asp-for="WebsiteUrl" tabindex="-1" autocomplete="off" />
+                    </div>
                     <button type="submit" class="btn btn-primary w-100 btn-lg">إرسال طلب التسجيل</button>
                 </form>
             </div>

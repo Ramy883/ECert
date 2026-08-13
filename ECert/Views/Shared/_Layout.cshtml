@@ -1,4 +1,4 @@
-﻿@{
+@{
     var theme = ViewBag.Theme as ECert.Models.ThemeSetting ?? new ECert.Models.ThemeSetting();
     var siteSettings = ViewBag.SiteSettings as List<ECert.Models.SiteSetting> ?? new();
     var socialLinks = ViewBag.SocialLinks as List<ECert.Models.SocialLink> ?? new();
@@ -20,6 +20,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="@GetSetting("MetaDescription")" />
     <meta name="keywords" content="@GetSetting("SeoKeywords")" />
+    <meta property="og:title" content="@ViewData["Title"] - @siteName" />
+    <meta property="og:description" content="@(ViewData["OgDescription"] ?? GetSetting("MetaDescription"))" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="@Context.Request.Scheme://@Context.Request.Host@Context.Request.Path" />
+    @if (ViewData["OgImage"] is string ogImage && !string.IsNullOrWhiteSpace(ogImage)) { <meta property="og:image" content="@ogImage" /> }
+    <meta name="twitter:card" content="summary_large_image" />
     <title>@ViewData["Title"] - @siteName</title>
     @if (!string.IsNullOrEmpty(faviconUrl))
     {
@@ -64,7 +70,7 @@
                 }
                 @siteName
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-label="فتح قائمة التنقل">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
@@ -72,6 +78,12 @@
                     <li class="nav-item"><a class="nav-link" asp-controller="Home" asp-action="Index"><i class="bi bi-house"></i> الرئيسية</a></li>
                     <li class="nav-item"><a class="nav-link" asp-controller="PublicCourses" asp-action="Index"><i class="bi bi-book"></i> الدورات</a></li>
                     <li class="nav-item"><a class="nav-link" asp-controller="Posts" asp-action="Index"><i class="bi bi-newspaper"></i> الأخبار</a></li>
+                    <li class="nav-item d-flex align-items-center ms-lg-2">
+                        <form method="get" asp-controller="PublicCourses" asp-action="Index" class="d-flex" role="search">
+                            <label class="visually-hidden" for="globalCourseSearch">البحث في الدورات</label>
+                            <input id="globalCourseSearch" name="search" class="form-control form-control-sm" type="search" placeholder="ابحث عن دورة" aria-label="ابحث عن دورة" />
+                        </form>
+                    </li>
                     <li class="nav-item"><a class="nav-link" asp-controller="Certificates" asp-action="Verify"><i class="bi bi-shield-check"></i> التحقق من شهادة</a></li>
                 </ul>
                 <ul class="navbar-nav">

@@ -11,9 +11,10 @@ public class PublicCoursesController : Controller
 
     public async Task<IActionResult> Index(int? categoryId, string? search)
     {
+        var publicStatuses = new[] { "OpenForRegistration", "Published", "Full", "InProgress", "Completed" };
         ViewBag.Categories = await _db.Categories
             .Where(c => c.IsActive)
-            .Include(c => c.Courses.Where(co => co.Status == "OpenForRegistration" || co.Status == "Published" || co.Status == "Full"))
+            .Include(c => c.Courses.Where(co => publicStatuses.Contains(co.Status)))
             .ToListAsync();
 
         ViewBag.CurrentCategoryId = categoryId;
@@ -22,7 +23,7 @@ public class PublicCoursesController : Controller
         if (categoryId.HasValue || !string.IsNullOrEmpty(search))
         {
             var query = _db.Courses.Include(c => c.Instructor).Include(c => c.Category)
-                .Where(c => c.Status == "OpenForRegistration" || c.Status == "Published" || c.Status == "Full");
+                .Where(c => publicStatuses.Contains(c.Status));
 
             if (categoryId.HasValue)
                 query = query.Where(c => c.CategoryId == categoryId.Value);
@@ -39,7 +40,9 @@ public class PublicCoursesController : Controller
     {
         var course = await _db.Courses.Include(c => c.Instructor).Include(c => c.Category)
             .FirstOrDefaultAsync(c => c.CourseId == id);
-        if (course == null) return NotFound();
+        if (course == null || course.Status == "Draft" || course.Status == "Archived") return NotFound();
+        ViewData["OgImage"] = course.ImageUrl;
+        ViewData["OgDescription"] = course.ShortDescription;
         return View(course);
     }
 }

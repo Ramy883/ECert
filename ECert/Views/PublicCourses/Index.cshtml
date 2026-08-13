@@ -75,17 +75,14 @@ else
             {
                 <div class="col-md-4">
                     <div class="card h-100 shadow-sm">
-                        @if (!string.IsNullOrEmpty(course.ImageUrl))
-                        {
-                            <img src="@course.ImageUrl" class="card-img-top" style="height:180px; object-fit:cover;" alt="@course.CourseName" />
-                        }
+                        <img src="@(string.IsNullOrWhiteSpace(course.ImageUrl) ? "/images/course-placeholder.svg" : course.ImageUrl)" class="card-img-top course-card-image" loading="lazy" alt="صورة دورة @course.CourseName" />
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <span class="badge bg-info">@course.Category?.CategoryName</span>
                                 @switch (course.Status)
                                 {
                                     case "OpenForRegistration": <span class="badge bg-success">مفتوحة</span> break;
-                                    case "Published": <span class="badge bg-primary">منشورة</span> break;
+                                    case "Published": <span class="badge bg-warning text-dark">قريباً</span> break;
                                     case "Full": <span class="badge bg-danger">ممتلئة</span> break;
                                     case "InProgress": <span class="badge bg-warning text-dark">جارية</span> break;
                                     case "Completed": <span class="badge bg-secondary">منتهية</span> break;
@@ -95,8 +92,13 @@ else
                             <p class="card-text text-muted small">@course.ShortDescription</p>
                             <hr />
                             <p class="small mb-1"><i class="bi bi-person"></i> @course.Instructor?.FullName</p>
-                            <p class="small mb-1"><i class="bi bi-calendar"></i> @course.StartDate?.ToString("yyyy-MM-dd") - @course.EndDate?.ToString("yyyy-MM-dd")</p>
-                            <p class="small mb-1"><i class="bi bi-geo-alt"></i> @course.Location</p>
+                            <p class="small mb-1"><i class="bi bi-calendar"></i> تبدأ: @(course.StartDate?.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("ar-SA")) ?? "يحدد لاحقاً")</p>
+                            @if (course.StartDate.HasValue && course.EndDate.HasValue)
+                            {
+                                var durationDays = Math.Max(1, (course.EndDate.Value.Date - course.StartDate.Value.Date).Days + 1);
+                                <p class="small mb-1"><i class="bi bi-clock"></i> المدة: @durationDays يوم</p>
+                            }
+                            <p class="small mb-1"><i class="bi bi-geo-alt"></i> @(string.IsNullOrWhiteSpace(course.Location) ? "عن بعد أو يحدد لاحقاً" : course.Location)</p>
                             <p class="small mb-1"><i class="bi bi-people"></i> المقاعد: @(course.TotalSeats - course.BookedSeats) / @course.TotalSeats</p>
                             @if (!string.IsNullOrEmpty(course.DiscountType) && course.DiscountValue > 0)
                             {
@@ -134,6 +136,8 @@ else
 
 @section Styles {
 <style>
+    .course-card-image { height: 190px; object-fit: cover; background: #eef2ff; }
+    .card { border-radius: 1rem; overflow: hidden; }
     .category-card {
         transition: transform 0.2s, box-shadow 0.2s;
         cursor: pointer;

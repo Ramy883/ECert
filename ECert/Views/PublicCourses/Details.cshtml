@@ -12,6 +12,7 @@
 
 <div class="row g-4">
     <div class="col-lg-8">
+        <img src="@(string.IsNullOrWhiteSpace(Model.ImageUrl) ? "/images/course-placeholder.svg" : Model.ImageUrl)" class="course-hero-image mb-4" loading="eager" alt="صورة دورة @Model.CourseName" />
         <div class="card shadow-sm">
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-start mb-3">
@@ -48,7 +49,7 @@
         </div>
     </div>
 
-    <div class="col-lg-4">
+    <div class="col-lg-4 sticky-course-info">
         <div class="card shadow-sm mb-3">
             <div class="card-body">
                 <h5 class="card-title">معلومات الدورة</h5>
