@@ -11,10 +11,9 @@ public class PublicCoursesController : Controller
 
     public async Task<IActionResult> Index(int? categoryId, string? search)
     {
-        var publicStatuses = new[] { "OpenForRegistration", "Published", "Full", "InProgress", "Completed" };
         ViewBag.Categories = await _db.Categories
             .Where(c => c.IsActive)
-            .Include(c => c.Courses.Where(co => publicStatuses.Contains(co.Status)))
+            .Include(c => c.Courses.Where(co => co.Status == "OpenForRegistration" || co.Status == "Published" || co.Status == "Full" || co.Status == "InProgress" || co.Status == "Completed"))
             .ToListAsync();
 
         ViewBag.CurrentCategoryId = categoryId;
@@ -23,7 +22,7 @@ public class PublicCoursesController : Controller
         if (categoryId.HasValue || !string.IsNullOrEmpty(search))
         {
             var query = _db.Courses.Include(c => c.Instructor).Include(c => c.Category)
-                .Where(c => publicStatuses.Contains(c.Status));
+                .Where(c => c.Status == "OpenForRegistration" || c.Status == "Published" || c.Status == "Full" || c.Status == "InProgress" || c.Status == "Completed");
 
             if (categoryId.HasValue)
                 query = query.Where(c => c.CategoryId == categoryId.Value);
