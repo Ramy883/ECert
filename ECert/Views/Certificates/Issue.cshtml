@@ -65,7 +65,7 @@
                 <h6 class="mb-1">المتدربون المؤهلون للحصول على شهادة</h6>
                 <small class="text-muted">الإصدار من داخل النظام سينتج بيانات الشهادة فقط، ثم يمكنك تصديرها لاحقاً مع رابط QR للاستخدام في برامج التصميم الخارجية.</small>
             </div>
-            <button type="submit" class="btn btn-success" id="issueSelectedBtn" disabled>
+            <button type="button" class="btn btn-success" id="issueSelectedBtn" disabled>
                 <i class="bi bi-award"></i> إصدار الشهادات للمحدد
             </button>
         </div>
@@ -115,6 +115,31 @@
             }
         </div>
     </div>
+
+    <div class="modal fade" id="issueCertificatesModal" tabindex="-1" aria-labelledby="issueCertificatesModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="issueCertificatesModalLabel"><i class="bi bi-award text-success"></i> تأكيد إصدار الشهادات</h5>
+                    <button type="button" class="btn-close ms-0" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-3">ستصدر <strong id="issueModalCount">0</strong> شهادة. اختر بادئة موحدة لهذه الدفعة لتسهيل تمييزها والبحث عنها لاحقاً.</p>
+                    <label for="certificatePrefix" class="form-label">بادئة رقم الشهادة <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control text-uppercase" id="certificatePrefix" name="certificatePrefix" required maxlength="12" autocomplete="off" spellcheck="false" dir="auto" aria-describedby="certificatePrefixHelp" placeholder="مثال: PTM" />
+                    <div id="certificatePrefixHelp" class="form-text">من 2 إلى 12 حرفاً أو رقماً، ويمكن استخدام الشرطة بين الأجزاء. لا تبدأ أو تنهِ البادئة بشرطة.</div>
+                    <div class="alert alert-light border mt-3 mb-0 small" role="status">
+                        <div class="text-muted mb-1">معاينة رقم الشهادة</div>
+                        <code id="certificateNumberPreview">أدخل البادئة للمعاينة</code>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-success"><i class="bi bi-check2-circle"></i> إصدار الشهادات</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </form>
 
 @section Scripts {
@@ -127,6 +152,38 @@
         const selectAllBtn = document.getElementById('selectAllBtn');
         const clearSelectionBtn = document.getElementById('clearSelectionBtn');
         const form = document.getElementById('bulkIssueForm');
+        const issueModalElement = document.getElementById('issueCertificatesModal');
+        const prefixInput = document.getElementById('certificatePrefix');
+        const prefixPreview = document.getElementById('certificateNumberPreview');
+        const issueModalCount = document.getElementById('issueModalCount');
+        const issueModal = issueModalElement && window.bootstrap ? new bootstrap.Modal(issueModalElement) : null;
+        const prefixPattern = /^[\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*$/u;
+
+        function updatePrefixPreview() {
+            if (!prefixInput || !prefixPreview) return;
+
+            const prefix = prefixInput.value.trim().toUpperCase();
+            const valid = prefix.length >= 2 && prefix.length <= 12 && prefixPattern.test(prefix);
+            prefixInput.setCustomValidity(prefix.length > 0 && !valid ? 'أدخل بادئة من 2 إلى 12 حرفاً أو رقماً، مع استخدام الشرطة بين الأجزاء فقط.' : '');
+            prefixPreview.textContent = valid
+                ? `${prefix}-${new Date().getUTCFullYear()}-XXXXXXXXXX`
+                : 'أدخل بادئة صالحة للمعاينة';
+        }
+
+        function openIssueModal() {
+            const checked = checkboxes.filter(x => x.checked).length;
+            if (checked === 0) return;
+
+            if (issueModalCount) issueModalCount.textContent = checked;
+            updatePrefixPreview();
+
+            if (issueModal) {
+                issueModal.show();
+                window.setTimeout(() => prefixInput?.focus(), 200);
+            } else {
+                form?.requestSubmit();
+            }
+        }
 
         function updateSelectionState() {
             const checked = checkboxes.filter(x => x.checked).length;
@@ -158,6 +215,9 @@
             });
         }
 
+        if (issueBtn) issueBtn.addEventListener('click', openIssueModal);
+        if (prefixInput) prefixInput.addEventListener('input', updatePrefixPreview);
+
         if (form) {
             form.addEventListener('submit', function (event) {
                 const checked = checkboxes.filter(x => x.checked).length;
@@ -166,9 +226,10 @@
                     return;
                 }
 
-                const confirmed = confirm(`هل تريد إصدار ${checked} شهادة الآن؟`);
-                if (!confirmed) {
+                updatePrefixPreview();
+                if (!prefixInput || !prefixInput.value.trim() || !prefixInput.checkValidity()) {
                     event.preventDefault();
+                    prefixInput?.reportValidity();
                 }
             });
         }

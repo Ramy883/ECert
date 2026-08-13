@@ -146,7 +146,7 @@ public class CertificatesController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> IssueBulk(int[] registrationIds)
+    public async Task<IActionResult> IssueBulk(int[] registrationIds, string? certificatePrefix)
     {
         if (!HasPermission("issue-certificates")) return Forbid();
 
@@ -155,6 +155,17 @@ public class CertificatesController : Controller
         if (idList.Count == 0)
         {
             TempData["Error"] = "الرجاء تحديد متدرب واحد على الأقل لإصدار الشهادات.";
+            return RedirectToAction(nameof(Issue));
+        }
+
+        string normalizedCertificatePrefix;
+        try
+        {
+            normalizedCertificatePrefix = _certificateSecurity.NormalizeCertificatePrefix(certificatePrefix);
+        }
+        catch (ArgumentException exception)
+        {
+            TempData["Error"] = exception.Message;
             return RedirectToAction(nameof(Issue));
         }
 
@@ -180,7 +191,7 @@ public class CertificatesController : Controller
         {
             var certificate = new Certificate
             {
-                CertificateNumber = await GenerateUniqueCertificateNumberAsync(reservedCertificateNumbers),
+                CertificateNumber = await GenerateUniqueCertificateNumberAsync(normalizedCertificatePrefix, reservedCertificateNumbers),
                 PublicId = await GenerateUniquePublicIdAsync(reservedPublicIds),
                 VerificationCode = await GenerateUniqueVerificationCodeAsync(reservedVerificationCodes),
                 RegistrationId = registration.RegistrationId,
@@ -203,7 +214,7 @@ public class CertificatesController : Controller
 
         var issuedBy = User.Identity?.Name ?? "System";
         var certNumbers = string.Join(", ", issuedCertificates.Select(c => c.CertificateNumber));
-        await _audit.LogAsync(issuedBy, "IssueBulk", "Certificate", null, null, $"Count: {issuedCertificates.Count}, Certificates: {certNumbers}", HttpContext.Connection.RemoteIpAddress?.ToString());
+        await _audit.LogAsync(issuedBy, "IssueBulk", "Certificate", null, null, $"Prefix: {normalizedCertificatePrefix}; Count: {issuedCertificates.Count}; Certificates: {certNumbers}", HttpContext.Connection.RemoteIpAddress?.ToString());
 
         foreach (var registration in registrations)
         {
@@ -219,7 +230,7 @@ public class CertificatesController : Controller
                 certificate.CertificateId);
         }
 
-        TempData["Success"] = $"تم إصدار {issuedCertificates.Count} شهادة بنجاح.";
+        TempData["Success"] = $"تم إصدار {issuedCertificates.Count} شهادة بنجاح بالبادئة {normalizedCertificatePrefix}.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -508,11 +519,11 @@ public class CertificatesController : Controller
         }
     }
 
-    private async Task<string> GenerateUniqueCertificateNumberAsync(HashSet<string>? reservedValues = null)
+    private async Task<string> GenerateUniqueCertificateNumberAsync(string certificatePrefix, HashSet<string>? reservedValues = null)
     {
         for (var attempt = 0; attempt < 20; attempt++)
         {
-            var value = _certificateSecurity.GenerateCertificateNumber();
+            var value = _certificateSecurity.GenerateCertificateNumber(certificatePrefix);
             if (reservedValues != null && reservedValues.Contains(value))
                 continue;
 

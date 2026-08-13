@@ -22,7 +22,29 @@ public class CertificateSecurityService
     }
 
     public string GenerateCertificateNumber()
-        => $"CERT-{DateTime.UtcNow.Year}-{GenerateSecureToken(10)}";
+        => GenerateCertificateNumber("CERT");
+
+    public string GenerateCertificateNumber(string certificatePrefix)
+    {
+        var normalizedPrefix = NormalizeCertificatePrefix(certificatePrefix);
+        return $"{normalizedPrefix}-{DateTime.UtcNow.Year}-{GenerateSecureToken(10)}";
+    }
+
+    public string NormalizeCertificatePrefix(string? certificatePrefix)
+    {
+        var normalizedPrefix = (certificatePrefix ?? string.Empty).Trim().ToUpperInvariant();
+
+        if (normalizedPrefix.Length < 2 || normalizedPrefix.Length > 12)
+            throw new ArgumentException("بادئة رقم الشهادة يجب أن تتكون من 2 إلى 12 حرفاً أو رقماً.");
+
+        if (normalizedPrefix.StartsWith('-') || normalizedPrefix.EndsWith('-') || normalizedPrefix.Contains("--") ||
+            normalizedPrefix.Any(character => !char.IsLetterOrDigit(character) && character != '-'))
+        {
+            throw new ArgumentException("بادئة رقم الشهادة تقبل الحروف والأرقام والشرطات فقط.");
+        }
+
+        return normalizedPrefix;
+    }
 
     public string GeneratePublicId()
         => GenerateSecureToken(16);
