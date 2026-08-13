@@ -19,18 +19,15 @@ public class PublicCoursesController : Controller
         ViewBag.CurrentCategoryId = categoryId;
         ViewBag.Search = search;
 
-        if (categoryId.HasValue || !string.IsNullOrEmpty(search))
-        {
-            var query = _db.Courses.Include(c => c.Instructor).Include(c => c.Category)
-                .Where(c => c.Status == "OpenForRegistration" || c.Status == "Published" || c.Status == "Full" || c.Status == "InProgress" || c.Status == "Completed");
+        var query = _db.Courses.Include(c => c.Instructor).Include(c => c.Category)
+            .Where(c => c.Status == "OpenForRegistration" || c.Status == "Published" || c.Status == "Full" || c.Status == "InProgress" || c.Status == "Completed");
 
-            if (categoryId.HasValue)
-                query = query.Where(c => c.CategoryId == categoryId.Value);
-            if (!string.IsNullOrEmpty(search))
-                query = query.Where(c => c.CourseName.Contains(search));
+        if (categoryId.HasValue)
+            query = query.Where(c => c.CategoryId == categoryId.Value);
+        if (!string.IsNullOrWhiteSpace(search))
+            query = query.Where(c => c.CourseName.Contains(search));
 
-            ViewBag.Courses = await query.OrderByDescending(c => c.CreatedAt).ToListAsync();
-        }
+        ViewBag.Courses = await query.OrderByDescending(c => c.CreatedAt).ToListAsync();
 
         return View();
     }
