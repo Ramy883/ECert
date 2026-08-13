@@ -12,7 +12,7 @@
 
 <div class="row g-4">
     <div class="col-lg-8">
-        <img src="@(string.IsNullOrWhiteSpace(Model.ImageUrl) ? "/images/course-placeholder.svg" : Model.ImageUrl)" class="course-hero-image mb-4" loading="eager" alt="صورة دورة @Model.CourseName" />
+        <img src="@(string.IsNullOrWhiteSpace(Model.ImageUrl) ? "/images/course-placeholder.svg" : Model.ImageUrl)" class="course-hero-image mb-4" loading="eager" alt="صورة دورة @Model.CourseName" onerror="this.onerror=null;this.src='/images/course-placeholder.svg';" />
         <div class="card shadow-sm">
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-start mb-3">
@@ -60,12 +60,12 @@
                 <p><i class="bi bi-people"></i> <strong>المقاعد المتاحة:</strong> @(Model.TotalSeats - Model.BookedSeats) من @Model.TotalSeats</p>
                 @if (!string.IsNullOrEmpty(Model.DiscountType) && Model.DiscountValue > 0)
                 {
-                    <p class="fs-5"><i class="bi bi-tag"></i> <span class="text-muted text-decoration-line-through">@Model.Price ريال</span> <span class="fw-bold text-danger fs-4">@Model.FinalPrice.ToString("N0") ريال</span></p>
-                    <small class="text-danger">(خصم @Model.DiscountValue@(Model.DiscountType == "Percentage" ? "%" : " ريال"))</small>
+                    <p class="fs-5"><i class="bi bi-tag"></i> <span class="text-muted text-decoration-line-through">@Model.Price.ToString("N0") ريال</span> <span class="fw-bold text-danger fs-4">@Model.FinalPrice.ToString("N0") ريال</span></p>
+                    <small class="text-danger">(خصم @Model.DiscountValue.ToString("N0")@(Model.DiscountType == "Percentage" ? "%" : " ريال"))</small>
                 }
                 else
                 {
-                    <p class="fs-4 fw-bold text-primary"><i class="bi bi-tag"></i> @Model.Price ريال</p>
+                    <p class="fs-4 fw-bold text-primary"><i class="bi bi-tag"></i> @Model.Price.ToString("N0") ريال</p>
                 }
                 <hr />
                 @if (Model.Status == "OpenForRegistration" && Model.AvailableSeats > 0)
