@@ -24,6 +24,12 @@ public class CertificateSchemaMigrationService
         await EnsureColumnAsync("RevokedReason", "VARCHAR(500) NULL");
         await EnsureColumnAsync("SignatureVersion", "INT NOT NULL DEFAULT 1");
 
+        // These columns are used by NotificationService after certificate issuance.
+        // Older production databases may predate them, causing IssueBulk to fail after
+        // the certificate transaction has already been committed.
+        await EnsureTableColumnAsync("Notifications", "RelatedEntityType", "VARCHAR(100) NULL");
+        await EnsureTableColumnAsync("Notifications", "RelatedEntityId", "INT NULL");
+
         await EnsureColumnTypeAsync("CertificateNumber", "VARCHAR(40) NULL");
         await EnsureColumnTypeAsync("PublicId", "VARCHAR(32) NULL");
         await EnsureColumnTypeAsync("VerificationCode", "VARCHAR(24) NULL");
@@ -36,15 +42,50 @@ public class CertificateSchemaMigrationService
         await EnsureUniqueIndexAsync("IX_Certificates_VerificationCode", "VerificationCode");
     }
 
-    private async Task EnsureColumnAsync(string columnName, string definitionSql)
+    private Task EnsureColumnAsync(string columnName, string definitionSql)
+        => EnsureTableColumnAsync("Certificates", columnName, definitionSql);
+
+    private async Task EnsureTableColumnAsync(string tableName, string columnName, string definitionSql)
     {
-        if (await ColumnExistsAsync(columnName))
+        if (!await TableExistsAsync(tableName) || await ColumnExistsAsync(tableName, columnName))
             return;
 
-        await _db.Database.ExecuteSqlRawAsync($"ALTER TABLE `Certificates` ADD COLUMN `{columnName}` {definitionSql};");
+        await _db.Database.ExecuteSqlRawAsync($"ALTER TABLE `{tableName}` ADD COLUMN `{columnName}` {definitionSql};");
     }
 
-    private async Task<bool> ColumnExistsAsync(string columnName)
+    private async Task<bool> TableExistsAsync(string tableName)
+    {
+        var connection = _db.Database.GetDbConnection();
+        var shouldCloseConnection = connection.State != ConnectionState.Open;
+
+        try
+        {
+            if (shouldCloseConnection)
+                await connection.OpenAsync();
+
+            await using var command = connection.CreateCommand();
+            command.CommandText = @"
+SELECT COUNT(*)
+FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_SCHEMA = DATABASE()
+  AND TABLE_NAME = @tableName;";
+
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = "@tableName";
+            parameter.Value = tableName;
+            command.Parameters.Add(parameter);
+
+            var result = await command.ExecuteScalarAsync();
+            return Convert.ToInt32(result) > 0;
+        }
+        finally
+        {
+            if (shouldCloseConnection && connection.State == ConnectionState.Open)
+                await connection.CloseAsync();
+        }
+    }
+
+    private async Task<bool> ColumnExistsAsync(string tableName, string columnName)
     {
         var connection = _db.Database.GetDbConnection();
         var shouldCloseConnection = connection.State != ConnectionState.Open;
@@ -58,11 +99,16 @@ public class CertificateSchemaMigrationService
             command.CommandText = @"
 SELECT COUNT(*)
 FROM INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_SCHEMA = DATABASE()
-  AND TABLE_NAME = 'Certificates'
-  AND COLUMN_NAME = @columnName;";
+	WHERE TABLE_SCHEMA = DATABASE()
+	  AND TABLE_NAME = @tableName
+	  AND COLUMN_NAME = @columnName;";
 
             var parameter = command.CreateParameter();
+            var tableParameter = command.CreateParameter();
+            tableParameter.ParameterName = "@tableName";
+            tableParameter.Value = tableName;
+            command.Parameters.Add(tableParameter);
+
             parameter.ParameterName = "@columnName";
             parameter.Value = columnName;
             command.Parameters.Add(parameter);
@@ -112,7 +158,7 @@ WHERE TABLE_SCHEMA = DATABASE()
 
     private async Task EnsureColumnTypeAsync(string columnName, string definitionSql)
     {
-        if (!await ColumnExistsAsync(columnName))
+        if (!await ColumnExistsAsync("Certificates", columnName))
             return;
 
         await _db.Database.ExecuteSqlRawAsync($"ALTER TABLE `Certificates` MODIFY COLUMN `{columnName}` {definitionSql};");
