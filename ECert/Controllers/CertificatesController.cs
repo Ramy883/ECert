@@ -407,8 +407,13 @@ public class CertificatesController : Controller
             return View("VerifyResult", model);
         }
 
-        model.IsValid = true;
-        model.Message = "تم العثور على الشهادة.";
+        model.CertificateFound = true;
+        model.IsValid = string.Equals(certificate.Status, "Valid", StringComparison.OrdinalIgnoreCase);
+        model.Message = model.IsValid
+            ? "تم العثور على شهادة سارية."
+            : string.Equals(certificate.Status, "Revoked", StringComparison.OrdinalIgnoreCase)
+                ? "تم العثور على الشهادة، لكنها ملغاة ولا يمكن اعتمادها."
+                : "تم العثور على الشهادة، لكن حالتها غير معروفة. يرجى مراجعة الجهة المصدرة.";
         model.CertificateNumber = certificate.CertificateNumber;
         model.TraineeName = certificate.TraineeName;
         model.CourseName = certificate.CourseName;
@@ -550,7 +555,12 @@ public class CertificatesController : Controller
         => (value ?? string.Empty).Trim().ToUpperInvariant();
 
     private static string MapCertificateStatus(string? status)
-        => string.Equals(status, "Revoked", StringComparison.OrdinalIgnoreCase) ? "ملغية" : "سارية";
+        => status?.Trim().ToLowerInvariant() switch
+        {
+            "valid" => "سارية",
+            "revoked" => "ملغية",
+            _ => "غير معروفة"
+        };
 
     private sealed class TurnstileVerifyResponse
     {

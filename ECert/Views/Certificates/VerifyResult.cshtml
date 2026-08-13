@@ -1,67 +1,69 @@
-@model PublicCertificateVerificationViewModel
+@model ECert.Models.ViewModels.PublicCertificateVerificationViewModel
+
 @{
     ViewData["Title"] = "نتيجة التحقق";
+    var headingClass = Model.IsValid ? "text-success" : Model.CertificateFound ? "text-warning" : "text-danger";
+    var iconClass = Model.IsValid ? "bi-check-circle-fill" : Model.CertificateFound ? "bi-exclamation-triangle-fill" : "bi-x-circle-fill";
+    var statusClass = Model.IsValid ? "text-bg-success" : Model.CertificateFound ? "text-bg-warning" : "text-bg-danger";
 }
 
 <div class="row justify-content-center">
     <div class="col-lg-7 col-xl-6">
         <div class="card shadow-sm border-0 mt-5">
             <div class="card-body p-4 p-md-5 text-center">
+                <div class="mb-3 @headingClass" style="font-size:4rem;" aria-hidden="true">
+                    <i class="bi @iconClass"></i>
+                </div>
+
                 @if (Model.IsValid)
                 {
-                    <div class="mb-3 text-success" style="font-size:4rem;">
-                        <i class="bi bi-check-circle-fill"></i>
-                    </div>
-                    <h3 class="text-success mb-2">تم التحقق من الشهادة</h3>
-                    <p class="text-muted mb-4">تم عرض البيانات العامة فقط دون أي معلومات شخصية حساسة.</p>
-
-                    <div class="table-responsive">
-                        <table class="table table-borderless align-middle text-start mb-0">
-                            <tbody>
-                                <tr>
-                                    <th class="w-50">رقم الشهادة</th>
-                                    <td><code>@Model.CertificateNumber</code></td>
-                                </tr>
-                                <tr>
-                                    <th>اسم المتدرب</th>
-                                    <td>@Model.TraineeName</td>
-                                </tr>
-                                <tr>
-                                    <th>الدورة</th>
-                                    <td>@Model.CourseName</td>
-                                </tr>
-                                <tr>
-                                    <th>تاريخ الإصدار</th>
-                                    <td>@Model.IssueDate?.ToString("yyyy-MM-dd")</td>
-                                </tr>
-                                <tr>
-                                    <th>الحالة</th>
-                                    <td>
-                                        @if (Model.Status == "ملغية")
-                                        {
-                                            <span class="badge text-bg-danger">@Model.Status</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge text-bg-success">@Model.Status</span>
-                                        }
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    <h3 class="@headingClass mb-2">تم التحقق من الشهادة</h3>
+                    <p class="text-muted mb-4">الشهادة موجودة وحالتها سارية. تظهر هنا البيانات العامة اللازمة للتحقق فقط.</p>
+                }
+                else if (Model.CertificateFound)
+                {
+                    <h3 class="@headingClass mb-2">الشهادة غير قابلة للاعتماد</h3>
+                    <p class="text-muted mb-4">@Model.Message</p>
                 }
                 else
                 {
-                    <div class="mb-3 text-danger" style="font-size:4rem;">
-                        <i class="bi bi-x-circle-fill"></i>
-                    </div>
-                    <h3 class="text-danger mb-3">تعذر التحقق من الشهادة</h3>
+                    <h3 class="@headingClass mb-3">تعذر التحقق من الشهادة</h3>
                     <p class="text-muted mb-2">@Model.Message</p>
                     @if (!string.IsNullOrWhiteSpace(Model.SearchCode))
                     {
                         <p class="small text-muted mb-0">المدخل الذي تم التحقق منه: <code>@Model.SearchCode</code></p>
                     }
+                }
+
+                @if (Model.CertificateFound)
+                {
+                    <div class="table-responsive">
+                        <table class="table table-borderless align-middle text-start mb-0">
+                            <caption class="visually-hidden">بيانات الشهادة ونتيجة حالتها</caption>
+                            <tbody>
+                                <tr>
+                                    <th scope="row" class="w-50">رقم الشهادة</th>
+                                    <td><code>@Model.CertificateNumber</code></td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">اسم المتدرب</th>
+                                    <td>@Model.TraineeName</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">الدورة</th>
+                                    <td>@Model.CourseName</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">تاريخ الإصدار</th>
+                                    <td>@Model.IssueDate?.ToString("yyyy-MM-dd")</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">الحالة</th>
+                                    <td><span class="badge @statusClass">@Model.Status</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 }
 
                 <hr class="my-4" />

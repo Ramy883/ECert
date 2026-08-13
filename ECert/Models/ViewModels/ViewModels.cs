@@ -141,6 +141,7 @@ public class CertificateIndexPageViewModel
 public class PublicCertificateVerificationViewModel
 {
     public bool IsValid { get; set; }
+    public bool CertificateFound { get; set; }
     public string SearchCode { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
     public string? CertificateNumber { get; set; }
