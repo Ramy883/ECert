@@ -151,7 +151,8 @@ public class CertificatesController : Controller
         if (!HasPermission("issue-certificates")) return Forbid();
 
         var ids = registrationIds?.Where(id => id > 0).Distinct().ToArray() ?? Array.Empty<int>();
-        if (ids.Length == 0)
+        var idList = ids.ToList();
+        if (idList.Count == 0)
         {
             TempData["Error"] = "الرجاء تحديد متدرب واحد على الأقل لإصدار الشهادات.";
             return RedirectToAction(nameof(Issue));
@@ -159,7 +160,7 @@ public class CertificatesController : Controller
 
         var registrations = await _db.Registrations
             .Include(r => r.Course)
-            .Where(r => ids.Contains(r.RegistrationId) && r.Status == "Accepted" && !r.CertificateIssued && r.Course != null && r.Course.Status == "Completed")
+            .Where(r => idList.Contains(r.RegistrationId) && r.Status == "Accepted" && !r.CertificateIssued && r.Course != null && r.Course.Status == "Completed")
             .OrderBy(r => r.RegistrationId)
             .ToListAsync();
 
@@ -229,7 +230,8 @@ public class CertificatesController : Controller
         if (!HasPermission("issue-certificates")) return Forbid();
 
         var ids = certificateIds?.Where(id => id > 0).Distinct().ToArray() ?? Array.Empty<int>();
-        if (ids.Length == 0)
+        var idList = ids.ToList();
+        if (idList.Count == 0)
         {
             TempData["Error"] = "الرجاء تحديد شهادة واحدة على الأقل للتصدير.";
             return RedirectToAction(nameof(Index));
@@ -238,7 +240,7 @@ public class CertificatesController : Controller
         var certificates = await _db.Certificates
             .Include(c => c.Registration)
             .ThenInclude(r => r!.Course)
-            .Where(c => ids.Contains(c.CertificateId))
+            .Where(c => idList.Contains(c.CertificateId))
             .OrderByDescending(c => c.IssueDate)
             .ToListAsync();
 
