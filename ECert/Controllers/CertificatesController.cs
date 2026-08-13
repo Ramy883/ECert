@@ -135,6 +135,15 @@ public class CertificatesController : Controller
         return View(model);
     }
 
+    [HttpGet]
+    public IActionResult IssueBulk()
+    {
+        if (!HasPermission("issue-certificates")) return Forbid();
+
+        TempData["Error"] = "افتح صفحة إصدار الشهادات وحدد المتدربين قبل تنفيذ الإصدار.";
+        return RedirectToAction(nameof(Issue));
+    }
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> IssueBulk(int[] registrationIds)
