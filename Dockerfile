@@ -25,6 +25,7 @@ RUN mkdir -p /app/wwwroot/uploads /app/wwwroot/qrcodes
 
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_HTTP_PORTS=10000
+ENV DOTNET_USE_POLLING_FILE_WATCHER=1
 EXPOSE 10000
 
 # Render injects the assigned port into the PORT env var
