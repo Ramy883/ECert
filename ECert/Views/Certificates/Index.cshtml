@@ -91,7 +91,7 @@
                     <table class="table table-hover align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th style="width:50px;"><input type="checkbox" id="toggleAllRows" /></th>
+                                <th style="width:50px;"><input type="checkbox" id="toggleAllRows" aria-label="تحديد جميع الشهادات الظاهرة" /></th>
                                 <th>رقم الشهادة</th>
                                 <th>اسم المتدرب</th>
                                 <th>الدورة</th>
@@ -106,7 +106,7 @@
                                 var verificationUrl = Model.VerificationUrls.TryGetValue(cert.CertificateId, out var url) ? url : "#";
                                 <tr>
                                     <td>
-                                        <input type="checkbox" class="row-checkbox" name="certificateIds" value="@cert.CertificateId" />
+                                        <input type="checkbox" class="row-checkbox" name="certificateIds" value="@cert.CertificateId" aria-label="تحديد الشهادة @cert.CertificateNumber" />
                                     </td>
                                     <td>
                                         <div><code>@cert.CertificateNumber</code></div>
@@ -116,23 +116,34 @@
                                     <td>@cert.CourseName</td>
                                     <td>@cert.IssueDate.ToString("yyyy-MM-dd")</td>
                                     <td>
-                                        @if (cert.Status == "Revoked")
+                                        @if (cert.Status?.Trim().ToLowerInvariant() == "revoked")
                                         {
                                             <span class="badge text-bg-danger">ملغية</span>
                                         }
-                                        else
+                                        else if (cert.Status?.Trim().ToLowerInvariant() == "valid")
                                         {
                                             <span class="badge text-bg-success">سارية</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge text-bg-warning">غير معروفة</span>
                                         }
                                     </td>
                                     <td>
                                         <div class="d-flex flex-column gap-2">
-                                            <a href="@verificationUrl" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
-                                                <i class="bi bi-box-arrow-up-right"></i> فتح الرابط
-                                            </a>
-                                            <button type="button" class="btn btn-sm btn-outline-secondary copy-url-btn" data-url="@verificationUrl">
-                                                <i class="bi bi-clipboard"></i> نسخ الرابط
-                                            </button>
+                                            @if (!string.IsNullOrWhiteSpace(verificationUrl) && verificationUrl != "#")
+                                            {
+                                                <a href="@verificationUrl" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary" aria-label="فتح رابط التحقق للشهادة @cert.CertificateNumber">
+                                                    <i class="bi bi-box-arrow-up-right"></i> فتح الرابط
+                                                </a>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary copy-url-btn" data-url="@verificationUrl" aria-label="نسخ رابط التحقق للشهادة @cert.CertificateNumber">
+                                                    <i class="bi bi-clipboard"></i> نسخ الرابط
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <span class="small text-muted">الرابط غير متاح</span>
+                                            }
                                         </div>
                                     </td>
                                 </tr>
@@ -197,12 +208,24 @@
                 const url = btn.getAttribute('data-url') || '';
                 if (!url) return;
                 try {
-                    await navigator.clipboard.writeText(url);
+                    if (navigator.clipboard && window.isSecureContext) {
+                        await navigator.clipboard.writeText(url);
+                    } else {
+                        const textArea = document.createElement('textarea');
+                        textArea.value = url;
+                        textArea.style.position = 'fixed';
+                        textArea.style.opacity = '0';
+                        document.body.appendChild(textArea);
+                        textArea.focus();
+                        textArea.select();
+                        if (!document.execCommand('copy')) throw new Error('copy failed');
+                        textArea.remove();
+                    }
                     const original = btn.innerHTML;
                     btn.innerHTML = '<i class="bi bi-check2"></i> تم النسخ';
                     setTimeout(() => btn.innerHTML = original, 1500);
                 } catch {
-                    alert('تعذر نسخ الرابط تلقائياً.');
+                    alert('تعذر نسخ الرابط تلقائياً. يمكنك تحديده ونسخه يدوياً.');
                 }
             });
         });
