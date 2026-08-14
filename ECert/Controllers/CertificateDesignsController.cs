@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text.Json;
 using ECert.Data;
 using ECert.Models;
@@ -21,13 +22,24 @@ public class CertificateDesignsController : Controller
         _audit = audit;
     }
 
-    private bool CanManage()
-        => User.IsInRole("SuperAdmin") || User.HasClaim(c => c.Type == "Permission" && c.Value == "manage-certificate-designs");
+    private async Task<bool> CanManageAsync()
+    {
+        if (User.IsInRole("SuperAdmin") || User.HasClaim(c => c.Type == "Permission" && c.Value == "manage-certificate-designs"))
+            return true;
+
+        if (!int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+            return false;
+
+        return await _db.UserRoles
+            .Where(userRole => userRole.UserId == userId)
+            .AnyAsync(userRole => userRole.Role!.RolePermissions
+                .Any(rolePermission => rolePermission.Permission!.PermissionName == "manage-certificate-designs"));
+    }
 
     [HttpGet]
     public async Task<IActionResult> Index(int? id)
     {
-        if (!CanManage()) return Forbid();
+        if (!await CanManageAsync()) return Forbid();
 
         var designs = await _db.CertificateDesigns
             .Include(t => t.Elements)
@@ -52,7 +64,7 @@ public class CertificateDesignsController : Controller
     [HttpGet]
     public async Task<IActionResult> New()
     {
-        if (!CanManage()) return Forbid();
+        if (!await CanManageAsync()) return Forbid();
 
         var designs = await _db.CertificateDesigns
             .Include(t => t.Elements)
@@ -73,7 +85,7 @@ public class CertificateDesignsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Save(CertificateDesignEditorPostModel model)
     {
-        if (!CanManage()) return Forbid();
+        if (!await CanManageAsync()) return Forbid();
 
         var canvasWidth = Math.Clamp(model.CanvasWidth, 800, 1600);
         var canvasHeight = Math.Clamp(model.CanvasHeight, 500, 1200);

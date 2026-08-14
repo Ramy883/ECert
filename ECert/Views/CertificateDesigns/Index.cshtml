@@ -7,6 +7,13 @@
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     });
+    var fieldGroups = new[]
+    {
+        new { Label = "الشهادة", Keys = new[] { "certificate_number", "issue_date", "issued_by", "status", "verification_code", "verification_url" } },
+        new { Label = "المتدرب", Keys = new[] { "trainee_name", "trainee_name_arabic", "trainee_name_english", "trainee_gender", "trainee_university", "trainee_college", "trainee_specialization", "trainee_academic_level" } },
+        new { Label = "الدورة", Keys = new[] { "course_name", "course_name_arabic", "course_name_english", "course_short_description", "course_location", "course_category", "course_start_date", "course_end_date" } },
+        new { Label = "المدرب", Keys = new[] { "instructor_name", "instructor_specialization", "instructor_bio" } }
+    };
 }
 
 <style>
@@ -24,6 +31,8 @@
     .certificate-element[data-element-type="divider"] { padding: 0; min-height: 2px; border-top: 2px solid currentColor; }
     .field-chip { cursor: pointer; border: 1px solid #dce5ef; background: #f8fafc; border-radius: 999px; padding: .4rem .65rem; font-size: .8rem; color: #334155; transition: .15s ease; }
     .field-chip:hover { background: #eaf2ff; border-color: #93c5fd; color: #1d4ed8; }
+    .field-chip-list { max-height: 190px; overflow-y: auto; padding: .25rem; border: 1px solid #eef2f7; border-radius: 12px; background: #fbfdff; }
+    .field-group-title { font-size: .72rem; font-weight: 800; color: #64748b; margin: .35rem 0 .25rem; }
     .mini-label { font-size: .74rem; color: #64748b; font-weight: 700; margin-bottom: .3rem; display: block; }
     .property-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .65rem; }
     .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: #94a3b8; }
@@ -129,11 +138,29 @@
                     <button type="button" id="addElement" class="btn btn-primary btn-sm px-3"><i class="bi bi-plus-lg"></i></button>
                 </div>
                 <select id="fieldKey" class="form-select form-select-sm mb-2" aria-label="الحقل الديناميكي">
-                    @foreach (var field in Model.FieldLabels) { <option value="@field.Key">@field.Value</option> }
+                    @foreach (var group in fieldGroups)
+                    {
+                        <optgroup label="@group.Label">
+                            @foreach (var key in group.Keys.Where(key => Model.FieldLabels.ContainsKey(key)))
+                            {
+                                <option value="@key">@Model.FieldLabels[key]</option>
+                            }
+                        </optgroup>
+                    }
                 </select>
                 <input id="staticContent" class="form-control form-control-sm mb-2 d-none" maxlength="1000" placeholder="اكتب النص الثابت هنا" />
-                <div class="d-flex flex-wrap gap-1 mb-3">
-                    @foreach (var field in Model.FieldLabels) { <button type="button" class="field-chip quick-field" data-field="@field.Key">@field.Value</button> }
+                <div class="small text-muted mb-2">اختر أي متغير لوضع بياناته الفعلية تلقائياً في الشهادة عند التحقق.</div>
+                <div class="field-chip-list mb-3">
+                    @foreach (var group in fieldGroups)
+                    {
+                        <div class="field-group-title">@group.Label</div>
+                        <div class="d-flex flex-wrap gap-1">
+                            @foreach (var key in group.Keys.Where(key => Model.FieldLabels.ContainsKey(key)))
+                            {
+                                <button type="button" class="field-chip quick-field" data-field="@key">@Model.FieldLabels[key]</button>
+                            }
+                        </div>
+                    }
                 </div>
                 <div id="selectedPanel" class="d-none">
                     <hr />
@@ -141,8 +168,22 @@
                         <h6 class="fw-bold mb-0">العنصر المحدد</h6>
                         <button type="button" id="deleteElement" class="btn btn-sm btn-outline-danger" title="حذف العنصر"><i class="bi bi-trash3"></i></button>
                     </div>
-                    <div class="mb-2"><label class="mini-label" for="selectedContent">النص أو المحتوى</label><textarea id="selectedContent" class="form-control form-control-sm" rows="2" maxlength="1000"></textarea></div>
-                    <div class="property-grid">
+                        <div class="mb-2"><label class="mini-label" for="selectedContent">النص أو المحتوى</label><textarea id="selectedContent" class="form-control form-control-sm" rows="2" maxlength="1000"></textarea></div>
+                        <div class="mb-2" id="selectedFieldWrap">
+                            <label class="mini-label" for="selectedFieldKey">المتغير الديناميكي</label>
+                            <select id="selectedFieldKey" class="form-select form-select-sm">
+                                @foreach (var group in fieldGroups)
+                                {
+                                    <optgroup label="@group.Label">
+                                        @foreach (var key in group.Keys.Where(key => Model.FieldLabels.ContainsKey(key)))
+                                        {
+                                            <option value="@key">@Model.FieldLabels[key]</option>
+                                        }
+                                    </optgroup>
+                                }
+                            </select>
+                        </div>
+                        <div class="property-grid">
                         <div><label class="mini-label" for="selectedFontSize">حجم الخط</label><input id="selectedFontSize" type="number" min="8" max="96" class="form-control form-control-sm" /></div>
                         <div><label class="mini-label" for="selectedColor">لون النص</label><input id="selectedColor" type="color" class="form-control form-control-color w-100" /></div>
                         <div><label class="mini-label" for="selectedAlign">المحاذاة</label><select id="selectedAlign" class="form-select form-select-sm"><option value="right">يمين</option><option value="center">وسط</option><option value="left">يسار</option></select></div>
@@ -185,7 +226,24 @@
         issue_date: '2026/08/14',
         status: 'سارية ومعتمدة',
         verification_code: 'EXAMPLE-VERIFY-CODE',
-        verification_url: 'ecert.example/v/sample'
+        verification_url: 'ecert.example/v/sample',
+        trainee_name_arabic: 'أحمد محمد العتيبي',
+        trainee_name_english: 'Ahmed Mohammed Alotaibi',
+        trainee_gender: 'ذكر',
+        trainee_university: 'جامعة التدريب',
+        trainee_college: 'كلية الإدارة',
+        trainee_specialization: 'إدارة الأعمال',
+        trainee_academic_level: 'المستوى السادس',
+        course_name_arabic: 'القيادة الاستراتيجية وإدارة فرق العمل',
+        course_name_english: 'Strategic Leadership and Team Management',
+        course_short_description: 'برنامج تدريبي احترافي معتمد',
+        course_location: 'قاعة التدريب الرئيسية',
+        course_category: 'الإدارة والقيادة',
+        course_start_date: '2026/08/01',
+        course_end_date: '2026/08/14',
+        instructor_name: 'د. سارة أحمد',
+        instructor_specialization: 'القيادة وتطوير الأداء',
+        instructor_bio: 'مدربة ومستشارة في التطوير المؤسسي'
     };
     const nodes = new Map();
     const $ = id => document.getElementById(id);
@@ -251,6 +309,8 @@
         panel.classList.remove('d-none');
         $('selectedContent').value = element.content || '';
         $('selectedContent').disabled = element.elementType === 'field' || element.elementType === 'divider';
+        $('selectedFieldWrap').classList.toggle('d-none', element.elementType !== 'field');
+        $('selectedFieldKey').value = element.fieldKey || $('fieldKey').value;
         $('selectedFontSize').value = element.fontSize;
         $('selectedColor').value = element.fontColor || '#172033';
         $('selectedAlign').value = element.textAlign || 'center';
@@ -318,6 +378,7 @@
     $('addElement').addEventListener('click', addElement);
     document.querySelectorAll('.quick-field').forEach(button => button.addEventListener('click', () => { $('elementType').value = 'field'; $('fieldKey').value = button.dataset.field; $('elementType').dispatchEvent(new Event('change')); addElement(); }));
     $('deleteElement').addEventListener('click', () => { if (selectedIndex < 0) return; elements.splice(selectedIndex, 1); selectedIndex = -1; render(); });
+    $('selectedFieldKey').addEventListener('change', event => updateSelected('fieldKey', event.target.value));
     [['selectedContent','content'],['selectedFontSize','fontSize'],['selectedColor','fontColor'],['selectedAlign','textAlign'],['selectedWeight','fontWeight'],['selectedFontFamily','fontFamily'],['selectedX','x'],['selectedY','y'],['selectedWidth','width'],['selectedHeight','height'],['selectedVisible','isVisible']].forEach(([id, property]) => {
         $(id).addEventListener('input', event => updateSelected(property, property === 'isVisible' ? event.target.checked : event.target.value));
         $(id).addEventListener('change', event => updateSelected(property, property === 'isVisible' ? event.target.checked : event.target.value));

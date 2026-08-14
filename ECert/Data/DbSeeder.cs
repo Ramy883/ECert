@@ -49,7 +49,7 @@ public static class DbSeeder
             db.RolePermissions.Add(new RolePermission { RoleId = superAdminRole.RoleId, PermissionId = p.PermissionId });
 
         // Admin permissions (no finance, no users, no roles)
-        var adminPerms = new[] { "manage-registrations", "manage-courses", "manage-instructors", "issue-certificates", "manage-categories" };
+        var adminPerms = new[] { "manage-registrations", "manage-courses", "manage-instructors", "issue-certificates", "manage-categories", "manage-certificate-designs" };
         foreach (var p in permissions.Where(p => adminPerms.Contains(p.PermissionName)))
             db.RolePermissions.Add(new RolePermission { RoleId = adminRole.RoleId, PermissionId = p.PermissionId });
 
@@ -198,10 +198,18 @@ public static class DbSeeder
             db.SaveChanges();
         }
 
-        var superAdmin = db.Roles.FirstOrDefault(r => r.RoleName == "SuperAdmin");
-        if (superAdmin != null && !db.RolePermissions.Any(rp => rp.RoleId == superAdmin.RoleId && rp.PermissionId == permission.PermissionId))
+        var rolesToGrant = db.Roles
+            .Where(role => role.RoleName == "SuperAdmin" || role.RoleName == "Admin")
+            .ToList();
+
+        var missingAssignments = rolesToGrant
+            .Where(role => !db.RolePermissions.Any(rp => rp.RoleId == role.RoleId && rp.PermissionId == permission.PermissionId))
+            .Select(role => new RolePermission { RoleId = role.RoleId, PermissionId = permission.PermissionId })
+            .ToList();
+
+        if (missingAssignments.Count > 0)
         {
-            db.RolePermissions.Add(new RolePermission { RoleId = superAdmin.RoleId, PermissionId = permission.PermissionId });
+            db.RolePermissions.AddRange(missingAssignments);
             db.SaveChanges();
         }
     }
