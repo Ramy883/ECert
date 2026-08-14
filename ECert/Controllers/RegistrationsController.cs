@@ -42,7 +42,7 @@ public class RegistrationsController : Controller
 
         if (!string.IsNullOrEmpty(status)) query = query.Where(r => r.Status == status);
         if (!string.IsNullOrEmpty(search))
-            query = query.Where(r => r.FullName.Contains(search) || r.Phone.Contains(search) || r.RequestNumber.Contains(search));
+            query = query.Where(r => (r.FullNameArabic != null && r.FullNameArabic.Contains(search)) || (r.FullNameEnglish != null && r.FullNameEnglish.Contains(search)) || r.FullName.Contains(search) || r.Phone.Contains(search) || r.RequestNumber.Contains(search));
         if (courseId.HasValue) query = query.Where(r => r.CourseId == courseId.Value);
         if (dateFrom.HasValue) query = query.Where(r => r.RegistrationDate >= dateFrom.Value);
         if (dateTo.HasValue) query = query.Where(r => r.RegistrationDate <= dateTo.Value.AddDays(1));
@@ -306,7 +306,7 @@ public class RegistrationsController : Controller
         var query = _db.Registrations.Include(r => r.Course).Include(r => r.Invoice).AsQueryable();
         if (!string.IsNullOrEmpty(status)) query = query.Where(r => r.Status == status);
         if (!string.IsNullOrEmpty(search))
-            query = query.Where(r => r.FullName.Contains(search) || r.Phone.Contains(search) || r.RequestNumber.Contains(search));
+            query = query.Where(r => (r.FullNameArabic != null && r.FullNameArabic.Contains(search)) || (r.FullNameEnglish != null && r.FullNameEnglish.Contains(search)) || r.FullName.Contains(search) || r.Phone.Contains(search) || r.RequestNumber.Contains(search));
         if (courseId.HasValue) query = query.Where(r => r.CourseId == courseId.Value);
         if (dateFrom.HasValue) query = query.Where(r => r.RegistrationDate >= dateFrom.Value);
         if (dateTo.HasValue) query = query.Where(r => r.RegistrationDate <= dateTo.Value.AddDays(1));
@@ -315,22 +315,24 @@ public class RegistrationsController : Controller
         using var wb = new XLWorkbook();
         var ws = wb.Worksheets.Add("التسجيلات");
         ws.Cell(1, 1).Value = "رقم الطلب";
-        ws.Cell(1, 2).Value = "الاسم";
-        ws.Cell(1, 3).Value = "الهاتف";
-        ws.Cell(1, 4).Value = "الدورة";
-        ws.Cell(1, 5).Value = "التاريخ";
-        ws.Cell(1, 6).Value = "الحالة";
-        ws.Cell(1, 7).Value = "الموظف";
+        ws.Cell(1, 2).Value = "الاسم بالعربية";
+        ws.Cell(1, 3).Value = "الاسم بالإنجليزية";
+        ws.Cell(1, 4).Value = "الهاتف";
+        ws.Cell(1, 5).Value = "الدورة";
+        ws.Cell(1, 6).Value = "التاريخ";
+        ws.Cell(1, 7).Value = "الحالة";
+        ws.Cell(1, 8).Value = "الموظف";
         int row = 2;
         foreach (var r in list)
         {
             ws.Cell(row, 1).Value = r.RequestNumber;
-            ws.Cell(row, 2).Value = r.FullName;
-            ws.Cell(row, 3).Value = r.Phone;
-            ws.Cell(row, 4).Value = r.Course?.CourseName ?? "";
-            ws.Cell(row, 5).Value = r.RegistrationDate.ToString("yyyy-MM-dd");
-            ws.Cell(row, 6).Value = r.Status;
-            ws.Cell(row, 7).Value = r.ProcessedBy ?? "";
+            ws.Cell(row, 2).Value = r.FullNameArabic ?? r.FullName;
+            ws.Cell(row, 3).Value = r.FullNameEnglish ?? r.FullName;
+            ws.Cell(row, 4).Value = r.Phone;
+            ws.Cell(row, 5).Value = r.Course?.CourseName ?? "";
+            ws.Cell(row, 6).Value = r.RegistrationDate.ToString("yyyy-MM-dd");
+            ws.Cell(row, 7).Value = r.Status;
+            ws.Cell(row, 8).Value = r.ProcessedBy ?? "";
             row++;
         }
         ws.Columns().AdjustToContents();

@@ -15,9 +15,15 @@ public class LoginViewModel
 
 public class PublicRegistrationViewModel
 {
-    [Required(ErrorMessage = "الاسم الكامل مطلوب")]
-    [Display(Name = "الاسم الكامل")]
-    public string FullName { get; set; } = string.Empty;
+    [Required(ErrorMessage = "الاسم بالعربية مطلوب")]
+    [StringLength(100)]
+    [Display(Name = "الاسم بالعربية")]
+    public string? FullNameArabic { get; set; }
+
+    [Required(ErrorMessage = "الاسم بالإنجليزية مطلوب")]
+    [StringLength(100)]
+    [Display(Name = "الاسم بالإنجليزية")]
+    public string? FullNameEnglish { get; set; }
 
     [Required(ErrorMessage = "رقم الهاتف مطلوب")]
     [Display(Name = "رقم الهاتف")]

@@ -106,7 +106,9 @@ public class RegistrationController : Controller
         var registration = new Registration
         {
             RequestNumber = requestNumber,
-            FullName = model.FullName.Trim(),
+            FullName = model.FullNameArabic!.Trim(),
+            FullNameArabic = model.FullNameArabic.Trim(),
+            FullNameEnglish = model.FullNameEnglish!.Trim(),
             Phone = $"{country.CountryCode}{phone}",
             Email = model.Email?.Trim(),
             HeardFrom = model.HeardFrom?.Trim(),
@@ -128,7 +130,9 @@ public class RegistrationController : Controller
         await _db.SaveChangesAsync();
 
         ViewBag.RequestNumber = requestNumber;
-        ViewBag.FullName = model.FullName;
+        ViewBag.FullName = model.FullNameArabic;
+        ViewBag.FullNameArabic = model.FullNameArabic;
+        ViewBag.FullNameEnglish = model.FullNameEnglish;
         ViewBag.CourseName = course.CourseNameArabic;
         ViewBag.CourseNameEnglish = course.CourseNameEnglish;
         ViewBag.CourseNameArabic = course.CourseNameArabic;

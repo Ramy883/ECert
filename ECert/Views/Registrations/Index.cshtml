@@ -216,7 +216,8 @@
                                 </td>
                                 <td data-label="رقم الطلب"><code class="request-number">@registration.RequestNumber</code></td>
                                 <td data-label="المتدرب" class="trainee-cell">
-                                    <strong>@registration.FullName</strong>
+                                    <strong>@(registration.FullNameArabic ?? registration.FullName)</strong>
+                                    <span class="d-block text-muted small" dir="ltr">@(registration.FullNameEnglish ?? registration.FullName)</span>
                                     <span class="d-lg-none text-muted small">@registration.Phone</span>
                                 </td>
                                 <td data-label="الهاتف" class="d-none d-lg-table-cell ltr-cell">@registration.Phone</td>

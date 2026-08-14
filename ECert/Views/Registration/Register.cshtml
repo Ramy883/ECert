@@ -16,11 +16,17 @@
                 <form asp-action="Register" method="post" id="regForm" novalidate>
                     @Html.AntiForgeryToken()
                     <input type="hidden" asp-for="CourseId" />
-                    <div class="mb-3">
-                        <label asp-for="FullName" class="form-label"></label>
-                        <input asp-for="FullName" class="form-control" placeholder="الاسم الكامل" autocomplete="name" />
-                        <span asp-validation-for="FullName" class="text-danger"></span>
-                    </div>
+                                            <div class="mb-3">
+                            <label asp-for="FullNameArabic" class="form-label"></label>
+                            <input asp-for="FullNameArabic" class="form-control" placeholder="الاسم بالعربية" dir="rtl" autocomplete="name" />
+                            <span asp-validation-for="FullNameArabic" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="FullNameEnglish" class="form-label"></label>
+                            <input asp-for="FullNameEnglish" class="form-control" placeholder="Full name in English" dir="ltr" autocomplete="name" />
+                            <span asp-validation-for="FullNameEnglish" class="text-danger"></span>
+                        </div>
+
                     <div class="mb-3">
                         <label asp-for="CountryId" class="form-label"></label>
                         <select asp-for="CountryId" class="form-select" id="countrySelect" autocomplete="country-name">

@@ -10,7 +10,8 @@
             <div class="card-header bg-white"><h6 class="mb-0">بيانات المتدرب</h6></div>
             <div class="card-body">
                 <table class="table table-borderless">
-                    <tr><th class="w-50">الاسم</th><td>@Model.FullName</td></tr>
+                    <tr><th class="w-50">الاسم بالعربية</th><td>@(Model.FullNameArabic ?? Model.FullName)</td></tr>
+                    <tr><th>الاسم بالإنجليزية</th><td dir="ltr">@(Model.FullNameEnglish ?? Model.FullName)</td></tr>
                     <tr><th>الهاتف</th><td>@Model.Phone</td></tr>
                     <tr><th>البريد</th><td>@(Model.Email ?? "-")</td></tr>
                     <tr><th>كيف سمع عنا</th><td>@(Model.HeardFrom ?? "-")</td></tr>

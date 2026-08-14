@@ -44,6 +44,7 @@ builder.Services.AddSingleton<VerifyRequestGuardService>();
 builder.Services.AddScoped<CertificateSchemaMigrationService>();
 builder.Services.AddScoped<AcademicSchemaMigrationService>();
 builder.Services.AddScoped<CourseNameSchemaMigrationService>();
+builder.Services.AddScoped<RegistrationNameSchemaMigrationService>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -119,6 +120,8 @@ using (var scope = app.Services.CreateScope())
             ) CHARACTER SET utf8mb4;");
         var courseNameMigration = scope.ServiceProvider.GetRequiredService<CourseNameSchemaMigrationService>();
         await courseNameMigration.EnsureAsync();
+        var registrationNameMigration = scope.ServiceProvider.GetRequiredService<RegistrationNameSchemaMigrationService>();
+        await registrationNameMigration.EnsureAsync();
         DbSeeder.Seed(db);
         DbSeeder.SeedHomepageCms(db);
         var certificateMigration = scope.ServiceProvider.GetRequiredService<CertificateSchemaMigrationService>();
