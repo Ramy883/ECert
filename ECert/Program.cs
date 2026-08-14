@@ -125,8 +125,6 @@ using (var scope = app.Services.CreateScope())
         await certificateMigration.EnsureAsync();
         var academicMigration = scope.ServiceProvider.GetRequiredService<AcademicSchemaMigrationService>();
         await academicMigration.EnsureAsync();
-        var courseNameMigration = scope.ServiceProvider.GetRequiredService<CourseNameSchemaMigrationService>();
-        await courseNameMigration.EnsureAsync();
     }
     catch (Exception ex)
     {
