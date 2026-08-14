@@ -1,0 +1,90 @@
+@model ECert.ViewModels.CourseImportPageViewModel
+@{
+    ViewData["Title"] = "استيراد الدورات";
+    ViewData["PageIcon"] = "bi-file-earmark-spreadsheet";
+    ViewData["PageDesc"] = "رفع عدة دورات من ملف Excel مع تحقق ومراجعة قبل الحفظ";
+    Layout = "_AdminLayout";
+}
+<div class="page-header">
+    <partial name="_PageHeader" />
+    <div class="page-actions">
+        <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-right"></i> العودة للدورات</a>
+        <a asp-action="DownloadImportTemplate" class="btn btn-outline-primary"><i class="bi bi-download"></i> تنزيل القالب</a>
+    </div>
+</div>
+
+<div class="alert alert-info d-flex gap-2 align-items-start">
+    <i class="bi bi-shield-check fs-5"></i>
+    <div><strong>استيراد آمن قبل الحفظ.</strong> يجب أن تكون كل الصفوف صحيحة؛ إذا وُجد خطأ واحد فلن يتم حفظ أي دورة حتى تتم مراجعته.</div>
+</div>
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger"><div asp-validation-summary="All"></div></div>
+}
+
+@if (Model.Preview is null)
+{
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+            <h5 class="mb-3"><i class="bi bi-cloud-arrow-up text-primary"></i> رفع ملف الدورات</h5>
+            <form asp-action="Import" method="post" enctype="multipart/form-data" class="row g-3">
+                @Html.AntiForgeryToken()
+                <div class="col-12">
+                    <label asp-for="File" class="form-label fw-bold">ملف XLSX</label>
+                    <input asp-for="File" type="file" class="form-control" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required />
+                    <div class="form-text">الحد الأقصى 10 ميجابايت. استخدم القالب المرفق، ولا تغيّر أسماء الأعمدة الأساسية.</div>
+                </div>
+                <div class="col-12 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> فحص ومعاينة الملف</button>
+                    <a asp-action="DownloadImportTemplate" class="btn btn-light">ما هي الأعمدة المطلوبة؟</a>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row g-3 mb-3">
+        <div class="col-md-4"><div class="card shadow-sm border-0"><div class="card-body"><div class="text-muted small">إجمالي الصفوف</div><div class="fs-3 fw-bold">@Model.Preview.TotalRows</div></div></div></div>
+        <div class="col-md-4"><div class="card shadow-sm border-0"><div class="card-body"><div class="text-muted small">صفوف سليمة</div><div class="fs-3 fw-bold text-success">@Model.Preview.ValidRows</div></div></div></div>
+        <div class="col-md-4"><div class="card shadow-sm border-0"><div class="card-body"><div class="text-muted small">صفوف تحتاج مراجعة</div><div class="fs-3 fw-bold text-danger">@Model.Preview.InvalidRows</div></div></div></div>
+    </div>
+    @if (Model.Preview.InvalidRows > 0)
+    {
+        <div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> لا يمكن الاعتماد قبل إصلاح جميع الصفوف المعلّمة. عدّل الملف ثم ارفعه مرة أخرى.</div>
+    }
+    else
+    {
+        <div class="alert alert-success"><i class="bi bi-check-circle"></i> جميع الصفوف اجتازت التحقق. راجع البيانات ثم اعتمد الاستيراد.</div>
+    }
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light"><tr><th>الصف</th><th>الدورة</th><th>الفئة</th><th>المدرب</th><th>السعر</th><th>المقاعد</th><th>الحالة</th><th>التحقق</th></tr></thead>
+                    <tbody>
+                    @foreach (var row in Model.Preview.Rows)
+                    {
+                        <tr class="@(row.IsValid ? "" : "table-danger")">
+                            <td>@row.RowNumber</td><td><strong>@row.CourseName</strong></td><td>@row.Category</td><td>@row.Instructor</td><td>@row.Price.ToString("N0") ريال</td><td>@row.TotalSeats</td><td>@row.Status</td>
+                            <td>@if (row.IsValid) { <span class="badge bg-success">سليم</span> } else { <span class="text-danger small">@string.Join("، ", row.Errors)</span> }</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <a asp-action="Import" class="btn btn-outline-secondary"><i class="bi bi-arrow-repeat"></i> رفع ملف آخر</a>
+        @if (Model.Preview.CanCommit)
+        {
+            <form asp-action="ConfirmImport" method="post" onsubmit="return confirm('سيتم إنشاء جميع الدورات المعروضة دفعة واحدة. هل تريد المتابعة؟');">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="token" value="@Model.Preview.Token" />
+                <button type="submit" class="btn btn-success"><i class="bi bi-check2-circle"></i> اعتماد استيراد @Model.Preview.ValidRows دورة</button>
+            </form>
+        }
+    </div>
+}
