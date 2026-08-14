@@ -21,6 +21,7 @@ public class CertificatesController : Controller
     private readonly VerifyRequestGuardService _verifyGuard;
     private readonly IConfiguration _configuration;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly CertificateDesignService _certificateDesigns;
 
     public CertificatesController(
         ECertDbContext db,
@@ -29,7 +30,8 @@ public class CertificatesController : Controller
         CertificateSecurityService certificateSecurity,
         VerifyRequestGuardService verifyGuard,
         IConfiguration configuration,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory,
+        CertificateDesignService certificateDesigns)
     {
         _db = db;
         _audit = audit;
@@ -38,6 +40,7 @@ public class CertificatesController : Controller
         _verifyGuard = verifyGuard;
         _configuration = configuration;
         _httpClientFactory = httpClientFactory;
+        _certificateDesigns = certificateDesigns;
     }
 
     private bool HasPermission(string perm) => User.HasClaim(c => c.Type == "Permission" && c.Value == perm);
