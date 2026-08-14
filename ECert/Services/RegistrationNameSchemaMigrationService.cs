@@ -15,8 +15,8 @@ public class RegistrationNameSchemaMigrationService
         await EnsureColumnAsync("Registrations", "FullNameArabic", "VARCHAR(100) NULL");
         await EnsureColumnAsync("Registrations", "FullNameEnglish", "VARCHAR(100) NULL");
         await EnsureColumnAsync("Registrations", "Gender", "VARCHAR(20) NULL");
-        await EnsureColumnAsync("Registrations", "DocumentPath", "VARCHAR(500) NULL");
-        await EnsureColumnAsync("Registrations", "DocumentOriginalName", "VARCHAR(255) NULL");
+        await DropColumnIfExistsAsync("Registrations", "DocumentPath");
+        await DropColumnIfExistsAsync("Registrations", "DocumentOriginalName");
 
         await _db.Database.ExecuteSqlRawAsync(@"
 UPDATE `Registrations`
@@ -34,6 +34,14 @@ WHERE `FullNameArabic` IS NULL
             return;
 
         await _db.Database.ExecuteSqlRawAsync($"ALTER TABLE `{tableName}` ADD COLUMN `{columnName}` {definitionSql};");
+    }
+
+    private async Task DropColumnIfExistsAsync(string tableName, string columnName)
+    {
+        if (!await ColumnExistsAsync(tableName, columnName))
+            return;
+
+        await _db.Database.ExecuteSqlRawAsync($"ALTER TABLE `{tableName}` DROP COLUMN `{columnName}`;");
     }
 
     private async Task<bool> ColumnExistsAsync(string tableName, string columnName)

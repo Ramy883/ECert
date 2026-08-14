@@ -27,14 +27,6 @@ public class Registration
     [Display(Name = "الجنس")]
     public string? Gender { get; set; }
 
-    [StringLength(500)]
-    [Display(Name = "مسار المستند")]
-    public string? DocumentPath { get; set; }
-
-    [StringLength(255)]
-    [Display(Name = "اسم المستند")]
-    public string? DocumentOriginalName { get; set; }
-
     [Required(ErrorMessage = "رقم الهاتف مطلوب")]
     [Display(Name = "رقم الهاتف")]
     public string Phone { get; set; } = string.Empty;

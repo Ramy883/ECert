@@ -12,12 +12,9 @@ public class RegistrationController : Controller
     private static readonly IReadOnlyList<string> AcademicLevels = AcademicLevelCatalog.Levels;
 
     private readonly ECertDbContext _db;
-    private readonly RegistrationDocumentService _documents;
-
-    public RegistrationController(ECertDbContext db, RegistrationDocumentService documents)
+    public RegistrationController(ECertDbContext db)
     {
         _db = db;
-        _documents = documents;
     }
 
     [HttpGet]
@@ -48,27 +45,6 @@ public class RegistrationController : Controller
         return View(vm);
     }
 
-    [HttpGet]
-    public async Task<IActionResult> Document(int id)
-    {
-        if (!(User.Identity?.IsAuthenticated == true && (User.IsInRole("SuperAdmin") || User.HasClaim("Permission", "manage-registrations"))))
-            return Forbid();
-
-        var registration = await _db.Registrations.AsNoTracking().FirstOrDefaultAsync(r => r.RegistrationId == id);
-        if (registration == null || string.IsNullOrWhiteSpace(registration.DocumentPath)) return NotFound();
-
-        try
-        {
-            var fullPath = _documents.ResolveFullPath(registration.DocumentPath);
-            if (!System.IO.File.Exists(fullPath)) return NotFound();
-            return PhysicalFile(fullPath, GetDocumentContentType(fullPath), registration.DocumentOriginalName ?? Path.GetFileName(fullPath), enableRangeProcessing: true);
-        }
-        catch (InvalidDataException)
-        {
-            return BadRequest();
-        }
-    }
-
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Register(PublicRegistrationViewModel model)
@@ -84,9 +60,6 @@ public class RegistrationController : Controller
 
         if (model.Gender is not ("Male" or "Female"))
             ModelState.AddModelError(nameof(model.Gender), "اختر الجنس من القائمة.");
-        if (model.Document == null)
-            ModelState.AddModelError(nameof(model.Document), "المستند مطلوب.");
-
         if (!ModelState.IsValid)
             return await ReturnFormAsync(model, course);
 
@@ -135,17 +108,6 @@ public class RegistrationController : Controller
             return await ReturnFormAsync(model, course);
         }
 
-        SavedRegistrationDocument savedDocument;
-        try
-        {
-            savedDocument = await _documents.SaveAsync(model.Document);
-        }
-        catch (InvalidDataException exception)
-        {
-            ModelState.AddModelError(nameof(model.Document), exception.Message);
-            return await ReturnFormAsync(model, course);
-        }
-
         var requestNumber = $"REG-{DateTime.Now:yyyy}-{new Random().Next(10000, 99999)}";
         var registration = new Registration
         {
@@ -154,8 +116,6 @@ public class RegistrationController : Controller
             FullNameArabic = model.FullNameArabic.Trim(),
             FullNameEnglish = model.FullNameEnglish!.Trim(),
             Gender = model.Gender,
-            DocumentPath = savedDocument.RelativePath,
-            DocumentOriginalName = savedDocument.OriginalName,
             Phone = $"{country.CountryCode}{phone}",
             Email = model.Email?.Trim(),
             HeardFrom = model.HeardFrom?.Trim(),
@@ -255,16 +215,6 @@ public class RegistrationController : Controller
         if (model.AcademicSpecializationId.HasValue)
             model.SpecializationName = await _db.AcademicSpecializations.Where(s => s.AcademicSpecializationId == model.AcademicSpecializationId).Select(s => s.SpecializationName).FirstOrDefaultAsync();
     }
-
-    private static string GetDocumentContentType(string path)
-        => Path.GetExtension(path).ToLowerInvariant() switch
-        {
-            ".pdf" => "application/pdf",
-            ".png" => "image/png",
-            ".jpg" or ".jpeg" => "image/jpeg",
-            ".webp" => "image/webp",
-            _ => "application/octet-stream"
-        };
 
     private sealed record AcademicSelection(University University, College College, AcademicSpecialization Specialization, string AcademicLevel);
 }

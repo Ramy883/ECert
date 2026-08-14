@@ -15,15 +15,13 @@ public class RegistrationsController : Controller
     private readonly ECertDbContext _db;
     private readonly AuditLogService _audit;
     private readonly NotificationService _notify;
-    private readonly RegistrationDocumentService _documents;
     private readonly RegistrationInvoiceService _invoiceService;
 
-    public RegistrationsController(ECertDbContext db, AuditLogService audit, NotificationService notify, RegistrationDocumentService documents, RegistrationInvoiceService invoiceService)
+    public RegistrationsController(ECertDbContext db, AuditLogService audit, NotificationService notify, RegistrationInvoiceService invoiceService)
     {
         _db = db;
         _audit = audit;
         _notify = notify;
-        _documents = documents;
         _invoiceService = invoiceService;
     }
 
@@ -69,31 +67,6 @@ public class RegistrationsController : Controller
         ViewBag.PendingCount = registrations.Count(r => r.Status == "Pending");
         ViewBag.ReturnUrl = $"{Request.PathBase}{Request.Path}{Request.QueryString}";
         return View();
-    }
-
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> UploadDocument(int id, IFormFile? document)
-    {
-        if (!HasPermission("manage-registrations")) return Forbid();
-        var registration = await _db.Registrations.FirstOrDefaultAsync(r => r.RegistrationId == id);
-        if (registration == null) return NotFound();
-
-        try
-        {
-            var saved = await _documents.SaveAsync(document);
-            registration.DocumentPath = saved.RelativePath;
-            registration.DocumentOriginalName = saved.OriginalName;
-            await _db.SaveChangesAsync();
-            await _audit.LogAsync(User.Identity?.Name ?? "", "UploadDocument", "Registration", id, null, saved.OriginalName);
-            TempData["Success"] = "تم رفع المستند وتحديث الطلب.";
-        }
-        catch (InvalidDataException exception)
-        {
-            TempData["Error"] = exception.Message;
-        }
-
-        return RedirectToAction(nameof(Details), new { id });
     }
 
     public async Task<IActionResult> Details(int id)
@@ -353,10 +326,9 @@ public class RegistrationsController : Controller
         ws.Cell(1, 4).Value = "الجنس";
         ws.Cell(1, 5).Value = "الهاتف";
         ws.Cell(1, 6).Value = "الدورة";
-        ws.Cell(1, 7).Value = "المستند";
-        ws.Cell(1, 8).Value = "التاريخ";
-        ws.Cell(1, 9).Value = "الحالة";
-        ws.Cell(1, 10).Value = "الموظف";
+        ws.Cell(1, 7).Value = "التاريخ";
+        ws.Cell(1, 8).Value = "الحالة";
+        ws.Cell(1, 9).Value = "الموظف";
         int row = 2;
         foreach (var r in list)
         {
@@ -366,10 +338,9 @@ public class RegistrationsController : Controller
             ws.Cell(row, 4).Value = r.Gender == "Male" ? "ذكر" : r.Gender == "Female" ? "أنثى" : "";
             ws.Cell(row, 5).Value = r.Phone;
             ws.Cell(row, 6).Value = r.Course?.CourseName ?? "";
-            ws.Cell(row, 7).Value = r.DocumentOriginalName ?? "";
-            ws.Cell(row, 8).Value = r.RegistrationDate.ToString("yyyy-MM-dd");
-            ws.Cell(row, 9).Value = r.Status;
-            ws.Cell(row, 10).Value = r.ProcessedBy ?? "";
+            ws.Cell(row, 7).Value = r.RegistrationDate.ToString("yyyy-MM-dd");
+            ws.Cell(row, 8).Value = r.Status;
+            ws.Cell(row, 9).Value = r.ProcessedBy ?? "";
             row++;
         }
         ws.Columns().AdjustToContents();

@@ -17,21 +17,6 @@
                     <tr><th>البريد</th><td>@(Model.Email ?? "-")</td></tr>
                     <tr><th>كيف سمع عنا</th><td>@(Model.HeardFrom ?? "-")</td></tr>
                     <tr><th>الدورة</th><td>@Model.Course?.CourseName</td></tr>
-                    <tr><th>المستند</th><td>
-                        @if (!string.IsNullOrWhiteSpace(Model.DocumentPath))
-                        {
-                            <a asp-controller="Registration" asp-action="Document" asp-route-id="@Model.RegistrationId" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary"><i class="bi bi-file-earmark-arrow-down"></i> @(Model.DocumentOriginalName ?? "فتح المستند")</a>
-                        }
-                        else
-                        {
-                            <span class="text-muted">لا يوجد مستند</span>
-                        }
-                        <form asp-controller="Registrations" asp-action="UploadDocument" asp-route-id="@Model.RegistrationId" method="post" enctype="multipart/form-data" class="mt-2">
-                            @Html.AntiForgeryToken()
-                            <input type="file" name="document" class="form-control form-control-sm" accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp" required />
-                            <button type="submit" class="btn btn-sm btn-outline-secondary mt-2"><i class="bi bi-upload"></i> رفع/استبدال المستند</button>
-                        </form>
-                    </td></tr>
                     <tr><th>تاريخ التسجيل</th><td>@Model.RegistrationDate.ToString("yyyy-MM-dd HH:mm")</td></tr>
                     <tr><th>الحالة</th><td>
                         @switch (Model.Status)

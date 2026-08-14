@@ -13,7 +13,7 @@
                 <p class="text-center text-muted mb-1"><span dir="ltr">@Model.CourseNameEnglish</span></p>
                 <p class="text-center text-muted mb-4">@Model.CourseNameArabic</p>
                 <div asp-validation-summary="All" class="text-danger"></div>
-                <form asp-action="Register" method="post" enctype="multipart/form-data" id="regForm" novalidate>
+                <form asp-action="Register" method="post" id="regForm" novalidate>
                     @Html.AntiForgeryToken()
                     <input type="hidden" asp-for="CourseId" />
                                         <div class="mb-3">
@@ -26,21 +26,20 @@
                         <input asp-for="FullNameEnglish" class="form-control" placeholder="Full name in English" dir="ltr" autocomplete="name" />
                         <span asp-validation-for="FullNameEnglish" class="text-danger"></span>
                     </div>
-                    <div class="mb-3">
-                        <label asp-for="Gender" class="form-label"></label>
-                        <select asp-for="Gender" class="form-select">
-                            <option value="">اختر الجنس</option>
-                            <option value="Male">ذكر</option>
-                            <option value="Female">أنثى</option>
-                        </select>
+                    <fieldset class="mb-3">
+                        <legend class="form-label fs-6 mb-2">الجنس</legend>
+                        <div class="d-flex gap-4" role="radiogroup" aria-label="الجنس">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" asp-for="Gender" value="Male" id="genderMale" />
+                                <label class="form-check-label" for="genderMale">ذكر</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" asp-for="Gender" value="Female" id="genderFemale" />
+                                <label class="form-check-label" for="genderFemale">أنثى</label>
+                            </div>
+                        </div>
                         <span asp-validation-for="Gender" class="text-danger"></span>
-                    </div>
-                    <div class="mb-3">
-                        <label asp-for="Document" class="form-label"></label>
-                        <input asp-for="Document" type="file" class="form-control" accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp" />
-                        <div class="form-text">المسموح: PDF أو PNG أو JPG أو JPEG أو WEBP، وبحجم أقصى 10 ميغابايت.</div>
-                        <span asp-validation-for="Document" class="text-danger"></span>
-                    </div>
+                    </fieldset>
 
                     <div class="mb-3">
                         <label asp-for="CountryId" class="form-label"></label>

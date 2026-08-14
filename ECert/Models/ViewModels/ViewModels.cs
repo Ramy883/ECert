@@ -33,10 +33,6 @@ public class PublicRegistrationViewModel
     [Display(Name = "الجنس")]
     public string? Gender { get; set; }
 
-    [Required(ErrorMessage = "المستند مطلوب")]
-    [Display(Name = "المستند / الوثيقة")]
-    public IFormFile? Document { get; set; }
-
     [Required(ErrorMessage = "الدولة مطلوبة")]
     [Display(Name = "الدولة")]
     public int CountryId { get; set; }
