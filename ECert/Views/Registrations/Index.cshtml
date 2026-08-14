@@ -1,136 +1,274 @@
+@using ECert.Models
 @{
     ViewData["Title"] = "إدارة التسجيلات";
     ViewData["PageIcon"] = "bi-clipboard-check";
-    ViewData["PageDesc"] = "مراجعة طلبات التسجيل في الدورات وقبولها أو رفضها";
+    ViewData["PageDesc"] = "مراجعة الطلبات واتخاذ القرار بسرعة ودقة";
     Layout = "_AdminLayout";
+
     var registrations = ViewBag.Registrations as List<Registration> ?? new();
     var isSuperAdmin = User.HasClaim(c => c.Type == "Role" && c.Value == "SuperAdmin");
+    var activeStatus = (string?)ViewBag.Status ?? string.Empty;
+    var activeSearch = (string?)ViewBag.Search ?? string.Empty;
+    var selectedCourseId = (int?)ViewBag.CourseId;
+    var activeDateFrom = (DateTime?)ViewBag.DateFrom;
+    var activeDateTo = (DateTime?)ViewBag.DateTo;
+    var courses = (ViewBag.Courses as dynamic) ?? new List<dynamic>();
+    var returnUrl = (string?)ViewBag.ReturnUrl ?? Url.Action("Index", "Registrations") ?? "/Registrations";
+    var pendingCount = registrations.Count(r => r.Status == "Pending");
+    var hasActiveFilters = !string.IsNullOrWhiteSpace(activeStatus)
+        || !string.IsNullOrWhiteSpace(activeSearch)
+        || selectedCourseId.HasValue
+        || activeDateFrom.HasValue
+        || activeDateTo.HasValue;
 }
-<div class="page-header">
-    <partial name="_PageHeader" />
-</div>
 
-<div class="card shadow-sm mb-3">
-    <div class="card-body py-2">
-        <form method="get" class="row g-2 align-items-center">
-            <div class="col-md-4">
-                <input type="text" name="search" value="@ViewBag.Search" class="form-control" placeholder="بحث بالاسم، الهاتف، رقم الطلب..." />
+<div class="registrations-workspace">
+    <div class="page-header registrations-page-header mb-3">
+        <partial name="_PageHeader" />
+        <p class="text-muted small mb-0 mt-1">حدِّد الطلبات <strong>المعلقة فقط</strong>، ثم اتخذ قراراً واحداً واضحاً. تبقى الطلبات المعالجة مرئية للمتابعة ولا تدخل في الاختيار الجماعي.</p>
+    </div>
+
+    <section class="registration-filter-card" aria-label="بحث وتصفية التسجيلات">
+        <form method="get" id="registrationFilters" class="registration-filter-form">
+            <div class="registration-search-field">
+                <label for="registrationSearch" class="visually-hidden">البحث في التسجيلات</label>
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <input id="registrationSearch" type="search" name="search" value="@activeSearch" class="form-control" placeholder="ابحث بالاسم أو الهاتف أو رقم الطلب" autocomplete="off" />
             </div>
-            <div class="col-md-3">
-                <select name="courseId" class="form-select">
-                    <option value="">كل الدورات</option>
-                    @foreach (var c in (ViewBag.Courses as dynamic) ?? new List<dynamic>())
-                    {
-                        <option value="@c.CourseId" selected="@(ViewBag.CourseId == (int)c.CourseId)">@c.CourseName</option>
-                    }
+
+            <div class="registration-status-field">
+                <label for="status" class="visually-hidden">حالة الطلب</label>
+                <i class="bi bi-funnel" aria-hidden="true"></i>
+                <select id="status" name="status" class="form-select" onchange="this.form.requestSubmit()">
+                    @if (string.IsNullOrWhiteSpace(activeStatus)) { <option value="" selected>كل الحالات</option> } else { <option value="">كل الحالات</option> }
+                    @if (activeStatus == "Pending") { <option value="Pending" selected>معلقة</option> } else { <option value="Pending">معلقة</option> }
+                    @if (activeStatus == "Accepted") { <option value="Accepted" selected>مقبولة</option> } else { <option value="Accepted">مقبولة</option> }
+                    @if (activeStatus == "Rejected") { <option value="Rejected" selected>مرفوضة</option> } else { <option value="Rejected">مرفوضة</option> }
+                    @if (activeStatus == "Archived") { <option value="Archived" selected>مؤرشفة</option> } else { <option value="Archived">مؤرشفة</option> }
                 </select>
             </div>
-            <div class="col-md-2">
-                <input type="date" name="dateFrom" value="@(((DateTime?)ViewBag.DateFrom)?.ToString("yyyy-MM-dd"))" class="form-control" />
-            </div>
-            <div class="col-md-2">
-                <input type="date" name="dateTo" value="@(((DateTime?)ViewBag.DateTo)?.ToString("yyyy-MM-dd"))" class="form-control" />
-            </div>
-            <div class="col-md-1">
-                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i></button>
+
+            <button type="button" class="btn btn-light registration-filter-toggle @(selectedCourseId.HasValue || activeDateFrom.HasValue || activeDateTo.HasValue ? "is-active" : "")" id="toggleAdvancedFilters" aria-expanded="@(selectedCourseId.HasValue || activeDateFrom.HasValue || activeDateTo.HasValue ? "true" : "false")" aria-controls="advancedFilters">
+                <i class="bi bi-sliders2" aria-hidden="true"></i><span>تصفية</span>
+                @if (selectedCourseId.HasValue || activeDateFrom.HasValue || activeDateTo.HasValue)
+                {
+                    <span class="filter-indicator" aria-label="فلاتر إضافية مفعلة"></span>
+                }
+            </button>
+
+            <button type="submit" class="btn btn-primary registration-search-submit" title="تطبيق البحث والفلاتر">
+                <i class="bi bi-arrow-left-short" aria-hidden="true"></i><span>بحث</span>
+            </button>
+
+            <a asp-action="ExportXlsx" asp-route-status="@activeStatus" asp-route-search="@activeSearch" asp-route-courseId="@selectedCourseId" asp-route-dateFrom="@(activeDateFrom?.ToString("yyyy-MM-dd"))" asp-route-dateTo="@(activeDateTo?.ToString("yyyy-MM-dd"))" class="btn btn-outline-success registration-export-button" title="تصدير النتائج الحالية إلى Excel">
+                <i class="bi bi-file-earmark-excel" aria-hidden="true"></i><span>Excel</span>
+            </a>
+
+            @if (hasActiveFilters)
+            {
+                <a asp-action="Index" class="btn btn-link registration-reset-button" title="مسح كل الفلاتر">
+                    <i class="bi bi-x-circle" aria-hidden="true"></i><span>مسح</span>
+                </a>
+            }
+
+            <div id="advancedFilters" class="registration-advanced-filters @(selectedCourseId.HasValue || activeDateFrom.HasValue || activeDateTo.HasValue ? "" : "d-none")">
+                <div>
+                    <label for="courseId" class="form-label">الدورة</label>
+                    <select id="courseId" name="courseId" class="form-select">
+                        @if (!selectedCourseId.HasValue) { <option value="" selected>كل الدورات</option> } else { <option value="">كل الدورات</option> }
+                        @foreach (var course in courses)
+                        {
+                            if (selectedCourseId == (int)course.CourseId)
+                            {
+                                <option value="@course.CourseId" selected>@course.CourseName</option>
+                            }
+                            else
+                            {
+                                <option value="@course.CourseId">@course.CourseName</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label for="dateFrom" class="form-label">من تاريخ</label>
+                    <input id="dateFrom" type="date" name="dateFrom" value="@(activeDateFrom?.ToString("yyyy-MM-dd"))" class="form-control" />
+                </div>
+                <div>
+                    <label for="dateTo" class="form-label">إلى تاريخ</label>
+                    <input id="dateTo" type="date" name="dateTo" value="@(activeDateTo?.ToString("yyyy-MM-dd"))" class="form-control" />
+                </div>
             </div>
         </form>
-        <div class="mt-2">
-            <a asp-action="ExportXlsx" asp-route-status="@ViewBag.Status" asp-route-search="@ViewBag.Search" asp-route-courseId="@ViewBag.CourseId" asp-route-dateFrom="@(((DateTime?)ViewBag.DateFrom)?.ToString("yyyy-MM-dd"))" asp-route-dateTo="@(((DateTime?)ViewBag.DateTo)?.ToString("yyyy-MM-dd"))" class="btn btn-sm btn-success"><i class="bi bi-file-earmark-excel"></i> تصدير XLSX</a>
-            @if (!string.IsNullOrEmpty(ViewBag.Search) || ViewBag.CourseId != null || ViewBag.DateFrom != null) { <a asp-action="Index" class="btn btn-sm btn-outline-secondary">مسح الفلاتر</a> }
+    </section>
+
+    <section class="registration-list-card mt-3" aria-label="نتائج التسجيلات">
+        <div class="registration-list-header">
+            <div class="registration-list-title">
+                <span class="registration-list-icon"><i class="bi bi-people" aria-hidden="true"></i></span>
+                <div>
+                    <h6 class="mb-0">طلبات التسجيل</h6>
+                    <small class="text-muted"><strong>@registrations.Count</strong> نتيجة ظاهرة <span class="mx-1">•</span> <strong class="text-warning-emphasis">@pendingCount</strong> معلقة قابلة للمعالجة</small>
+                </div>
+            </div>
+            @if (pendingCount > 0)
+            {
+                <button type="button" class="btn btn-sm btn-outline-primary selection-helper" id="selectAllPending">
+                    <i class="bi bi-check2-square" aria-hidden="true"></i><span>تحديد المعلقة الظاهرة</span>
+                </button>
+            }
         </div>
-    </div>
-</div>
 
-<div class="mb-3">
-    <a asp-action="Index" class="btn btn-sm @(ViewBag.Status == null ? "btn-primary" : "btn-outline-primary")">الكل</a>
-    <a asp-action="Index" asp-route-status="Pending" class="btn btn-sm @(ViewBag.Status == "Pending" ? "btn-warning" : "btn-outline-warning")">معلقة</a>
-    <a asp-action="Index" asp-route-status="Accepted" class="btn btn-sm @(ViewBag.Status == "Accepted" ? "btn-success" : "btn-outline-success")">مقبولة</a>
-    <a asp-action="Index" asp-route-status="Rejected" class="btn btn-sm @(ViewBag.Status == "Rejected" ? "btn-danger" : "btn-outline-danger")">مرفوضة</a>
-    <a asp-action="Index" asp-route-status="Archived" class="btn btn-sm @(ViewBag.Status == "Archived" ? "btn-secondary" : "btn-outline-secondary")">مؤرشفة</a>
-</div>
-
-<form asp-action="BulkAction" method="post" id="bulkRegistrationsForm">
-    @Html.AntiForgeryToken()
-    <div id="bulkToolbar" class="alert alert-primary d-none sticky-top shadow-sm" style="top: 4.5rem; z-index: 10;">
-        <div class="d-flex flex-wrap align-items-center gap-2">
-            <strong><span id="selectedRegistrationsCount">0</span> محدد</strong>
-            <button type="submit" name="action" value="approve" class="btn btn-success btn-sm" onclick="return confirmBulk('approve')"><i class="bi bi-check2-all"></i> قبول المحدد</button>
-            <button type="submit" name="action" value="reject" class="btn btn-danger btn-sm" onclick="return confirmBulk('reject')"><i class="bi bi-x-circle"></i> رفض المحدد</button>
-            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearRegistrationSelection()">إلغاء التحديد</button>
+        <form asp-action="BulkAction" method="post" id="bulkRegistrationsForm" class="d-none">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="returnUrl" value="@returnUrl" />
+            <input type="hidden" name="action" id="bulkAction" />
             <input type="hidden" name="note" id="bulkNote" />
+        </form>
+
+        <div id="bulkActionBar" class="bulk-action-bar d-none" role="region" aria-live="polite" aria-label="إجراءات على الطلبات المحددة">
+            <div class="bulk-selection-summary">
+                <span class="bulk-selection-icon"><i class="bi bi-check2-circle" aria-hidden="true"></i></span>
+                <div>
+                    <strong><span id="selectedRegistrationsCount">0</span> طلبات معلقة محددة</strong>
+                    <small>سيتم تنفيذ الإجراء على العناصر المؤهلة فقط.</small>
+                </div>
+            </div>
+            <div class="bulk-action-buttons">
+                <button type="button" class="btn btn-sm btn-success" id="bulkApproveBtn" title="قبول الطلبات المعلقة المحددة">
+                    <i class="bi bi-check-lg" aria-hidden="true"></i><span>قبول المحدد</span>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger" id="bulkRejectBtn" title="رفض الطلبات المعلقة المحددة">
+                    <i class="bi bi-x-lg" aria-hidden="true"></i><span>رفض المحدد</span>
+                </button>
+                <button type="button" class="btn btn-sm btn-light" id="clearRegistrationSelection" title="إلغاء تحديد الطلبات">
+                    <i class="bi bi-x-circle" aria-hidden="true"></i><span>إلغاء</span>
+                </button>
+            </div>
         </div>
-    </div>
-    <div class="card shadow-sm">
-    <div class="card-body">
+
         @if (registrations.Any())
         {
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead class="table-light">
-                        <tr><th><input type="checkbox" id="toggleAllRegistrations" aria-label="تحديد كل الطلبات" /></th><th>رقم الطلب</th><th>الاسم</th><th>الهاتف</th><th>الدورة</th><th>التاريخ</th><th>حالة الدفع</th><th>الحالة</th><th>إجراءات</th></tr>
+            <div class="table-responsive registration-table-wrap">
+                <table class="table registration-table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="selection-column">
+                                @if (pendingCount > 0)
+                                {
+                                    <input type="checkbox" id="toggleAllRegistrations" class="form-check-input" aria-label="تحديد كل الطلبات المعلقة الظاهرة" />
+                                }
+                            </th>
+                            <th>رقم الطلب</th>
+                            <th>المتدرب</th>
+                            <th class="d-none d-lg-table-cell">الهاتف</th>
+                            <th>الدورة</th>
+                            <th class="d-none d-lg-table-cell">تاريخ الطلب</th>
+                            <th>الدفع</th>
+                            <th>الحالة</th>
+                            <th class="actions-column">إجراءات</th>
+                        </tr>
                     </thead>
                     <tbody>
-                        @foreach (var r in registrations)
+                        @foreach (var registration in registrations)
                         {
-                            <tr>
-                                <td><input type="checkbox" name="ids" value="@r.RegistrationId" class="registration-checkbox" aria-label="تحديد طلب @r.RequestNumber" /></td>
-                                <td><code>@r.RequestNumber</code></td>
-                                <td>@r.FullName</td>
-                                <td>@r.Phone</td>
-                                <td>@r.Course?.CourseName</td>
-                                <td>@r.RegistrationDate.ToString("yyyy-MM-dd")</td>
-                                <td>
-                                    @if (r.Invoice == null || r.Invoice.PaidAmount <= 0)
+                            var isPending = registration.Status == "Pending";
+                            var statusClass = registration.Status switch
+                            {
+                                "Pending" => "status-pending",
+                                "Accepted" => "status-accepted",
+                                "Rejected" => "status-rejected",
+                                _ => "status-archived"
+                            };
+                            var statusLabel = registration.Status switch
+                            {
+                                "Pending" => "معلق",
+                                "Accepted" => "مقبول",
+                                "Rejected" => "مرفوض",
+                                _ => "مؤرشف"
+                            };
+                            var paymentClass = "payment-unpaid";
+                            var paymentLabel = "غير مدفوع";
+                            var paymentTitle = "لم يتم تسجيل أي دفعة";
+                            if (registration.Invoice != null && registration.Invoice.PaidAmount > 0 && registration.Invoice.PaidAmount < registration.Invoice.TotalAmount)
+                            {
+                                var paidPercent = registration.Invoice.TotalAmount > 0 ? (int)Math.Round(registration.Invoice.PaidAmount / registration.Invoice.TotalAmount * 100) : 0;
+                                paymentClass = "payment-partial";
+                                paymentLabel = $"جزئي {paidPercent}%";
+                                paymentTitle = $"المدفوع: {registration.Invoice.PaidAmount:N2} من {registration.Invoice.TotalAmount:N2}";
+                            }
+                            else if (registration.Invoice != null && registration.Invoice.PaidAmount >= registration.Invoice.TotalAmount && registration.Invoice.TotalAmount > 0)
+                            {
+                                paymentClass = "payment-paid";
+                                paymentLabel = "مكتمل";
+                                paymentTitle = "تم سداد كامل المبلغ";
+                            }
+
+                            <tr class="@(isPending ? "registration-row-pending" : "registration-row-processed")">
+                                <td data-label="تحديد" class="selection-cell">
+                                    @if (isPending)
                                     {
-                                        <span class="badge bg-danger" title="لم يتم تسجيل أي دفعة">غير مدفوع</span>
-                                    }
-                                    else if (r.Invoice.PaidAmount < r.Invoice.TotalAmount)
-                                    {
-                                        var paidPercent = r.Invoice.TotalAmount > 0 ? (int)Math.Round(r.Invoice.PaidAmount / r.Invoice.TotalAmount * 100) : 0;
-                                        <span class="badge bg-warning text-dark" title="المدفوع: @r.Invoice.PaidAmount من @r.Invoice.TotalAmount">جزئي @paidPercent%</span>
+                                        <input form="bulkRegistrationsForm" type="checkbox" name="ids" value="@registration.RegistrationId" class="form-check-input registration-checkbox" aria-label="تحديد الطلب المعلق @registration.RequestNumber" />
                                     }
                                     else
                                     {
-                                        <span class="badge bg-success">مدفوع بالكامل</span>
+                                        <span class="processed-lock" title="لا تدخل الطلبات المعالجة في الإجراءات الجماعية"><i class="bi bi-lock-fill" aria-hidden="true"></i></span>
                                     }
                                 </td>
-                                <td>
-                                    @switch (r.Status)
-                                    {
-                                        case "Pending": <span class="badge bg-warning text-dark">معلق</span> break;
-                                        case "Accepted": <span class="badge bg-success">مقبول</span> break;
-                                        case "Rejected": <span class="badge bg-danger">مرفوض</span> break;
-                                        case "Archived": <span class="badge bg-secondary">مؤرشف</span> break;
-                                    }
+                                <td data-label="رقم الطلب"><code class="request-number">@registration.RequestNumber</code></td>
+                                <td data-label="المتدرب" class="trainee-cell">
+                                    <strong>@registration.FullName</strong>
+                                    <span class="d-lg-none text-muted small">@registration.Phone</span>
                                 </td>
-                                <td>
-                                    @if (r.Status == "Pending")
-                                    {
-                                        <form asp-action="Accept" asp-route-id="@r.RegistrationId" method="post" class="d-inline">
-                                            <button class="btn btn-sm btn-success"><i class="bi bi-check"></i> قبول</button>
-                                        </form>
-                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="rejectRegistration(@r.RegistrationId)"><i class="bi bi-x"></i> رفض</button>
-                                    }
-                                    @if (r.Status == "Rejected")
-                                    {
-                                        <form asp-action="Reopen" asp-route-id="@r.RegistrationId" method="post" class="d-inline">
-                                            <button class="btn btn-sm btn-outline-warning"><i class="bi bi-arrow-counterclockwise"></i> إعادة فتح</button>
-                                        </form>
-                                    }
-                                    @if (r.Status == "Accepted" || r.Status == "Rejected")
-                                    {
-                                        <form asp-action="Archive" asp-route-id="@r.RegistrationId" method="post" class="d-inline">
-                                            <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-archive"></i> أرشفة</button>
-                                        </form>
-                                    }
-                                    @if (isSuperAdmin)
-                                    {
-                                        <form asp-action="Delete" asp-route-id="@r.RegistrationId" method="post" class="d-inline" onsubmit="return confirm('هل أنت متأكد من الحذف النهائي؟ لا يمكن التراجع!')">
-                                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                                        </form>
-                                    }
-                                    <a asp-action="Details" asp-route-id="@r.RegistrationId" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
+                                <td data-label="الهاتف" class="d-none d-lg-table-cell ltr-cell">@registration.Phone</td>
+                                <td data-label="الدورة" class="course-cell">@registration.Course?.CourseName</td>
+                                <td data-label="تاريخ الطلب" class="d-none d-lg-table-cell text-nowrap">@registration.RegistrationDate.ToString("dd MMM yyyy")</td>
+                                <td data-label="الدفع"><span class="payment-chip @paymentClass" title="@paymentTitle">@paymentLabel</span></td>
+                                <td data-label="الحالة"><span class="status-chip @statusClass">@statusLabel</span></td>
+                                <td data-label="إجراءات" class="actions-cell">
+                                    <div class="row-action-buttons">
+                                        @if (isPending)
+                                        {
+                                            <form asp-action="Accept" asp-route-id="@registration.RegistrationId" asp-route-returnUrl="@returnUrl" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-success btn-icon" title="قبول الطلب" aria-label="قبول طلب @registration.RequestNumber" onclick="return confirm('هل تريد قبول طلب @registration.FullName؟');">
+                                                    <i class="bi bi-check-lg" aria-hidden="true"></i>
+                                                </button>
+                                            </form>
+                                            <a asp-action="Reject" asp-route-id="@registration.RegistrationId" asp-route-returnUrl="@returnUrl" class="btn btn-sm btn-outline-danger btn-icon" title="رفض الطلب" aria-label="رفض طلب @registration.RequestNumber">
+                                                <i class="bi bi-x-lg" aria-hidden="true"></i>
+                                            </a>
+                                        }
+                                        @if (registration.Status == "Rejected")
+                                        {
+                                            <form asp-action="Reopen" asp-route-id="@registration.RegistrationId" asp-route-returnUrl="@returnUrl" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-outline-warning btn-icon" title="إعادة فتح الطلب" aria-label="إعادة فتح طلب @registration.RequestNumber" onclick="return confirm('هل تريد إعادة فتح هذا الطلب؟');">
+                                                    <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+                                                </button>
+                                            </form>
+                                        }
+                                        @if (registration.Status is "Accepted" or "Rejected")
+                                        {
+                                            <form asp-action="Archive" asp-route-id="@registration.RegistrationId" asp-route-returnUrl="@returnUrl" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary btn-icon" title="أرشفة الطلب" aria-label="أرشفة طلب @registration.RequestNumber" onclick="return confirm('هل تريد أرشفة هذا الطلب؟');">
+                                                    <i class="bi bi-archive" aria-hidden="true"></i>
+                                                </button>
+                                            </form>
+                                        }
+                                        <a asp-action="Details" asp-route-id="@registration.RegistrationId" class="btn btn-sm btn-light btn-icon" title="عرض التفاصيل" aria-label="عرض تفاصيل طلب @registration.RequestNumber">
+                                            <i class="bi bi-eye" aria-hidden="true"></i>
+                                        </a>
+                                        @if (isSuperAdmin)
+                                        {
+                                            <form asp-action="Delete" asp-route-id="@registration.RegistrationId" asp-route-returnUrl="@returnUrl" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-outline-danger btn-icon" title="حذف نهائي" aria-label="حذف طلب @registration.RequestNumber نهائياً" onclick="return confirm('هل أنت متأكد من الحذف النهائي؟ لا يمكن التراجع.');">
+                                                    <i class="bi bi-trash3" aria-hidden="true"></i>
+                                                </button>
+                                            </form>
+                                        }
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -140,41 +278,231 @@
         }
         else
         {
-            <p class="text-center text-muted py-4">لا توجد تسجيلات</p>
+            <div class="registration-empty-state">
+                <span><i class="bi bi-search" aria-hidden="true"></i></span>
+                <h6>لا توجد طلبات مطابقة</h6>
+                <p>جرّب تعديل البحث أو توسيع الفلاتر للوصول إلى النتائج المطلوبة.</p>
+                @if (hasActiveFilters)
+                {
+                    <a asp-action="Index" class="btn btn-sm btn-outline-primary">عرض كل الطلبات</a>
+                }
+            </div>
         }
+    </section>
+</div>
+
+<div class="modal fade" id="bulkDecisionModal" tabindex="-1" aria-labelledby="bulkDecisionTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header">
+                <h6 class="modal-title" id="bulkDecisionTitle">تأكيد الإجراء</h6>
+                <button type="button" class="btn-close m-0" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <div class="decision-icon" id="bulkDecisionIcon"><i class="bi bi-check2-circle" aria-hidden="true"></i></div>
+                <p class="mb-2" id="bulkDecisionMessage"></p>
+                <div id="bulkRejectReasonGroup" class="d-none">
+                    <label for="bulkRejectReason" class="form-label small fw-semibold">سبب الرفض <span class="text-muted fw-normal">(اختياري)</span></label>
+                    <textarea id="bulkRejectReason" class="form-control" rows="3" maxlength="500" placeholder="أضف سبباً موحداً للطلبات المرفوضة"></textarea>
+                </div>
+                <small class="text-muted d-block mt-3">لن تتأثر الطلبات المقبولة أو المرفوضة أو المؤرشفة.</small>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-sm" id="confirmBulkDecision">تأكيد</button>
+            </div>
+        </div>
     </div>
-    </div>
-</form>
+</div>
+
+<style>
+    .registrations-workspace { --registration-primary: #1d4ed8; --registration-navy: #16233c; --registration-border: #e6ebf2; --registration-muted: #64748b; }
+    .registrations-page-header { display: flex; flex-direction: column; gap: .15rem; }
+    .registration-filter-card, .registration-list-card { background: #fff; border: 1px solid var(--registration-border); border-radius: 16px; box-shadow: 0 5px 18px rgba(15, 23, 42, .035); }
+    .registration-filter-card { padding: .8rem; }
+    .registration-filter-form { display: grid; grid-template-columns: minmax(230px, 1fr) minmax(150px, 190px) auto auto auto; align-items: center; gap: .55rem; }
+    .registration-search-field, .registration-status-field { position: relative; }
+    .registration-search-field > i, .registration-status-field > i { position: absolute; right: .75rem; top: 50%; transform: translateY(-50%); color: #94a3b8; z-index: 2; }
+    .registration-search-field .form-control, .registration-status-field .form-select { padding-right: 2.3rem; border-color: #d9e1ec; min-height: 38px; font-size: .875rem; }
+    .registration-status-field .form-select { cursor: pointer; }
+    .registration-filter-toggle, .registration-search-submit, .registration-export-button { min-height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: .35rem; white-space: nowrap; font-size: .825rem; }
+    .registration-filter-toggle { border-color: #d9e1ec; position: relative; }
+    .registration-filter-toggle.is-active { border-color: #93c5fd; color: var(--registration-primary); background: #eff6ff; }
+    .filter-indicator { width: 6px; height: 6px; border-radius: 50%; background: #2563eb; position: absolute; top: 6px; left: 7px; }
+    .registration-reset-button { color: var(--registration-muted); text-decoration: none; font-size: .8rem; padding-inline: .25rem; white-space: nowrap; }
+    .registration-reset-button:hover { color: #dc2626; }
+    .registration-advanced-filters { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(200px, 1fr) minmax(145px, 180px) minmax(145px, 180px); gap: .65rem; padding-top: .7rem; margin-top: .2rem; border-top: 1px dashed #dfe6ef; }
+    .registration-advanced-filters .form-label { margin-bottom: .25rem; color: #526174; font-size: .75rem; font-weight: 700; }
+    .registration-advanced-filters .form-control, .registration-advanced-filters .form-select { min-height: 36px; font-size: .85rem; }
+    .registration-list-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1rem .8rem; border-bottom: 1px solid #edf1f5; }
+    .registration-list-title { display: flex; align-items: center; gap: .7rem; min-width: 0; }
+    .registration-list-icon { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 10px; color: #1d4ed8; background: #eff6ff; }
+    .registration-list-title h6 { color: var(--registration-navy); font-weight: 800; }
+    .selection-helper { white-space: nowrap; border-radius: 8px; font-size: .78rem; }
+    .bulk-action-bar { position: sticky; top: 66px; z-index: 1010; display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .65rem .9rem; margin: .75rem .75rem 0; border: 1px solid #bfdbfe; border-radius: 12px; color: #153e75; background: linear-gradient(90deg, #eff6ff, #f8fbff); box-shadow: 0 8px 22px rgba(29, 78, 216, .1); }
+    .bulk-selection-summary { display: flex; align-items: center; gap: .55rem; }
+    .bulk-selection-summary strong, .bulk-selection-summary small { display: block; line-height: 1.25; }
+    .bulk-selection-summary small { font-size: .73rem; color: #5d7293; }
+    .bulk-selection-icon { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; background: #dbeafe; color: #2563eb; }
+    .bulk-action-buttons, .row-action-buttons { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
+    .bulk-action-buttons .btn { border-radius: 8px; font-size: .78rem; white-space: nowrap; }
+    .registration-table-wrap { overflow: visible; }
+    .registration-table { --bs-table-bg: transparent; --bs-table-hover-bg: #fafcff; font-size: .845rem; }
+    .registration-table thead th { padding: .75rem .8rem; color: #64748b; font-weight: 700; font-size: .72rem; white-space: nowrap; background: #f8fafc; border-bottom: 1px solid #e5ebf2; }
+    .registration-table td { padding: .72rem .8rem; vertical-align: middle; color: #243247; border-color: #edf1f5; }
+    .registration-row-pending { box-shadow: inset -3px 0 0 #facc15; }
+    .registration-row-processed { opacity: .84; }
+    .selection-column, .selection-cell { width: 46px; text-align: center; }
+    .request-number { padding: .22rem .38rem; border-radius: 6px; color: #385070; background: #f1f5f9; font-size: .76rem; direction: ltr; unicode-bidi: plaintext; }
+    .trainee-cell strong { display: block; color: #1e293b; font-weight: 700; }
+    .course-cell { max-width: 190px; color: #475569; }
+    .ltr-cell { direction: ltr; text-align: right; unicode-bidi: plaintext; }
+    .status-chip, .payment-chip { display: inline-flex; align-items: center; padding: .25rem .48rem; border-radius: 999px; font-size: .72rem; line-height: 1.1; white-space: nowrap; font-weight: 700; }
+    .status-pending { color: #854d0e; background: #fef3c7; } .status-accepted { color: #166534; background: #dcfce7; } .status-rejected { color: #b91c1c; background: #fee2e2; } .status-archived { color: #475569; background: #e2e8f0; }
+    .payment-unpaid { color: #b91c1c; background: #fef2f2; } .payment-partial { color: #9a5800; background: #fff7ed; } .payment-paid { color: #166534; background: #ecfdf5; }
+    .actions-column { min-width: 150px; } .actions-cell { min-width: 150px; }
+    .btn-icon { width: 31px; height: 31px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border-radius: 8px; }
+    .processed-lock { color: #a0aec0; font-size: .78rem; }
+    .registration-empty-state { padding: 3.5rem 1.5rem; text-align: center; color: #64748b; }
+    .registration-empty-state > span { display: inline-flex; justify-content: center; align-items: center; width: 48px; height: 48px; color: #3b82f6; background: #eff6ff; border-radius: 14px; font-size: 1.25rem; margin-bottom: .8rem; }
+    .registration-empty-state h6 { color: #334155; font-weight: 800; } .registration-empty-state p { font-size: .86rem; margin-bottom: 1rem; }
+    .decision-icon { width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 1.25rem; color: #166534; background: #dcfce7; margin-bottom: .8rem; }
+    .decision-icon.is-danger { color: #b91c1c; background: #fee2e2; }
+
+    @@media (max-width: 991.98px) {
+        .registration-filter-form { grid-template-columns: minmax(180px, 1fr) minmax(140px, 170px) auto auto; }
+        .registration-export-button { grid-column: auto; }
+        .registration-reset-button { display: inline-flex; align-items: center; gap: .25rem; }
+        .registration-advanced-filters { grid-template-columns: 1fr 1fr; }
+        .registration-advanced-filters > :first-child { grid-column: 1 / -1; }
+        .bulk-action-bar { top: 58px; }
+    }
+
+    @@media (max-width: 767.98px) {
+        .registration-filter-card { padding: .65rem; }
+        .registration-filter-form { grid-template-columns: 1fr auto auto; gap: .45rem; }
+        .registration-search-field { grid-column: 1 / -1; }
+        .registration-status-field { grid-column: span 2; }
+        .registration-filter-toggle span, .registration-search-submit span, .registration-export-button span, .registration-reset-button span { display: none; }
+        .registration-filter-toggle, .registration-search-submit, .registration-export-button { width: 38px; padding: 0; }
+        .registration-reset-button { width: 30px; justify-content: center; padding: 0; }
+        .registration-advanced-filters { grid-template-columns: 1fr; gap: .5rem; }
+        .registration-advanced-filters > :first-child { grid-column: auto; }
+        .registration-list-header { align-items: flex-start; padding: .85rem; }
+        .selection-helper { padding-inline: .55rem; } .selection-helper span { display: none; }
+        .bulk-action-bar { position: sticky; top: 57px; align-items: stretch; flex-direction: column; padding: .65rem; margin: .6rem .6rem 0; }
+        .bulk-action-buttons { display: grid; grid-template-columns: 1fr 1fr auto; width: 100%; }
+        .bulk-action-buttons .btn { justify-content: center; }
+        .registration-table-wrap { overflow: visible; }
+        .registration-table, .registration-table tbody, .registration-table tr, .registration-table td { display: block; width: 100%; }
+        .registration-table thead { display: none; }
+        .registration-table tbody { padding: .55rem; }
+        .registration-table tr { margin-bottom: .55rem; overflow: hidden; border: 1px solid #e5ebf2; border-radius: 12px; box-shadow: 0 2px 8px rgba(15,23,42,.035); }
+        .registration-table td { display: flex; align-items: center; justify-content: space-between; gap: .75rem; min-height: 40px; padding: .5rem .65rem; border: 0; border-bottom: 1px solid #f0f3f7; text-align: left; }
+        .registration-table td:last-child { border-bottom: 0; }
+        .registration-table td::before { content: attr(data-label); flex: 0 0 76px; color: #7a899c; font-size: .7rem; font-weight: 800; text-align: right; }
+        .registration-table .selection-cell { justify-content: flex-start; min-height: 34px; background: #fafcff; }
+        .registration-table .selection-cell::before { flex-basis: auto; margin-left: .25rem; }
+        .registration-table .trainee-cell { align-items: flex-start; flex-direction: row; }
+        .registration-table .trainee-cell > span { margin-right: auto; text-align: left; }
+        .registration-table .course-cell { max-width: none; }
+        .registration-table .actions-cell { align-items: flex-start; }
+        .row-action-buttons { justify-content: flex-end; }
+        .ltr-cell { text-align: left; }
+        .registration-row-processed { opacity: 1; }
+    }
+
+    @@media (max-width: 390px) {
+        .registration-list-title small { font-size: .7rem; }
+        .bulk-action-buttons .btn { padding-inline: .45rem; }
+        .registration-table td::before { flex-basis: 65px; }
+    }
+</style>
 
 @section Scripts {
 <script>
-const bulkForm = document.getElementById('bulkRegistrationsForm');
-const bulkToolbar = document.getElementById('bulkToolbar');
-const countLabel = document.getElementById('selectedRegistrationsCount');
-const checkboxes = Array.from(document.querySelectorAll('.registration-checkbox'));
-const toggleAll = document.getElementById('toggleAllRegistrations');
-function updateRegistrationSelection() {
-    const count = checkboxes.filter(x => x.checked).length;
-    countLabel.textContent = count;
-    bulkToolbar.classList.toggle('d-none', count === 0);
-    toggleAll.checked = checkboxes.length > 0 && count === checkboxes.length;
-}
-function clearRegistrationSelection() { checkboxes.forEach(x => x.checked = false); updateRegistrationSelection(); }
-function confirmBulk(action) {
-    const count = checkboxes.filter(x => x.checked).length;
-    if (!count) return false;
-    if (action === 'reject') {
-        const note = prompt('سبب الرفض الجماعي (اختياري):') || '';
-        document.getElementById('bulkNote').value = note;
-    }
-    return confirm(`هل تريد تنفيذ هذا الإجراء على ${count} طلب؟`);
-}
-toggleAll?.addEventListener('change', () => { checkboxes.forEach(x => x.checked = toggleAll.checked); updateRegistrationSelection(); });
-checkboxes.forEach(x => x.addEventListener('change', updateRegistrationSelection));
-updateRegistrationSelection();
+    (() => {
+        const advancedFilters = document.getElementById('advancedFilters');
+        const advancedToggle = document.getElementById('toggleAdvancedFilters');
+        const selectionCheckboxes = Array.from(document.querySelectorAll('.registration-checkbox'));
+        const toggleAll = document.getElementById('toggleAllRegistrations');
+        const selectAllPending = document.getElementById('selectAllPending');
+        const clearSelection = document.getElementById('clearRegistrationSelection');
+        const bulkActionBar = document.getElementById('bulkActionBar');
+        const selectionCount = document.getElementById('selectedRegistrationsCount');
+        const bulkForm = document.getElementById('bulkRegistrationsForm');
+        const bulkActionInput = document.getElementById('bulkAction');
+        const bulkNoteInput = document.getElementById('bulkNote');
+        const bulkApproveButton = document.getElementById('bulkApproveBtn');
+        const bulkRejectButton = document.getElementById('bulkRejectBtn');
+        const decisionModalElement = document.getElementById('bulkDecisionModal');
+        const decisionTitle = document.getElementById('bulkDecisionTitle');
+        const decisionMessage = document.getElementById('bulkDecisionMessage');
+        const decisionIcon = document.getElementById('bulkDecisionIcon');
+        const rejectReasonGroup = document.getElementById('bulkRejectReasonGroup');
+        const rejectReason = document.getElementById('bulkRejectReason');
+        const confirmDecision = document.getElementById('confirmBulkDecision');
+        let pendingAction = null;
 
-function rejectRegistration(id) {
-    window.location.href = '/Registrations/Reject/' + id;
-}
+        advancedToggle?.addEventListener('click', () => {
+            const willOpen = advancedFilters.classList.contains('d-none');
+            advancedFilters.classList.toggle('d-none', !willOpen);
+            advancedToggle.setAttribute('aria-expanded', String(willOpen));
+            advancedToggle.classList.toggle('is-active', willOpen);
+        });
+
+        const selectedCount = () => selectionCheckboxes.filter(checkbox => checkbox.checked).length;
+        const updateSelectionState = () => {
+            const count = selectedCount();
+            if (selectionCount) selectionCount.textContent = count;
+            bulkActionBar?.classList.toggle('d-none', count === 0);
+            if (toggleAll) {
+                toggleAll.checked = selectionCheckboxes.length > 0 && count === selectionCheckboxes.length;
+                toggleAll.indeterminate = count > 0 && count < selectionCheckboxes.length;
+            }
+        };
+
+        const setAllPending = checked => {
+            selectionCheckboxes.forEach(checkbox => checkbox.checked = checked);
+            updateSelectionState();
+        };
+
+        toggleAll?.addEventListener('change', () => setAllPending(toggleAll.checked));
+        selectAllPending?.addEventListener('click', () => setAllPending(true));
+        clearSelection?.addEventListener('click', () => setAllPending(false));
+        selectionCheckboxes.forEach(checkbox => checkbox.addEventListener('change', updateSelectionState));
+
+        const showBulkDecision = action => {
+            const count = selectedCount();
+            if (!count || !decisionModalElement || !window.bootstrap) return;
+            pendingAction = action;
+            const isReject = action === 'reject';
+            decisionTitle.textContent = isReject ? 'تأكيد رفض الطلبات' : 'تأكيد قبول الطلبات';
+            decisionMessage.textContent = isReject
+                ? `سيتم رفض ${count} طلب/طلبات معلقة محددة.`
+                : `سيتم قبول ${count} طلب/طلبات معلقة محددة.`;
+            decisionIcon.classList.toggle('is-danger', isReject);
+            decisionIcon.innerHTML = isReject
+                ? '<i class="bi bi-x-circle" aria-hidden="true"></i>'
+                : '<i class="bi bi-check2-circle" aria-hidden="true"></i>';
+            rejectReasonGroup.classList.toggle('d-none', !isReject);
+            rejectReason.value = '';
+            confirmDecision.className = `btn btn-sm ${isReject ? 'btn-danger' : 'btn-success'}`;
+            confirmDecision.textContent = isReject ? 'تأكيد الرفض' : 'تأكيد القبول';
+            bootstrap.Modal.getOrCreateInstance(decisionModalElement).show();
+        };
+
+        bulkApproveButton?.addEventListener('click', () => showBulkDecision('approve'));
+        bulkRejectButton?.addEventListener('click', () => showBulkDecision('reject'));
+        confirmDecision?.addEventListener('click', () => {
+            if (!pendingAction || !bulkForm) return;
+            bulkActionInput.value = pendingAction;
+            bulkNoteInput.value = pendingAction === 'reject' ? rejectReason.value.trim() : '';
+            bootstrap.Modal.getOrCreateInstance(decisionModalElement).hide();
+            bulkForm.requestSubmit();
+        });
+
+        updateSelectionState();
+    })();
 </script>
 }

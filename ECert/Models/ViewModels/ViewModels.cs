@@ -56,6 +56,7 @@ public class DashboardViewModel
 public class RejectRegistrationViewModel
 {
     public int RegistrationId { get; set; }
+    public string? ReturnUrl { get; set; }
     [Required(ErrorMessage = "سبب الرفض مطلوب")]
     [Display(Name = "سبب الرفض")]
     public string Reason { get; set; } = string.Empty;
