@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using ECert.Data;
 using ECert.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +24,12 @@ var mysqlConn = NormalizeMySqlConnectionString(rawMySqlConn);
 
 builder.Services.AddDbContext<ECertDbContext>(options =>
     options.UseMySql(mysqlConn, ServerVersion.AutoDetect(mysqlConn)));
+
+// Render rebuilds containers during each deploy. Persisting Data Protection keys in MySQL
+// keeps authentication cookies and antiforgery tokens valid across future deployments.
+builder.Services.AddDataProtection()
+    .PersistKeysToDbContext<ECertDbContext>()
+    .SetApplicationName("ECert");
 
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient();
@@ -97,6 +104,13 @@ using (var scope = app.Services.CreateScope())
     {
         var db = scope.ServiceProvider.GetRequiredService<ECertDbContext>();
         db.Database.EnsureCreated();
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS `DataProtectionKeys` (
+                `Id` INT NOT NULL AUTO_INCREMENT,
+                `FriendlyName` VARCHAR(512) NOT NULL,
+                `Xml` LONGTEXT NOT NULL,
+                PRIMARY KEY (`Id`)
+            ) CHARACTER SET utf8mb4;");
         DbSeeder.Seed(db);
         DbSeeder.SeedHomepageCms(db);
         var certificateMigration = scope.ServiceProvider.GetRequiredService<CertificateSchemaMigrationService>();

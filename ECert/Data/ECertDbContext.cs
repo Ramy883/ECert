@@ -1,9 +1,10 @@
 ﻿using ECert.Models;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECert.Data;
 
-public class ECertDbContext : DbContext
+public class ECertDbContext : DbContext, IDataProtectionKeyContext
 {
     public ECertDbContext(DbContextOptions<ECertDbContext> options) : base(options) { }
 
@@ -31,6 +32,7 @@ public class ECertDbContext : DbContext
     public DbSet<StatCard> StatCards => Set<StatCard>();
     public DbSet<HomepageSection> HomepageSections => Set<HomepageSection>();
     public DbSet<ThemeSetting> ThemeSettings => Set<ThemeSetting>();
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
