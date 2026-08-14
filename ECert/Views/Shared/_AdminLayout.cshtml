@@ -263,15 +263,18 @@
                 }
 
                 @* === الشهادات === *@
-                @if (IsSuperAdmin || HasPerm("issue-certificates"))
+                @if (IsSuperAdmin || HasPerm("issue-certificates") || HasPerm("manage-certificate-designs"))
                 {
                     <li class="sidebar-section">الشهادات</li>
-                    <li class="nav-item">
-                        <a class="nav-link @IsActive("Certificates")" asp-controller="Certificates" asp-action="Index">
-                            <i class="bi bi-award"></i> الشهادات الصادرة
-                        </a>
-                    </li>
-                    @if (IsSuperAdmin)
+                    @if (IsSuperAdmin || HasPerm("issue-certificates"))
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link @IsActive("Certificates")" asp-controller="Certificates" asp-action="Index">
+                                <i class="bi bi-award"></i> الشهادات الصادرة
+                            </a>
+                        </li>
+                    }
+                    @if (IsSuperAdmin || HasPerm("manage-certificate-designs"))
                     {
                         <li class="nav-item">
                             <a class="nav-link @IsActive("CertificateDesigns")" asp-controller="CertificateDesigns" asp-action="Index">

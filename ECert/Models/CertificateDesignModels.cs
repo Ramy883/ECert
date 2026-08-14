@@ -3,8 +3,8 @@ using System.ComponentModel.DataAnnotations;
 namespace ECert.Models;
 
 /// <summary>
-/// Represents the visual layer shown on a verified certificate. It intentionally lives beside
-/// CertificateTemplateSettings so the existing print/snapshot workflow remains intact.
+/// Represents the visual layer shown on a verified certificate. It is independent of historical
+/// certificate-template artifacts so the published design remains the source for public verification.
 /// </summary>
 public class CertificateDesign
 {
