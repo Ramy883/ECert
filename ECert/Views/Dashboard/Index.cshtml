@@ -137,7 +137,7 @@
                                     <tr>
                                         <td><code>@inv.InvoiceNumber</code></td>
                                         <td>@inv.TraineeName</td>
-                                        <td>@inv.TotalAmount ريال</td>
+                                        <td>@inv.TotalAmount.ToString("N0") ريال</td>
                                         <td>
                                             @switch (inv.Status)
                                             {

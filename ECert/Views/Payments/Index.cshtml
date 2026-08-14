@@ -78,7 +78,7 @@
                             <tr>
                                 <td><code>@p.Invoice?.InvoiceNumber</code></td>
                                 <td>@p.Invoice?.TraineeName</td>
-                                <td class="fw-bold">@p.Amount ريال</td>
+                                <td class="fw-bold">@p.Amount.ToString("N0") ريال</td>
                                 <td>
                                     @switch (p.PaymentMethod)
                                     {

@@ -89,7 +89,7 @@
                                 {
                                     <tr>
                                         <td><code>@p.Invoice?.InvoiceNumber</code></td>
-                                        <td>@p.Amount ريال</td>
+                                        <td>@p.Amount.ToString("N0") ريال</td>
                                         <td>@p.PaymentMethod</td>
                                         <td>@p.PaymentDate.ToString("MM-dd")</td>
                                     </tr>
@@ -117,7 +117,7 @@
                                     <tr>
                                         <td><code>@inv.InvoiceNumber</code></td>
                                         <td>@inv.TraineeName</td>
-                                        <td>@inv.TotalAmount ريال</td>
+                                        <td>@inv.TotalAmount.ToString("N0") ريال</td>
                                         <td>
                                             @switch (inv.Status)
                                             {

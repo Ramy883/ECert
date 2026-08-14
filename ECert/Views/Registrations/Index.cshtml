@@ -194,7 +194,7 @@
                                 var paidPercent = registration.Invoice.TotalAmount > 0 ? (int)Math.Round(registration.Invoice.PaidAmount / registration.Invoice.TotalAmount * 100) : 0;
                                 paymentClass = "payment-partial";
                                 paymentLabel = $"جزئي {paidPercent}%";
-                                paymentTitle = $"المدفوع: {registration.Invoice.PaidAmount:N2} من {registration.Invoice.TotalAmount:N2}";
+                                paymentTitle = $"المدفوع: {registration.Invoice.PaidAmount:N0} من {registration.Invoice.TotalAmount:N0}";
                             }
                             else if (registration.Invoice != null && registration.Invoice.PaidAmount >= registration.Invoice.TotalAmount && registration.Invoice.TotalAmount > 0)
                             {

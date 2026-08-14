@@ -47,9 +47,9 @@
                                 <td><code>@inv.InvoiceNumber</code></td>
                                 <td>@inv.TraineeName</td>
                                 <td>@inv.CourseName</td>
-                                <td>@inv.TotalAmount ريال</td>
-                                <td>@inv.PaidAmount ريال</td>
-                                <td>@inv.RemainingAmount ريال</td>
+                                <td>@inv.TotalAmount.ToString("N0") ريال</td>
+                                <td>@inv.PaidAmount.ToString("N0") ريال</td>
+                                <td>@inv.RemainingAmount.ToString("N0") ريال</td>
                                 <td>
                                     @switch (inv.Status)
                                     {

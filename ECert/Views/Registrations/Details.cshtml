@@ -45,9 +45,9 @@
                 @if (Model.Invoice != null)
                 {
                     <p><strong>رقم الفاتورة:</strong> @Model.Invoice.InvoiceNumber</p>
-                    <p><strong>المبلغ:</strong> @Model.Invoice.TotalAmount ريال</p>
-                    <p><strong>المدفوع:</strong> @Model.Invoice.PaidAmount ريال</p>
-                    <p><strong>المتبقي:</strong> @Model.Invoice.RemainingAmount ريال</p>
+                    <p><strong>المبلغ:</strong> @Model.Invoice.TotalAmount.ToString("N0") ريال</p>
+                    <p><strong>المدفوع:</strong> @Model.Invoice.PaidAmount.ToString("N0") ريال</p>
+                    <p><strong>المتبقي:</strong> @Model.Invoice.RemainingAmount.ToString("N0") ريال</p>
                     <a asp-controller="Invoices" asp-action="Details" asp-route-id="@Model.Invoice.InvoiceId" class="btn btn-sm btn-outline-primary">عرض الفاتورة</a>
                 }
                 else

@@ -13,7 +13,7 @@
                     <strong>الفاتورة:</strong> @invoice?.InvoiceNumber<br />
                     <strong>المتدرب:</strong> @invoice?.TraineeName<br />
                     <strong>الدورة:</strong> @invoice?.CourseName<br />
-                    <strong>المتبقي:</strong> <span class="text-danger fw-bold">@invoice?.RemainingAmount ريال</span>
+                    <strong>المتبقي:</strong> <span class="text-danger fw-bold">@invoice?.RemainingAmount?.ToString("N0") ريال</span>
                 </div>
                 <form asp-action="Add" method="post" id="paymentForm">
                     @Html.AntiForgeryToken()
