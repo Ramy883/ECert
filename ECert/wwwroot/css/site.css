@@ -202,6 +202,19 @@ main { flex: 1; }
     border-color: var(--primary-100) !important;
 }
 .course-img { height: 210px; object-fit: cover; transition: transform 0.5s ease; }
+
+/* Course details cover: bounded and responsive across screen sizes */
+.course-hero-image {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: clamp(220px, 32vw, 420px);
+    object-fit: cover;
+    object-position: center;
+    border-radius: 1rem;
+    background: #eef2ff;
+}
+
 .course-card:hover .course-img { transform: scale(1.05); }
 .course-img-placeholder {
     height: 210px;
@@ -640,6 +653,10 @@ main { flex: 1; }
     to { transform: translateY(-3px); }
 }
 @media (max-width: 576px) {
+    .course-hero-image {
+        height: 220px;
+        border-radius: .75rem;
+    }
     .back-to-top { width: 46px; height: 46px; bottom: 18px; right: 18px; font-size: 1.1rem; }
 }
 
