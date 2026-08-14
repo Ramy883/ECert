@@ -105,6 +105,15 @@
                             </div>
                         </div>
                         <div class="col-12">
+                            <div class="border rounded-3 p-3 bg-light">
+                                <div class="form-check form-switch mb-1">
+                                    <input asp-for="RequiresAcademicDetails" class="form-check-input" />
+                                    <label asp-for="RequiresAcademicDetails" class="form-check-label fw-semibold">دورة جامعية</label>
+                                </div>
+                                <small class="text-muted">عند التفعيل، تصبح الجامعة والكلية والتخصص والمستوى الدراسي مطلوبة عند تسجيل المتدرب.</small>
+                            </div>
+                        </div>
+                        <div class="col-12">
                             <label class="form-label">صورة الدورة</label>
                             <input type="file" name="image" accept="image/*" class="form-control" onchange="previewImage(this, 'imgPreview')" />
                             <img id="imgPreview" class="mt-2 rounded" style="max-height:150px; display:none;" />

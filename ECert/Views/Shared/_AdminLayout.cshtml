@@ -335,6 +335,11 @@
                 @if (IsSuperAdmin)
                 {
                     <li class="nav-item">
+                        <a class="nav-link @IsActive("AcademicCatalog")" asp-controller="AcademicCatalog" asp-action="Index">
+                            <i class="bi bi-mortarboard"></i> البيانات الجامعية
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link @IsActive("PhoneCountries")" asp-controller="PhoneCountries" asp-action="Index">
                             <i class="bi bi-phone"></i> مفاتيح الهواتف
                         </a>

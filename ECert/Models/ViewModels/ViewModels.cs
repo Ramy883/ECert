@@ -34,6 +34,26 @@ public class PublicRegistrationViewModel
     [Display(Name = "كيف سمعت عنا؟ (اختياري)")]
     public string? HeardFrom { get; set; }
 
+    [Display(Name = "إدخال البيانات الجامعية")]
+    public bool IncludeAcademicDetails { get; set; }
+
+    [Display(Name = "الجامعة")]
+    public int? UniversityId { get; set; }
+
+    [Display(Name = "الكلية")]
+    public int? CollegeId { get; set; }
+
+    [Display(Name = "التخصص")]
+    public int? AcademicSpecializationId { get; set; }
+
+    [Display(Name = "المستوى الدراسي")]
+    public string? AcademicLevel { get; set; }
+
+    // حقول عرض فقط؛ تُعاد تعبئتها من الخادم ولا يُعتمد عليها عند الحفظ.
+    public string? UniversityName { get; set; }
+    public string? CollegeName { get; set; }
+    public string? SpecializationName { get; set; }
+
     // Honeypot: must remain empty for real visitors.
     public string? WebsiteUrl { get; set; }
 

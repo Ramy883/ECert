@@ -2,25 +2,27 @@
 @{
     ViewData["Title"] = "التسجيل في الدورة";
     var countries = ViewBag.Countries as List<ECert.Models.PhoneCountry> ?? new();
+    var academicLevels = ViewBag.AcademicLevels as string[] ?? Array.Empty<string>();
+    var courseRequiresAcademic = ViewBag.RequiresAcademicDetails as bool? ?? false;
 }
 <div class="row justify-content-center">
-    <div class="col-md-6">
+    <div class="col-lg-7 col-xl-6">
         <div class="card shadow-sm border-0">
-            <div class="card-body p-4">
+            <div class="card-body p-4 p-md-5">
                 <h3 class="text-center mb-2"><i class="bi bi-pencil-square"></i> التسجيل في الدورة</h3>
                 <p class="text-center text-muted mb-4">@Model.CourseName</p>
                 <div asp-validation-summary="All" class="text-danger"></div>
-                <form asp-action="Register" method="post" id="regForm">
+                <form asp-action="Register" method="post" id="regForm" novalidate>
                     @Html.AntiForgeryToken()
                     <input type="hidden" asp-for="CourseId" />
                     <div class="mb-3">
                         <label asp-for="FullName" class="form-label"></label>
-                        <input asp-for="FullName" class="form-control" placeholder="الاسم الكامل" />
+                        <input asp-for="FullName" class="form-control" placeholder="الاسم الكامل" autocomplete="name" />
                         <span asp-validation-for="FullName" class="text-danger"></span>
                     </div>
                     <div class="mb-3">
                         <label asp-for="CountryId" class="form-label"></label>
-                        <select asp-for="CountryId" class="form-select" id="countrySelect">
+                        <select asp-for="CountryId" class="form-select" id="countrySelect" autocomplete="country-name">
                             <option value="">اختر الدولة</option>
                             @foreach (var c in countries)
                             {
@@ -33,14 +35,14 @@
                         <label asp-for="Phone" class="form-label"></label>
                         <div class="input-group">
                             <span class="input-group-text" id="countryCodeDisplay">+---</span>
-                            <input asp-for="Phone" class="form-control" placeholder="أدخل رقم الهاتف" id="phoneInput" />
+                            <input asp-for="Phone" class="form-control" placeholder="أدخل رقم الهاتف" id="phoneInput" inputmode="numeric" autocomplete="tel-national" />
                         </div>
                         <span asp-validation-for="Phone" class="text-danger"></span>
                         <small class="text-muted" id="phoneHint"></small>
                     </div>
                     <div class="mb-3">
                         <label asp-for="Email" class="form-label"></label>
-                        <input asp-for="Email" class="form-control" placeholder="example@email.com (اختياري)" />
+                        <input asp-for="Email" class="form-control" placeholder="example@email.com (اختياري)" autocomplete="email" />
                         <span asp-validation-for="Email" class="text-danger"></span>
                     </div>
                     <div class="mb-3">
@@ -54,6 +56,72 @@
                             <option value="Other">أخرى</option>
                         </select>
                     </div>
+
+                    @if (courseRequiresAcademic)
+                    {
+                        <input type="hidden" asp-for="IncludeAcademicDetails" value="true" />
+                        <div class="alert alert-primary d-flex gap-2 align-items-start mb-3" role="note">
+                            <i class="bi bi-mortarboard-fill fs-5"></i>
+                            <div><strong>هذه دورة جامعية.</strong><br /><small>يرجى استكمال بياناتك الأكاديمية قبل إرسال الطلب.</small></div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="border rounded-3 p-3 mb-3 bg-light">
+                            <div class="form-check form-switch">
+                                <input asp-for="IncludeAcademicDetails" class="form-check-input" id="includeAcademicDetails" />
+                                <label asp-for="IncludeAcademicDetails" class="form-check-label fw-semibold">إضافة بياناتي الجامعية</label>
+                            </div>
+                            <small class="text-muted">اختياري لهذه الدورة؛ فعّله إذا رغبت في إدخال بياناتك الأكاديمية.</small>
+                        </div>
+                    }
+
+                    <section id="academicDetails" class="border rounded-3 p-3 p-md-4 mb-4" aria-labelledby="academicDetailsTitle" hidden>
+                        <div class="d-flex align-items-start gap-2 mb-3">
+                            <i class="bi bi-mortarboard fs-4 text-primary"></i>
+                            <div>
+                                <h5 class="mb-1" id="academicDetailsTitle">البيانات الجامعية</h5>
+                                <p class="small text-muted mb-0">ابحث واختر بالترتيب: الجامعة، ثم الكلية، ثم التخصص.</p>
+                            </div>
+                        </div>
+
+                        <div class="mb-3 search-select" data-search-select="university">
+                            <label asp-for="UniversityId" class="form-label"></label>
+                            <input asp-for="UniversityId" type="hidden" id="universityId" />
+                            <input asp-for="UniversityName" class="form-control academic-search" id="universitySearch" placeholder="اكتب اسم الجامعة للبحث" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="universityResults" />
+                            <div id="universityResults" class="list-group position-absolute w-100 shadow-sm search-results" role="listbox" hidden></div>
+                            <span asp-validation-for="UniversityId" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3 search-select" data-search-select="college">
+                            <label asp-for="CollegeId" class="form-label"></label>
+                            <input asp-for="CollegeId" type="hidden" id="collegeId" />
+                            <input asp-for="CollegeName" class="form-control academic-search" id="collegeSearch" placeholder="اختر الجامعة أولاً" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="collegeResults" disabled />
+                            <div id="collegeResults" class="list-group position-absolute w-100 shadow-sm search-results" role="listbox" hidden></div>
+                            <span asp-validation-for="CollegeId" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3 search-select" data-search-select="specialization">
+                            <label asp-for="AcademicSpecializationId" class="form-label"></label>
+                            <input asp-for="AcademicSpecializationId" type="hidden" id="specializationId" />
+                            <input asp-for="SpecializationName" class="form-control academic-search" id="specializationSearch" placeholder="اختر الكلية أولاً" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="specializationResults" disabled />
+                            <div id="specializationResults" class="list-group position-absolute w-100 shadow-sm search-results" role="listbox" hidden></div>
+                            <span asp-validation-for="AcademicSpecializationId" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-0">
+                            <label asp-for="AcademicLevel" class="form-label"></label>
+                            <select asp-for="AcademicLevel" class="form-select" id="academicLevel">
+                                <option value="">اختر المستوى الدراسي</option>
+                                @foreach (var level in academicLevels)
+                                {
+                                    <option value="@level">@level</option>
+                                }
+                            </select>
+                            <span asp-validation-for="AcademicLevel" class="text-danger"></span>
+                        </div>
+                    </section>
+
                     <div class="d-none" aria-hidden="true">
                         <label asp-for="WebsiteUrl">موقع الويب</label>
                         <input asp-for="WebsiteUrl" tabindex="-1" autocomplete="off" />
@@ -66,59 +134,170 @@
 </div>
 
 @section Scripts {
+<style>
+    .search-select { position: relative; }
+    .search-results { z-index: 1050; max-height: 220px; overflow-y: auto; }
+    .search-results .list-group-item { text-align: right; }
+</style>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const countrySelect = document.getElementById('countrySelect');
-    const codeDisplay = document.getElementById('countryCodeDisplay');
-    const phoneInput = document.getElementById('phoneInput');
-    const phoneHint = document.getElementById('phoneHint');
+    document.addEventListener('DOMContentLoaded', function () {
+        const courseRequiresAcademic = @courseRequiresAcademic.ToString().ToLowerInvariant();
+        const countrySelect = document.getElementById('countrySelect');
+        const codeDisplay = document.getElementById('countryCodeDisplay');
+        const phoneInput = document.getElementById('phoneInput');
+        const phoneHint = document.getElementById('phoneHint');
+        const academicSection = document.getElementById('academicDetails');
+        const academicToggle = document.getElementById('includeAcademicDetails');
+        const university = createSearchSelect('university', '/AcademicCatalog/Universities');
+        const college = createSearchSelect('college', '/AcademicCatalog/Colleges', () => university.idInput.value);
+        const specialization = createSearchSelect('specialization', '/AcademicCatalog/Specializations', () => college.idInput.value);
+        const academicLevel = document.getElementById('academicLevel');
 
-    countrySelect.addEventListener('change', function() {
-        const opt = this.options[this.selectedIndex];
-        const code = opt.dataset.code || '+---';
-        const min = opt.dataset.min || '';
-        const max = opt.dataset.max || '';
-        const prefixes = opt.dataset.prefixes || '';
-
-        codeDisplay.textContent = code;
-
-        if (min && max) {
-            let hint = `الرقم يجب أن يكون ${min === max ? min + ' أرقام' : 'بين ' + min + ' و ' + max + ' أرقام'}`;
-            if (prefixes) hint += ` | يبدأ بـ: ${prefixes}`;
-            phoneHint.textContent = hint;
-        } else {
-            phoneHint.textContent = '';
+        function updateCountryHint() {
+            const opt = countrySelect.options[countrySelect.selectedIndex];
+            const code = opt.dataset.code || '+---';
+            const min = opt.dataset.min || '';
+            const max = opt.dataset.max || '';
+            const prefixes = opt.dataset.prefixes || '';
+            codeDisplay.textContent = code;
+            if (min && max) {
+                let hint = `الرقم يجب أن يكون ${min === max ? min + ' أرقام' : 'بين ' + min + ' و ' + max + ' أرقام'}`;
+                if (prefixes) hint += ` | يبدأ بـ: ${prefixes}`;
+                phoneHint.textContent = hint;
+            } else phoneHint.textContent = '';
         }
+
+        function setAcademicVisibility() {
+            const show = courseRequiresAcademic || (academicToggle && academicToggle.checked);
+            academicSection.hidden = !show;
+            [university.input, college.input, specialization.input, academicLevel].forEach(input => {
+                input.required = show;
+            });
+            if (!show) clearAcademicDetails();
+        }
+
+        function clearAcademicDetails() {
+            university.reset();
+            college.reset();
+            specialization.reset();
+            academicLevel.value = '';
+        }
+
+        function createSearchSelect(key, endpoint, parentId) {
+            const input = document.getElementById(`${key}Search`);
+            const idInput = document.getElementById(`${key}Id`);
+            const results = document.getElementById(`${key}Results`);
+            let timer;
+
+            const api = {
+                input, idInput,
+                reset() {
+                    idInput.value = '';
+                    input.value = '';
+                    input.disabled = key !== 'university' && !parentId?.();
+                    input.placeholder = key === 'college' ? 'اختر الجامعة أولاً' : key === 'specialization' ? 'اختر الكلية أولاً' : 'اكتب اسم الجامعة للبحث';
+                    hideResults();
+                },
+                clearSelection() {
+                    idInput.value = '';
+                    if (key === 'university') { college.reset(); specialization.reset(); }
+                    if (key === 'college') specialization.reset();
+                }
+            };
+
+            function hideResults() {
+                results.hidden = true;
+                results.replaceChildren();
+                input.setAttribute('aria-expanded', 'false');
+            }
+
+            async function search() {
+                const dependencyId = parentId?.();
+                if (parentId && !dependencyId) { api.reset(); return; }
+                const parameters = new URLSearchParams({ q: input.value.trim() });
+                if (key === 'college') parameters.set('universityId', dependencyId);
+                if (key === 'specialization') parameters.set('collegeId', dependencyId);
+                try {
+                    const response = await fetch(`${endpoint}?${parameters.toString()}`, { headers: { 'Accept': 'application/json' } });
+                    const items = response.ok ? await response.json() : [];
+                    results.replaceChildren();
+                    if (!items.length) {
+                        const empty = document.createElement('div');
+                        empty.className = 'list-group-item text-muted small';
+                        empty.textContent = 'لا توجد نتائج مطابقة.';
+                        results.append(empty);
+                    } else {
+                        items.forEach(item => {
+                            const option = document.createElement('button');
+                            option.type = 'button';
+                            option.className = 'list-group-item list-group-item-action';
+                            option.setAttribute('role', 'option');
+                            option.textContent = item.name;
+                            option.addEventListener('mousedown', function (event) {
+                                event.preventDefault();
+                                idInput.value = item.id;
+                                input.value = item.name;
+                                if (key === 'university') { college.reset(); specialization.reset(); college.input.disabled = false; college.input.placeholder = 'اكتب اسم الكلية للبحث'; }
+                                if (key === 'college') { specialization.reset(); specialization.input.disabled = false; specialization.input.placeholder = 'اكتب اسم التخصص للبحث'; }
+                                hideResults();
+                            });
+                            results.append(option);
+                        });
+                    }
+                    results.hidden = false;
+                    input.setAttribute('aria-expanded', 'true');
+                } catch {
+                    hideResults();
+                }
+            }
+
+            input.addEventListener('input', function () {
+                api.clearSelection();
+                clearTimeout(timer);
+                timer = setTimeout(search, 220);
+            });
+            input.addEventListener('focus', search);
+            input.addEventListener('blur', () => setTimeout(hideResults, 180));
+            return api;
+        }
+
+        countrySelect.addEventListener('change', updateCountryHint);
+        academicToggle?.addEventListener('change', setAcademicVisibility);
+        updateCountryHint();
+        if (university.idInput.value) {
+            college.input.disabled = false;
+            college.input.placeholder = 'اكتب اسم الكلية للبحث';
+        }
+        if (college.idInput.value) {
+            specialization.input.disabled = false;
+            specialization.input.placeholder = 'اكتب اسم التخصص للبحث';
+        }
+        setAcademicVisibility();
+
+        document.getElementById('regForm').addEventListener('submit', function (e) {
+            const opt = countrySelect.options[countrySelect.selectedIndex];
+            if (opt.value) {
+                const min = parseInt(opt.dataset.min) || 0;
+                const max = parseInt(opt.dataset.max) || 99;
+                const prefixes = (opt.dataset.prefixes || '').split(',').filter(p => p.trim());
+                let phone = phoneInput.value.trim();
+                if (phone.startsWith('0')) phone = phone.substring(1);
+                if (phone && !/^\d+$/.test(phone)) {
+                    e.preventDefault(); alert('رقم الهاتف يجب أن يحتوي على أرقام فقط'); return;
+                }
+                if (phone && (phone.length < min || phone.length > max)) {
+                    e.preventDefault(); alert(`رقم الهاتف يجب أن يكون بين ${min} و ${max} أرقام`); return;
+                }
+                if (phone && prefixes.length > 0 && !prefixes.some(p => phone.startsWith(p.trim()))) {
+                    e.preventDefault(); alert(`رقم الهاتف يجب أن يبدأ بأحد البادئات: ${prefixes.join(', ')}`); return;
+                }
+            }
+
+            if (!academicSection.hidden && (!university.idInput.value || !college.idInput.value || !specialization.idInput.value || !academicLevel.value)) {
+                e.preventDefault();
+                alert('يرجى اختيار الجامعة والكلية والتخصص والمستوى الدراسي قبل إرسال الطلب.');
+            }
+        });
     });
-
-    // Client-side validation on form submit
-    document.getElementById('regForm').addEventListener('submit', function(e) {
-        const opt = countrySelect.options[countrySelect.selectedIndex];
-        if (!opt.value) return; // let server handle required
-
-        const min = parseInt(opt.dataset.min) || 0;
-        const max = parseInt(opt.dataset.max) || 99;
-        const prefixes = (opt.dataset.prefixes || '').split(',').filter(p => p.trim());
-
-        let phone = phoneInput.value.trim();
-        if (phone.startsWith('0')) phone = phone.substring(1);
-
-        if (phone && !/^\d+$/.test(phone)) {
-            e.preventDefault();
-            alert('رقم الهاتف يجب أن يحتوي على أرقام فقط');
-            return;
-        }
-        if (phone && (phone.length < min || phone.length > max)) {
-            e.preventDefault();
-            alert(`رقم الهاتف يجب أن يكون بين ${min} و ${max} أرقام`);
-            return;
-        }
-        if (phone && prefixes.length > 0 && !prefixes.some(p => phone.startsWith(p.trim()))) {
-            e.preventDefault();
-            alert(`رقم الهاتف يجب أن يبدأ بأحد البادئات: ${prefixes.join(', ')}`);
-            return;
-        }
-    });
-});
 </script>
 }

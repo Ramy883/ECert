@@ -38,6 +38,7 @@ builder.Services.AddScoped<NotificationService>();
 builder.Services.AddSingleton<CertificateSecurityService>();
 builder.Services.AddSingleton<VerifyRequestGuardService>();
 builder.Services.AddScoped<CertificateSchemaMigrationService>();
+builder.Services.AddScoped<AcademicSchemaMigrationService>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -115,6 +116,8 @@ using (var scope = app.Services.CreateScope())
         DbSeeder.SeedHomepageCms(db);
         var certificateMigration = scope.ServiceProvider.GetRequiredService<CertificateSchemaMigrationService>();
         await certificateMigration.EnsureAsync();
+        var academicMigration = scope.ServiceProvider.GetRequiredService<AcademicSchemaMigrationService>();
+        await academicMigration.EnsureAsync();
     }
     catch (Exception ex)
     {

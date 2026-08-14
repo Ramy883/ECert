@@ -78,6 +78,9 @@ public class Course
 
     public bool IsFeatured { get; set; } = false;
 
+    [Display(Name = "دورة جامعية")]
+    public bool RequiresAcademicDetails { get; set; } = false;
+
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 
     public ICollection<Registration> Registrations { get; set; } = new List<Registration>();

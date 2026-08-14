@@ -1,0 +1,130 @@
+@model ECert.Controllers.AcademicCatalogPageViewModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "البيانات الجامعية";
+}
+
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div>
+        <h2 class="mb-1"><i class="bi bi-mortarboard-fill text-primary ms-2"></i>البيانات الجامعية</h2>
+        <p class="text-muted mb-0">أنشئ القوائم التي تظهر للمتدرب في تسجيل الدورات الجامعية. ابدأ بالجامعة، ثم الكلية، ثم التخصص.</p>
+    </div>
+    <span class="badge bg-primary-subtle text-primary-emphasis px-3 py-2">السوبر أدمن فقط</span>
+</div>
+
+@if (TempData["Success"] is string success)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">@success<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+}
+@if (TempData["Error"] is string error)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">@error<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+}
+
+<div class="row g-4">
+    <div class="col-12 col-xl-4">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-header bg-white border-0 pt-4 px-4">
+                <h5 class="mb-1"><i class="bi bi-building ms-2 text-primary"></i>الجامعات</h5>
+                <small class="text-muted">@Model.Universities.Count جامعة مسجلة</small>
+            </div>
+            <div class="card-body px-4">
+                <form asp-action="CreateUniversity" method="post" class="input-group mb-4">
+                    @Html.AntiForgeryToken()
+                    <input name="universityName" class="form-control" maxlength="160" placeholder="اسم الجامعة" required />
+                    <button class="btn btn-primary" type="submit" aria-label="إضافة جامعة"><i class="bi bi-plus-lg"></i></button>
+                </form>
+                <div class="vstack gap-2">
+                    @foreach (var university in Model.Universities)
+                    {
+                        <form asp-action="UpdateUniversity" method="post" class="border rounded-3 p-2">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="universityId" value="@university.UniversityId" />
+                            <div class="d-flex gap-2 align-items-center">
+                                <input name="universityName" value="@university.UniversityName" class="form-control form-control-sm" maxlength="160" required />
+                                <div class="form-check form-switch m-0" title="نشطة">
+                                    <input class="form-check-input" type="checkbox" name="isActive" value="true" checked="@university.IsActive" aria-label="تفعيل الجامعة" />
+                                </div>
+                                <button class="btn btn-sm btn-outline-primary" type="submit" title="حفظ"><i class="bi bi-check-lg"></i></button>
+                            </div>
+                        </form>
+                    }
+                    @if (!Model.Universities.Any())
+                    {
+                        <p class="text-muted small mb-0">أضف أول جامعة لتتمكن من بناء الكليات والتخصصات.</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-xl-4">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-header bg-white border-0 pt-4 px-4">
+                <h5 class="mb-1"><i class="bi bi-bank ms-2 text-success"></i>الكليات</h5>
+                <small class="text-muted">@Model.Colleges.Count كلية مسجلة</small>
+            </div>
+            <div class="card-body px-4">
+                <form asp-action="CreateCollege" method="post" class="row g-2 mb-4">
+                    @Html.AntiForgeryToken()
+                    <div class="col-12"><select name="universityId" class="form-select" required><option value="">اختر الجامعة</option>@foreach (var university in Model.Universities.Where(u => u.IsActive)) { <option value="@university.UniversityId">@university.UniversityName</option> }</select></div>
+                    <div class="col"><input name="collegeName" class="form-control" maxlength="160" placeholder="اسم الكلية" required /></div>
+                    <div class="col-auto"><button class="btn btn-success" type="submit" aria-label="إضافة كلية"><i class="bi bi-plus-lg"></i></button></div>
+                </form>
+                <div class="vstack gap-2">
+                    @foreach (var college in Model.Colleges)
+                    {
+                        <form asp-action="UpdateCollege" method="post" class="border rounded-3 p-2">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="collegeId" value="@college.CollegeId" />
+                            <select name="universityId" class="form-select form-select-sm mb-2" required>@foreach (var university in Model.Universities) { <option value="@university.UniversityId" selected="@(university.UniversityId == college.UniversityId)">@university.UniversityName</option> }</select>
+                            <div class="d-flex gap-2 align-items-center">
+                                <input name="collegeName" value="@college.CollegeName" class="form-control form-control-sm" maxlength="160" required />
+                                <div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" name="isActive" value="true" checked="@college.IsActive" aria-label="تفعيل الكلية" /></div>
+                                <button class="btn btn-sm btn-outline-success" type="submit" title="حفظ"><i class="bi bi-check-lg"></i></button>
+                            </div>
+                        </form>
+                    }
+                    @if (!Model.Colleges.Any()) { <p class="text-muted small mb-0">تظهر الكليات هنا بعد إضافتها وربطها بجامعة.</p> }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-xl-4">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-header bg-white border-0 pt-4 px-4">
+                <h5 class="mb-1"><i class="bi bi-diagram-3-fill ms-2 text-warning"></i>التخصصات</h5>
+                <small class="text-muted">@Model.Specializations.Count تخصص مسجل</small>
+            </div>
+            <div class="card-body px-4">
+                <form asp-action="CreateSpecialization" method="post" class="row g-2 mb-4">
+                    @Html.AntiForgeryToken()
+                    <div class="col-12"><select name="collegeId" class="form-select" required><option value="">اختر الكلية</option>@foreach (var college in Model.Colleges.Where(c => c.IsActive && c.University?.IsActive == true)) { <option value="@college.CollegeId">@college.University!.UniversityName — @college.CollegeName</option> }</select></div>
+                    <div class="col"><input name="specializationName" class="form-control" maxlength="160" placeholder="اسم التخصص" required /></div>
+                    <div class="col-auto"><button class="btn btn-warning" type="submit" aria-label="إضافة تخصص"><i class="bi bi-plus-lg"></i></button></div>
+                </form>
+                <div class="vstack gap-2">
+                    @foreach (var specialization in Model.Specializations)
+                    {
+                        <form asp-action="UpdateSpecialization" method="post" class="border rounded-3 p-2">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="academicSpecializationId" value="@specialization.AcademicSpecializationId" />
+                            <select name="collegeId" class="form-select form-select-sm mb-2" required>@foreach (var college in Model.Colleges) { <option value="@college.CollegeId" selected="@(college.CollegeId == specialization.CollegeId)">@college.University!.UniversityName — @college.CollegeName</option> }</select>
+                            <div class="d-flex gap-2 align-items-center">
+                                <input name="specializationName" value="@specialization.SpecializationName" class="form-control form-control-sm" maxlength="160" required />
+                                <div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" name="isActive" value="true" checked="@specialization.IsActive" aria-label="تفعيل التخصص" /></div>
+                                <button class="btn btn-sm btn-outline-warning" type="submit" title="حفظ"><i class="bi bi-check-lg"></i></button>
+                            </div>
+                        </form>
+                    }
+                    @if (!Model.Specializations.Any()) { <p class="text-muted small mb-0">أضف التخصصات بعد إنشاء الكليات المرتبطة بها.</p> }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-light border mt-4 mb-0 small">
+    <i class="bi bi-shield-check ms-1"></i> للحفاظ على سجلات التسجيل، لا يُحذف أي عنصر مستخدم؛ يمكنك تعطيله لإخفائه من التسجيلات الجديدة.
+</div>

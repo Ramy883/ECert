@@ -33,6 +33,9 @@ public class ECertDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<HomepageSection> HomepageSections => Set<HomepageSection>();
     public DbSet<ThemeSetting> ThemeSettings => Set<ThemeSetting>();
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
+    public DbSet<University> Universities => Set<University>();
+    public DbSet<College> Colleges => Set<College>();
+    public DbSet<AcademicSpecialization> AcademicSpecializations => Set<AcademicSpecialization>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -76,11 +79,42 @@ public class ECertDbContext : DbContext, IDataProtectionKeyContext
             .WithMany(i => i.Courses)
             .HasForeignKey(c => c.InstructorId);
 
+        // Academic catalog
+        modelBuilder.Entity<College>()
+            .HasOne(c => c.University)
+            .WithMany(u => u.Colleges)
+            .HasForeignKey(c => c.UniversityId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AcademicSpecialization>()
+            .HasOne(s => s.College)
+            .WithMany(c => c.Specializations)
+            .HasForeignKey(s => s.CollegeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         // Registration
         modelBuilder.Entity<Registration>()
             .HasOne(r => r.Course)
             .WithMany(c => c.Registrations)
             .HasForeignKey(r => r.CourseId);
+
+        modelBuilder.Entity<Registration>()
+            .HasOne(r => r.University)
+            .WithMany()
+            .HasForeignKey(r => r.UniversityId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Registration>()
+            .HasOne(r => r.College)
+            .WithMany()
+            .HasForeignKey(r => r.CollegeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Registration>()
+            .HasOne(r => r.AcademicSpecialization)
+            .WithMany()
+            .HasForeignKey(r => r.AcademicSpecializationId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         // Invoice
         modelBuilder.Entity<Invoice>()

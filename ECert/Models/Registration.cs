@@ -25,6 +25,31 @@ public class Registration
     [Display(Name = "كيف سمعت عنا؟")]
     public string? HeardFrom { get; set; }
 
+    [Display(Name = "الجامعة")]
+    public int? UniversityId { get; set; }
+    public University? University { get; set; }
+
+    [Display(Name = "الكلية")]
+    public int? CollegeId { get; set; }
+    public College? College { get; set; }
+
+    [Display(Name = "التخصص")]
+    public int? AcademicSpecializationId { get; set; }
+    public AcademicSpecialization? AcademicSpecialization { get; set; }
+
+    [StringLength(80)]
+    [Display(Name = "المستوى الدراسي")]
+    public string? AcademicLevel { get; set; }
+
+    [StringLength(160)]
+    public string? UniversityNameSnapshot { get; set; }
+
+    [StringLength(160)]
+    public string? CollegeNameSnapshot { get; set; }
+
+    [StringLength(160)]
+    public string? SpecializationNameSnapshot { get; set; }
+
     [Required]
     public int CourseId { get; set; }
     public Course? Course { get; set; }

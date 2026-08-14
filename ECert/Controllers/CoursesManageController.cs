@@ -100,6 +100,7 @@ public class CoursesManageController : Controller
         existing.TotalSeats = course.TotalSeats;
         existing.Status = course.Status;
         existing.IsFeatured = course.IsFeatured;
+        existing.RequiresAcademicDetails = course.RequiresAcademicDetails;
         var imgPath = await SaveImage(image);
         if (imgPath != null)
         {

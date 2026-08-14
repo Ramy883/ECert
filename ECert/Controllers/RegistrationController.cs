@@ -1,5 +1,5 @@
-using ECert.Data;
 using ECert.Models;
+using ECert.Data;
 using ECert.Models.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +8,8 @@ namespace ECert.Controllers;
 
 public class RegistrationController : Controller
 {
+    private static readonly IReadOnlyList<string> AcademicLevels = AcademicLevelCatalog.Levels;
+
     private readonly ECertDbContext _db;
     public RegistrationController(ECertDbContext db) => _db = db;
 
@@ -26,8 +28,14 @@ public class RegistrationController : Controller
             TempData["Error"] = "عذراً، العدد مكتمل في هذه الدورة.";
             return RedirectToAction("Details", "PublicCourses", new { id = courseId });
         }
-        var vm = new PublicRegistrationViewModel { CourseId = courseId, CourseName = course.CourseName };
-        ViewBag.Countries = await _db.PhoneCountries.Where(c => c.IsActive).OrderBy(c => c.CountryName).ToListAsync();
+
+        var vm = new PublicRegistrationViewModel
+        {
+            CourseId = courseId,
+            CourseName = course.CourseName,
+            IncludeAcademicDetails = course.RequiresAcademicDetails
+        };
+        await PopulateRegistrationFormAsync(course);
         return View(vm);
     }
 
@@ -44,82 +52,77 @@ public class RegistrationController : Controller
             return View("Success");
         }
 
-        ViewBag.Countries = await _db.PhoneCountries.Where(c => c.IsActive).OrderBy(c => c.CountryName).ToListAsync();
-
         if (!ModelState.IsValid)
-        {
-            model.CourseName = course.CourseName;
-            return View(model);
-        }
+            return await ReturnFormAsync(model, course);
 
-        // Validate phone based on selected country
         var country = await _db.PhoneCountries.FindAsync(model.CountryId);
         if (country == null || !country.IsActive)
         {
-            ModelState.AddModelError("CountryId", "الدولة المختارة غير صحيحة");
-            model.CourseName = course.CourseName;
-            return View(model);
+            ModelState.AddModelError(nameof(model.CountryId), "الدولة المختارة غير صحيحة.");
+            return await ReturnFormAsync(model, course);
         }
 
         var phone = model.Phone.Trim();
-        // Remove leading zero if present
         if (phone.StartsWith("0")) phone = phone[1..];
-
-        // Validate length
         if (phone.Length < country.MinPhoneLength || phone.Length > country.MaxPhoneLength)
         {
-            ModelState.AddModelError("Phone", $"رقم الهاتف يجب أن يكون بين {country.MinPhoneLength} و {country.MaxPhoneLength} أرقام");
-            model.CourseName = course.CourseName;
-            return View(model);
+            ModelState.AddModelError(nameof(model.Phone), $"رقم الهاتف يجب أن يكون بين {country.MinPhoneLength} و {country.MaxPhoneLength} أرقام.");
+            return await ReturnFormAsync(model, course);
         }
-
-        // Validate digits only
         if (!phone.All(char.IsDigit))
         {
-            ModelState.AddModelError("Phone", "رقم الهاتف يجب أن يحتوي على أرقام فقط");
-            model.CourseName = course.CourseName;
-            return View(model);
+            ModelState.AddModelError(nameof(model.Phone), "رقم الهاتف يجب أن يحتوي على أرقام فقط.");
+            return await ReturnFormAsync(model, course);
         }
-
-        // Validate prefixes
         if (!string.IsNullOrEmpty(country.Prefixes))
         {
             var allowedPrefixes = country.Prefixes.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             if (allowedPrefixes.Length > 0 && !allowedPrefixes.Any(p => phone.StartsWith(p)))
             {
-                ModelState.AddModelError("Phone", $"رقم الهاتف يجب أن يبدأ بأحد البادئات: {string.Join(", ", allowedPrefixes)}");
-                model.CourseName = course.CourseName;
-                return View(model);
+                ModelState.AddModelError(nameof(model.Phone), $"رقم الهاتف يجب أن يبدأ بأحد البادئات: {string.Join(", ", allowedPrefixes)}.");
+                return await ReturnFormAsync(model, course);
             }
+        }
+
+        var hasAnyAcademicValue = model.UniversityId.HasValue || model.CollegeId.HasValue ||
+                                  model.AcademicSpecializationId.HasValue || !string.IsNullOrWhiteSpace(model.AcademicLevel);
+        var needsAcademicDetails = course.RequiresAcademicDetails || model.IncludeAcademicDetails || hasAnyAcademicValue;
+        AcademicSelection? academic = null;
+        if (needsAcademicDetails)
+        {
+            academic = await ValidateAcademicSelectionAsync(model);
+            if (academic == null) return await ReturnFormAsync(model, course);
         }
 
         if (course.AvailableSeats <= 0)
         {
-            ModelState.AddModelError("", "عذراً، لا توجد مقاعد متاحة في هذه الدورة.");
-            model.CourseName = course.CourseName;
-            return View(model);
+            ModelState.AddModelError(string.Empty, "عذراً، لا توجد مقاعد متاحة في هذه الدورة.");
+            return await ReturnFormAsync(model, course);
         }
 
         var requestNumber = $"REG-{DateTime.Now:yyyy}-{new Random().Next(10000, 99999)}";
-
         var registration = new Registration
         {
             RequestNumber = requestNumber,
-            FullName = model.FullName,
+            FullName = model.FullName.Trim(),
             Phone = $"{country.CountryCode}{phone}",
-            Email = model.Email,
-            HeardFrom = model.HeardFrom,
+            Email = model.Email?.Trim(),
+            HeardFrom = model.HeardFrom?.Trim(),
             CourseId = model.CourseId,
             Status = "Pending",
-            RegistrationDate = DateTime.Now
+            RegistrationDate = DateTime.Now,
+            UniversityId = academic?.University.UniversityId,
+            CollegeId = academic?.College.CollegeId,
+            AcademicSpecializationId = academic?.Specialization.AcademicSpecializationId,
+            AcademicLevel = academic?.AcademicLevel,
+            UniversityNameSnapshot = academic?.University.UniversityName,
+            CollegeNameSnapshot = academic?.College.CollegeName,
+            SpecializationNameSnapshot = academic?.Specialization.SpecializationName
         };
 
         _db.Registrations.Add(registration);
         course.BookedSeats++;
-        if (course.AvailableSeats <= 0)
-        {
-            course.Status = "Full";
-        }
+        if (course.AvailableSeats <= 0) course.Status = "Full";
         await _db.SaveChangesAsync();
 
         ViewBag.RequestNumber = requestNumber;
@@ -127,4 +130,74 @@ public class RegistrationController : Controller
         ViewBag.CourseName = course.CourseName;
         return View("Success");
     }
+
+    private async Task<AcademicSelection?> ValidateAcademicSelectionAsync(PublicRegistrationViewModel model)
+    {
+        if (!model.UniversityId.HasValue)
+            ModelState.AddModelError(nameof(model.UniversityId), "اختر الجامعة من القائمة.");
+        if (!model.CollegeId.HasValue)
+            ModelState.AddModelError(nameof(model.CollegeId), "اختر الكلية من القائمة.");
+        if (!model.AcademicSpecializationId.HasValue)
+            ModelState.AddModelError(nameof(model.AcademicSpecializationId), "اختر التخصص من القائمة.");
+
+        var level = model.AcademicLevel?.Trim();
+        if (string.IsNullOrEmpty(level) || !AcademicLevels.Contains(level))
+            ModelState.AddModelError(nameof(model.AcademicLevel), "اختر المستوى الدراسي من القائمة.");
+
+        if (!ModelState.IsValid || !model.UniversityId.HasValue || !model.CollegeId.HasValue || !model.AcademicSpecializationId.HasValue)
+            return null;
+
+        var university = await _db.Universities.SingleOrDefaultAsync(u => u.UniversityId == model.UniversityId && u.IsActive);
+        if (university == null)
+        {
+            ModelState.AddModelError(nameof(model.UniversityId), "الجامعة المختارة غير متاحة.");
+            return null;
+        }
+
+        var college = await _db.Colleges.Include(c => c.University)
+            .SingleOrDefaultAsync(c => c.CollegeId == model.CollegeId && c.UniversityId == university.UniversityId && c.IsActive && c.University!.IsActive);
+        if (college == null)
+        {
+            ModelState.AddModelError(nameof(model.CollegeId), "الكلية المختارة لا تنتمي إلى الجامعة أو غير متاحة.");
+            return null;
+        }
+
+        var specialization = await _db.AcademicSpecializations.Include(s => s.College).ThenInclude(c => c!.University)
+            .SingleOrDefaultAsync(s => s.AcademicSpecializationId == model.AcademicSpecializationId && s.CollegeId == college.CollegeId && s.IsActive && s.College!.IsActive && s.College.University!.IsActive);
+        if (specialization == null)
+        {
+            ModelState.AddModelError(nameof(model.AcademicSpecializationId), "التخصص المختار لا ينتمي إلى الكلية أو غير متاح.");
+            return null;
+        }
+
+        return new AcademicSelection(university, college, specialization, level!);
+    }
+
+    private async Task<IActionResult> ReturnFormAsync(PublicRegistrationViewModel model, Course course)
+    {
+        model.CourseName = course.CourseName;
+        model.IncludeAcademicDetails = course.RequiresAcademicDetails || model.IncludeAcademicDetails;
+        await PopulateAcademicDisplayNamesAsync(model);
+        await PopulateRegistrationFormAsync(course);
+        return View(model);
+    }
+
+    private async Task PopulateRegistrationFormAsync(Course course)
+    {
+        ViewBag.Countries = await _db.PhoneCountries.Where(c => c.IsActive).OrderBy(c => c.CountryName).ToListAsync();
+        ViewBag.RequiresAcademicDetails = course.RequiresAcademicDetails;
+        ViewBag.AcademicLevels = AcademicLevels;
+    }
+
+    private async Task PopulateAcademicDisplayNamesAsync(PublicRegistrationViewModel model)
+    {
+        if (model.UniversityId.HasValue)
+            model.UniversityName = await _db.Universities.Where(u => u.UniversityId == model.UniversityId).Select(u => u.UniversityName).FirstOrDefaultAsync();
+        if (model.CollegeId.HasValue)
+            model.CollegeName = await _db.Colleges.Where(c => c.CollegeId == model.CollegeId).Select(c => c.CollegeName).FirstOrDefaultAsync();
+        if (model.AcademicSpecializationId.HasValue)
+            model.SpecializationName = await _db.AcademicSpecializations.Where(s => s.AcademicSpecializationId == model.AcademicSpecializationId).Select(s => s.SpecializationName).FirstOrDefaultAsync();
+    }
+
+    private sealed record AcademicSelection(University University, College College, AcademicSpecialization Specialization, string AcademicLevel);
 }

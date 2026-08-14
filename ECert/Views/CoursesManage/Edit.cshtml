@@ -110,6 +110,15 @@
                             </div>
                         </div>
                         <div class="col-12">
+                            <div class="border rounded-3 p-3 bg-light">
+                                <div class="form-check form-switch mb-1">
+                                    <input asp-for="RequiresAcademicDetails" class="form-check-input" />
+                                    <label asp-for="RequiresAcademicDetails" class="form-check-label fw-semibold">دورة جامعية</label>
+                                </div>
+                                <small class="text-muted">عند التفعيل، يُطلب من المتدرب إدخال الجامعة والكلية والتخصص والمستوى الدراسي أثناء التسجيل.</small>
+                            </div>
+                        </div>
+                        <div class="col-12">
                             <label class="form-label">صورة الدورة</label>
                             @if (!string.IsNullOrEmpty(Model.ImageUrl))
                             {
