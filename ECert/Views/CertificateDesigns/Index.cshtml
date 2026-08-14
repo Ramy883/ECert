@@ -3,7 +3,29 @@
 
 @{
     ViewData["Title"] = "مصمم الشهادات";
-    var templateJson = JsonSerializer.Serialize(Model.Design.Elements.OrderBy(e => e.SortOrder), new JsonSerializerOptions
+    // Serialize only editor-safe scalar fields; CertificateDesignElement.Design is a back-reference
+    // and must never be sent to the browser because it creates a circular EF object graph.
+    var templateJson = JsonSerializer.Serialize(Model.Design.Elements
+        .OrderBy(e => e.SortOrder)
+        .Select(e => new
+        {
+            e.CertificateDesignElementId,
+            e.ElementType,
+            e.FieldKey,
+            e.Content,
+            e.X,
+            e.Y,
+            e.Width,
+            e.Height,
+            e.FontSize,
+            e.FontFamily,
+            e.FontColor,
+            e.FontWeight,
+            e.TextAlign,
+            e.IsVisible,
+            e.ZIndex,
+            e.SortOrder
+        }), new JsonSerializerOptions
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     });
