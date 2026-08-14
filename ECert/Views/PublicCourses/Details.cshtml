@@ -12,7 +12,7 @@
 
 <div class="row g-4">
     <div class="col-lg-8">
-        <img src="@(string.IsNullOrWhiteSpace(Model.ImageUrl) ? "/images/course-placeholder.svg" : Model.ImageUrl)" class="course-hero-image mb-4" loading="eager" alt="صورة دورة @Model.CourseName" onerror="this.onerror=null;this.src='/images/course-placeholder.svg';" />
+        <img src="@(string.IsNullOrWhiteSpace(Model.ImageUrl) ? "/images/course-placeholder.svg" : Model.ImageUrl)" class="course-hero-image mb-4" loading="eager" decoding="async" alt="صورة دورة @Model.CourseName" onerror="this.onerror=null;this.src='/images/course-placeholder.svg';" />
         <div class="card shadow-sm">
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-start mb-3">

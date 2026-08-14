@@ -196,11 +196,11 @@
                                     <div class="position-relative overflow-hidden">
                                         @if (!string.IsNullOrEmpty(course.ImageUrl))
                                         {
-                                            <img src="@course.ImageUrl" class="card-img-top course-img" alt="@course.CourseName" loading="lazy" onerror="this.onerror=null;this.src='/images/course-placeholder.svg';" />
+                                            <img src="@course.ImageUrl" class="card-img-top course-img" alt="@course.CourseName" loading="eager" decoding="async" onerror="this.onerror=null;this.src='/images/course-placeholder.svg';" />
                                         }
                                         else
                                         {
-                                            <img src="/images/course-placeholder.svg" class="card-img-top course-img" alt="صورة افتراضية لدورة @course.CourseName" loading="lazy" />
+                                            <img src="/images/course-placeholder.svg" class="card-img-top course-img" alt="صورة افتراضية لدورة @course.CourseName" loading="eager" decoding="async" />
                                         }
                                         <span class="badge course-badge">@course.Category?.CategoryName</span>
                                         @if (course.Status == "OpenForRegistration" && course.AvailableSeats > 0)
