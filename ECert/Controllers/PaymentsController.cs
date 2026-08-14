@@ -23,9 +23,9 @@ public class PaymentsController : Controller
         if (!HasPermission("manage-payments")) return Forbid();
         var query = _db.Payments.Include(p => p.Invoice).AsQueryable();
         if (!string.IsNullOrEmpty(search))
-            query = query.Where(p => p.Invoice!.InvoiceNumber.Contains(search) || p.Invoice.TraineeName.Contains(search) || p.RecordedBy!.Contains(search));
+            query = query.Where(p => p.Invoice!.InvoiceNumber.Contains(search) || p.Invoice.TraineeName.Contains(search) || (p.Invoice.TraineeNameArabic != null && p.Invoice.TraineeNameArabic.Contains(search)) || (p.Invoice.TraineeNameEnglish != null && p.Invoice.TraineeNameEnglish.Contains(search)) || p.RecordedBy!.Contains(search));
         if (!string.IsNullOrEmpty(studentName))
-            query = query.Where(p => p.Invoice!.TraineeName.Contains(studentName));
+            query = query.Where(p => p.Invoice!.TraineeName.Contains(studentName) || (p.Invoice.TraineeNameArabic != null && p.Invoice.TraineeNameArabic.Contains(studentName)) || (p.Invoice.TraineeNameEnglish != null && p.Invoice.TraineeNameEnglish.Contains(studentName)));
         if (!string.IsNullOrEmpty(invoiceNumber))
             query = query.Where(p => p.Invoice!.InvoiceNumber.Contains(invoiceNumber));
         if (!string.IsNullOrEmpty(courseName))
@@ -186,22 +186,24 @@ public class PaymentsController : Controller
         using var wb = new XLWorkbook();
         var ws = wb.Worksheets.Add("الدفعات");
         ws.Cell(1, 1).Value = "رقم الفاتورة";
-        ws.Cell(1, 2).Value = "اسم الطالب";
-        ws.Cell(1, 3).Value = "المبلغ";
-        ws.Cell(1, 4).Value = "طريقة الدفع";
-        ws.Cell(1, 5).Value = "التاريخ";
-        ws.Cell(1, 6).Value = "الموظف";
-        ws.Cell(1, 7).Value = "ملاحظات";
+        ws.Cell(1, 2).Value = "اسم الطالب بالعربية";
+        ws.Cell(1, 3).Value = "اسم الطالب بالإنجليزية";
+        ws.Cell(1, 4).Value = "المبلغ";
+        ws.Cell(1, 5).Value = "طريقة الدفع";
+        ws.Cell(1, 6).Value = "التاريخ";
+        ws.Cell(1, 7).Value = "الموظف";
+        ws.Cell(1, 8).Value = "ملاحظات";
         int row = 2;
         foreach (var p in list)
         {
             ws.Cell(row, 1).Value = p.Invoice?.InvoiceNumber ?? "";
-            ws.Cell(row, 2).Value = p.Invoice?.TraineeName ?? "";
-            ws.Cell(row, 3).Value = (double)p.Amount;
-            ws.Cell(row, 4).Value = p.PaymentMethod;
-            ws.Cell(row, 5).Value = p.PaymentDate.ToString("yyyy-MM-dd");
-            ws.Cell(row, 6).Value = p.RecordedBy ?? "";
-            ws.Cell(row, 7).Value = p.Notes ?? "";
+            ws.Cell(row, 2).Value = p.Invoice?.TraineeNameArabic ?? p.Invoice?.TraineeName ?? "";
+            ws.Cell(row, 3).Value = p.Invoice?.TraineeNameEnglish ?? p.Invoice?.TraineeName ?? "";
+            ws.Cell(row, 4).Value = (double)p.Amount;
+            ws.Cell(row, 5).Value = p.PaymentMethod;
+            ws.Cell(row, 6).Value = p.PaymentDate.ToString("yyyy-MM-dd");
+            ws.Cell(row, 7).Value = p.RecordedBy ?? "";
+            ws.Cell(row, 8).Value = p.Notes ?? "";
             row++;
         }
         ws.Columns().AdjustToContents();

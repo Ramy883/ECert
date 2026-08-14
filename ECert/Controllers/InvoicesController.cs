@@ -13,7 +13,8 @@ public class InvoicesController : Controller
 {
     private readonly ECertDbContext _db;
     private readonly AuditLogService _audit;
-    public InvoicesController(ECertDbContext db, AuditLogService audit) { _db = db; _audit = audit; }
+    private readonly RegistrationInvoiceService _invoiceService;
+    public InvoicesController(ECertDbContext db, AuditLogService audit, RegistrationInvoiceService invoiceService) { _db = db; _audit = audit; _invoiceService = invoiceService; }
 
     private bool HasPermission(string perm) => User.HasClaim(c => c.Type == "Permission" && c.Value == perm);
 
@@ -24,7 +25,7 @@ public class InvoicesController : Controller
         if (!string.IsNullOrEmpty(status)) query = query.Where(i => i.Status == status);
         if (!string.IsNullOrEmpty(search))
         {
-            query = query.Where(i => i.InvoiceNumber.Contains(search) || i.TraineeName.Contains(search) || i.TraineePhone.Contains(search) || i.CourseName.Contains(search));
+            query = query.Where(i => i.InvoiceNumber.Contains(search) || i.TraineeName.Contains(search) || (i.TraineeNameArabic != null && i.TraineeNameArabic.Contains(search)) || (i.TraineeNameEnglish != null && i.TraineeNameEnglish.Contains(search)) || i.TraineePhone.Contains(search) || i.CourseName.Contains(search) || (i.CourseNameArabic != null && i.CourseNameArabic.Contains(search)) || (i.CourseNameEnglish != null && i.CourseNameEnglish.Contains(search)));
         }
         ViewBag.Invoices = await query.OrderByDescending(i => i.CreatedAt).ToListAsync();
         ViewBag.Status = status;
@@ -36,9 +37,10 @@ public class InvoicesController : Controller
     public async Task<IActionResult> Create(int registrationId)
     {
         if (!HasPermission("manage-finance")) return Forbid();
-        var reg = await _db.Registrations.Include(r => r.Course).FirstOrDefaultAsync(r => r.RegistrationId == registrationId);
+        var reg = await _db.Registrations.Include(r => r.Course).Include(r => r.Invoice).FirstOrDefaultAsync(r => r.RegistrationId == registrationId);
         if (reg == null) return NotFound();
-        if (reg.Invoice != null) { TempData["Error"] = "توجد فاتورة already لهذا التسجيل"; return RedirectToAction("Index"); }
+        if (reg.Status != "Accepted") { TempData["Error"] = "لا يمكن إنشاء فاتورة إلا لتسجيل مقبول."; return RedirectToAction("Index"); }
+        if (reg.Invoice != null) { TempData["Error"] = $"توجد فاتورة بالفعل لهذا التسجيل: {reg.Invoice.InvoiceNumber}"; return RedirectToAction("Index"); }
 
         ViewBag.Registration = reg;
         return View();
@@ -52,27 +54,19 @@ public class InvoicesController : Controller
         var reg = await _db.Registrations.Include(r => r.Course).FirstOrDefaultAsync(r => r.RegistrationId == registrationId);
         if (reg == null) return NotFound();
 
-        var invoiceNumber = $"INV-{DateTime.Now:yyyy}-{new Random().Next(10000, 99999)}";
-        var invoice = new Invoice
+        if (reg.Status != "Accepted")
         {
-            InvoiceNumber = invoiceNumber,
-            RegistrationId = registrationId,
-            TraineeName = reg.FullName,
-            TraineePhone = reg.Phone,
-            CourseName = reg.Course?.CourseName ?? "",
-            TotalAmount = reg.Course?.FinalPrice ?? 0,
-            Status = "Unpaid",
-            CreatedAt = DateTime.Now,
-            DueDate = dueDate,
-            CreatedBy = User.Identity?.Name ?? "System"
-        };
+            TempData["Error"] = "لا يمكن إنشاء فاتورة إلا لتسجيل مقبول.";
+            return RedirectToAction("Index");
+        }
 
-        _db.Invoices.Add(invoice);
+        var invoice = await _invoiceService.EnsureForAcceptedAsync(reg, User.Identity?.Name ?? "System");
+        invoice.DueDate = dueDate;
         await _db.SaveChangesAsync();
 
-        await _audit.LogAsync(User.Identity?.Name ?? "", "Create", "Invoice", invoice.InvoiceId, null, $"Invoice: {invoiceNumber}, Amount: {invoice.TotalAmount}");
+        await _audit.LogAsync(User.Identity?.Name ?? "", "Create", "Invoice", invoice.InvoiceId, null, $"Invoice: {invoice.InvoiceNumber}, Amount: {invoice.TotalAmount}");
 
-        TempData["Success"] = $"تم إنشاء الفاتورة {invoiceNumber} بنجاح.";
+        TempData["Success"] = $"تم إنشاء/تأكيد الفاتورة {invoice.InvoiceNumber} بنجاح.";
         return RedirectToAction("Index");
     }
 

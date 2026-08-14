@@ -47,6 +47,8 @@ builder.Services.AddScoped<CourseNameSchemaMigrationService>();
 builder.Services.AddScoped<RegistrationNameSchemaMigrationService>();
 builder.Services.AddScoped<CertificateTemplateService>();
 builder.Services.AddScoped<RegistrationDocumentService>();
+builder.Services.AddScoped<RegistrationInvoiceService>();
+builder.Services.AddScoped<InvoiceSchemaMigrationService>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -124,6 +126,8 @@ using (var scope = app.Services.CreateScope())
         await courseNameMigration.EnsureAsync();
         var registrationNameMigration = scope.ServiceProvider.GetRequiredService<RegistrationNameSchemaMigrationService>();
         await registrationNameMigration.EnsureAsync();
+        var invoiceMigration = scope.ServiceProvider.GetRequiredService<InvoiceSchemaMigrationService>();
+        await invoiceMigration.EnsureAsync();
         DbSeeder.Seed(db);
         DbSeeder.SeedHomepageCms(db);
         var certificateMigration = scope.ServiceProvider.GetRequiredService<CertificateSchemaMigrationService>();

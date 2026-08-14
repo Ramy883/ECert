@@ -17,11 +17,27 @@ public class Invoice
     [Display(Name = "اسم المتدرب")]
     public string TraineeName { get; set; } = string.Empty;
 
+    [StringLength(150)]
+    [Display(Name = "اسم المتدرب بالعربية")]
+    public string? TraineeNameArabic { get; set; }
+
+    [StringLength(150)]
+    [Display(Name = "اسم المتدرب بالإنجليزية")]
+    public string? TraineeNameEnglish { get; set; }
+
     [Display(Name = "رقم الهاتف")]
     public string TraineePhone { get; set; } = string.Empty;
 
     [Display(Name = "الدورة")]
     public string CourseName { get; set; } = string.Empty;
+
+    [StringLength(200)]
+    [Display(Name = "الدورة بالإنجليزية")]
+    public string? CourseNameEnglish { get; set; }
+
+    [StringLength(200)]
+    [Display(Name = "الدورة بالعربية")]
+    public string? CourseNameArabic { get; set; }
 
     [Display(Name = "المبلغ الإجمالي")]
     public decimal TotalAmount { get; set; }

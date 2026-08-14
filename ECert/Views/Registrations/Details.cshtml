@@ -69,10 +69,10 @@
                 }
                 else
                 {
-                    <p class="text-muted">لا توجد فاتورة</p>
+                    <p class="text-muted">لا توجد فاتورة. عند قبول التسجيل تُنشأ الفاتورة تلقائيًا.</p>
                     @if (Model.Status == "Accepted")
                     {
-                        <a asp-controller="Invoices" asp-action="Create" asp-route-registrationId="@Model.RegistrationId" class="btn btn-sm btn-primary"><i class="bi bi-plus"></i> إنشاء فاتورة</a>
+                        <a asp-controller="Invoices" asp-action="Create" asp-route-registrationId="@Model.RegistrationId" class="btn btn-sm btn-outline-primary"><i class="bi bi-arrow-repeat"></i> تأكيد/استكمال الفاتورة</a>
                     }
                 }
             </div>

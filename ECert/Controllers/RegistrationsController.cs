@@ -16,13 +16,15 @@ public class RegistrationsController : Controller
     private readonly AuditLogService _audit;
     private readonly NotificationService _notify;
     private readonly RegistrationDocumentService _documents;
+    private readonly RegistrationInvoiceService _invoiceService;
 
-    public RegistrationsController(ECertDbContext db, AuditLogService audit, NotificationService notify, RegistrationDocumentService documents)
+    public RegistrationsController(ECertDbContext db, AuditLogService audit, NotificationService notify, RegistrationDocumentService documents, RegistrationInvoiceService invoiceService)
     {
         _db = db;
         _audit = audit;
         _notify = notify;
         _documents = documents;
+        _invoiceService = invoiceService;
     }
 
     private bool HasPermission(string perm) => User.HasClaim(c => c.Type == "Permission" && c.Value == perm);
@@ -122,13 +124,14 @@ public class RegistrationsController : Controller
         reg.Status = "Accepted";
         reg.AcceptedDate = DateTime.Now;
         reg.ProcessedBy = User.Identity?.Name ?? "System";
+        var invoice = await _invoiceService.EnsureForAcceptedAsync(reg, reg.ProcessedBy);
         await _db.SaveChangesAsync();
 
-        await _audit.LogAsync(User.Identity?.Name ?? "", "Accept", "Registration", id, null, "Status: Accepted");
+        await _audit.LogAsync(User.Identity?.Name ?? "", "Accept", "Registration", id, null, $"Status: Accepted; Invoice: {invoice.InvoiceNumber}");
         await _notify.SendAsync(reg.FullName, reg.Phone, reg.Email, "RegistrationAccepted",
             $"عزيزي {reg.FullName}، تم قبولك في دورة {reg.Course?.CourseName}. سيتم التواصل معك قريباً.", "SMS", "Registration", id);
 
-        TempData["Success"] = $"تم قبول طلب {reg.FullName} بنجاح.";
+        TempData["Success"] = $"تم قبول طلب {reg.FullName} بنجاح وإنشاء الفاتورة {invoice.InvoiceNumber}.";
         return ReturnToList(returnUrl);
     }
 
@@ -288,6 +291,7 @@ public class RegistrationsController : Controller
 
         var now = DateTime.Now;
         var processedBy = User.Identity?.Name ?? "System";
+        var createdInvoiceNumbers = new List<string>();
         if (actionKey == "approve")
         {
             foreach (var registration in eligible)
@@ -295,6 +299,8 @@ public class RegistrationsController : Controller
                 registration.Status = "Accepted";
                 registration.AcceptedDate = now;
                 registration.ProcessedBy = processedBy;
+                var invoice = await _invoiceService.EnsureForAcceptedAsync(registration, processedBy);
+                createdInvoiceNumbers.Add(invoice.InvoiceNumber);
             }
         }
         else
@@ -318,9 +324,9 @@ public class RegistrationsController : Controller
 
         await _db.SaveChangesAsync();
         await _audit.LogAsync(User.Identity?.Name ?? "", "BulkAction", "Registration", null, null,
-            $"Action: {actionKey}; Changed: {eligible.Count}; Skipped: {skipped}");
+            $"Action: {actionKey}; Changed: {eligible.Count}; Skipped: {skipped}; Invoices: {string.Join(",", createdInvoiceNumbers)}");
 
-        var actionLabel = actionKey == "approve" ? "قبول" : "رفض";
+        var actionLabel = actionKey == "approve" ? "قبول وإنشاء الفواتير" : "رفض";
         TempData["Success"] = skipped > 0
             ? $"تم {actionLabel} {eligible.Count} طلب/طلبات معلقة، وتجاوز {skipped} طلب/طلبات تمت معالجتها مسبقاً."
             : $"تم {actionLabel} {eligible.Count} طلب/طلبات معلقة بنجاح.";
