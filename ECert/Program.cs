@@ -117,6 +117,8 @@ using (var scope = app.Services.CreateScope())
                 `Xml` LONGTEXT NOT NULL,
                 PRIMARY KEY (`Id`)
             ) CHARACTER SET utf8mb4;");
+        var courseNameMigration = scope.ServiceProvider.GetRequiredService<CourseNameSchemaMigrationService>();
+        await courseNameMigration.EnsureAsync();
         DbSeeder.Seed(db);
         DbSeeder.SeedHomepageCms(db);
         var certificateMigration = scope.ServiceProvider.GetRequiredService<CertificateSchemaMigrationService>();
