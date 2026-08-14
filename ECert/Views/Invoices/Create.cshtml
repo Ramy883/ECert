@@ -11,7 +11,7 @@
                 <div class="alert alert-info">
                     <strong>المتدرب:</strong> @reg?.FullName<br />
                     <strong>الدورة:</strong> @reg?.Course?.CourseName<br />
-                    <strong>المبلغ:</strong> @reg?.Course?.Price?.ToString("N0") ريال
+                    <strong>المبلغ:</strong> @reg?.Course?.Price.ToString("N0") ريال
                 </div>
                 <form asp-action="Create" method="post">
                     @Html.AntiForgeryToken()
