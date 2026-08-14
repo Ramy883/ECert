@@ -17,8 +17,30 @@ public class CourseNameSchemaMigrationService
         await EnsureColumnAsync("Certificates", "CourseNameEnglish", "VARCHAR(200) NULL");
         await EnsureColumnAsync("Certificates", "CourseNameArabic", "VARCHAR(200) NULL");
 
+        await BackfillNullNamesAsync();
         await NormalizeCoursesAsync();
         await NormalizeCertificatesAsync();
+    }
+
+    private async Task BackfillNullNamesAsync()
+    {
+        await _db.Database.ExecuteSqlRawAsync(@"
+UPDATE `Courses`
+SET `CourseNameArabic` = COALESCE(NULLIF(`CourseNameArabic`, ''), `CourseName`),
+    `CourseNameEnglish` = COALESCE(NULLIF(`CourseNameEnglish`, ''), `CourseName`)
+WHERE `CourseNameArabic` IS NULL
+   OR `CourseNameEnglish` IS NULL
+   OR `CourseNameArabic` = ''
+   OR `CourseNameEnglish` = '';");
+
+        await _db.Database.ExecuteSqlRawAsync(@"
+UPDATE `Certificates`
+SET `CourseNameArabic` = COALESCE(NULLIF(`CourseNameArabic`, ''), `CourseName`),
+    `CourseNameEnglish` = COALESCE(NULLIF(`CourseNameEnglish`, ''), `CourseName`)
+WHERE `CourseNameArabic` IS NULL
+   OR `CourseNameEnglish` IS NULL
+   OR `CourseNameArabic` = ''
+   OR `CourseNameEnglish` = '';");
     }
 
     private async Task NormalizeCoursesAsync()
