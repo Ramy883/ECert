@@ -48,7 +48,6 @@ builder.Services.AddScoped<RegistrationNameSchemaMigrationService>();
 builder.Services.AddScoped<CertificateTemplateService>();
 builder.Services.AddScoped<CertificateDesignService>();
 builder.Services.AddScoped<CertificateDesignSchemaMigrationService>();
-builder.Services.AddScoped<RegistrationDocumentService>();
 builder.Services.AddScoped<RegistrationInvoiceService>();
 builder.Services.AddScoped<InvoiceSchemaMigrationService>();
 
