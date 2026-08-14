@@ -31,6 +31,10 @@ builder.Services.AddDataProtection()
     .PersistKeysToDbContext<ECertDbContext>()
     .SetApplicationName("ECert");
 
+// Render terminates TLS at the edge; explicitly configure the redirect target to avoid
+// startup warnings when the container itself has no HTTPS listener.
+builder.Services.AddHttpsRedirection(options => options.HttpsPort = 443);
+
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<AuditLogService>();
