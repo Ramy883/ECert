@@ -57,8 +57,8 @@ public class CertificatesController : Controller
             var trimmedSearch = search.Trim();
             query = query.Where(c =>
                 c.TraineeName.Contains(trimmedSearch) ||
-                c.CourseNameEnglish.Contains(trimmedSearch) ||
-                c.CourseNameArabic.Contains(trimmedSearch) ||
+                (c.CourseNameEnglish != null && c.CourseNameEnglish.Contains(trimmedSearch)) ||
+                (c.CourseNameArabic != null && c.CourseNameArabic.Contains(trimmedSearch)) ||
                 c.CourseName.Contains(trimmedSearch) ||
                 c.CertificateNumber.Contains(trimmedSearch) ||
                 c.PublicId.Contains(trimmedSearch));
@@ -283,8 +283,8 @@ public class CertificatesController : Controller
             var trimmedSearch = search.Trim();
             query = query.Where(c =>
                 c.TraineeName.Contains(trimmedSearch) ||
-                c.CourseNameEnglish.Contains(trimmedSearch) ||
-                c.CourseNameArabic.Contains(trimmedSearch) ||
+                (c.CourseNameEnglish != null && c.CourseNameEnglish.Contains(trimmedSearch)) ||
+                (c.CourseNameArabic != null && c.CourseNameArabic.Contains(trimmedSearch)) ||
                 c.CourseName.Contains(trimmedSearch) ||
                 c.CertificateNumber.Contains(trimmedSearch) ||
                 c.PublicId.Contains(trimmedSearch));

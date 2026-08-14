@@ -14,12 +14,12 @@ public class Course
     [Required(ErrorMessage = "اسم الدورة بالإنجليزية مطلوب")]
     [StringLength(200)]
     [Display(Name = "اسم الدورة بالإنجليزية")]
-    public string CourseNameEnglish { get; set; } = string.Empty;
+    public string? CourseNameEnglish { get; set; }
 
     [Required(ErrorMessage = "اسم الدورة بالعربية مطلوب")]
     [StringLength(200)]
     [Display(Name = "اسم الدورة بالعربية")]
-    public string CourseNameArabic { get; set; } = string.Empty;
+    public string? CourseNameArabic { get; set; }
 
     [Display(Name = "الصورة")]
     public string? ImageUrl { get; set; }

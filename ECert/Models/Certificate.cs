@@ -32,11 +32,11 @@ public class Certificate
 
     [StringLength(200)]
     [Display(Name = "اسم الدورة بالإنجليزية")]
-    public string CourseNameEnglish { get; set; } = string.Empty;
+    public string? CourseNameEnglish { get; set; }
 
     [StringLength(200)]
     [Display(Name = "اسم الدورة بالعربية")]
-    public string CourseNameArabic { get; set; } = string.Empty;
+    public string? CourseNameArabic { get; set; }
 
     [Display(Name = "تاريخ الإصدار")]
     public DateTime IssueDate { get; set; } = DateTime.Now;

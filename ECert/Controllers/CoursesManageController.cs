@@ -35,7 +35,7 @@ public class CoursesManageController : Controller
         if (!HasPermission("manage-courses")) return Forbid();
         var query = _db.Courses.Include(c => c.Category).Include(c => c.Instructor).Include(c => c.Registrations).AsQueryable();
         if (!string.IsNullOrEmpty(search))
-            query = query.Where(c => c.CourseNameArabic.Contains(search) || c.CourseNameEnglish.Contains(search) || c.CourseName.Contains(search));
+            query = query.Where(c => (c.CourseNameArabic != null && c.CourseNameArabic.Contains(search)) || (c.CourseNameEnglish != null && c.CourseNameEnglish.Contains(search)) || c.CourseName.Contains(search));
         ViewBag.Search = search;
         var courses = await query.OrderByDescending(c => c.CreatedAt).ToListAsync();
         return View(courses);
