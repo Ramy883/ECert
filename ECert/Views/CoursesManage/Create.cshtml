@@ -13,10 +13,15 @@
                 <form asp-action="Create" method="post" enctype="multipart/form-data">
                     @Html.AntiForgeryToken()
                     <div class="row g-3">
-                        <div class="col-md-8">
-                            <label asp-for="CourseName" class="form-label"></label>
-                            <input asp-for="CourseName" class="form-control" />
-                            <span asp-validation-for="CourseName" class="text-danger"></span>
+                        <div class="col-md-6">
+                            <label asp-for="CourseNameEnglish" class="form-label"></label>
+                            <input asp-for="CourseNameEnglish" class="form-control" dir="ltr" />
+                            <span asp-validation-for="CourseNameEnglish" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="CourseNameArabic" class="form-label"></label>
+                            <input asp-for="CourseNameArabic" class="form-control" dir="rtl" />
+                            <span asp-validation-for="CourseNameArabic" class="text-danger"></span>
                         </div>
                         <div class="col-md-4">
                             <label asp-for="Price" class="form-label"></label>

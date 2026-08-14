@@ -26,10 +26,17 @@ public class Certificate
     [Display(Name = "اسم المتدرب")]
     public string TraineeName { get; set; } = string.Empty;
 
-    [Required]
     [StringLength(200)]
-    [Display(Name = "اسم الدورة")]
+    [Display(Name = "اسم الدورة القديم")]
     public string CourseName { get; set; } = string.Empty;
+
+    [StringLength(200)]
+    [Display(Name = "اسم الدورة بالإنجليزية")]
+    public string CourseNameEnglish { get; set; } = string.Empty;
+
+    [StringLength(200)]
+    [Display(Name = "اسم الدورة بالعربية")]
+    public string CourseNameArabic { get; set; } = string.Empty;
 
     [Display(Name = "تاريخ الإصدار")]
     public DateTime IssueDate { get; set; } = DateTime.Now;

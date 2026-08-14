@@ -1,22 +1,25 @@
 @model Course
 @{
-    ViewData["Title"] = Model.CourseName;
+    ViewData["Title"] = $"{Model.CourseNameEnglish} / {Model.CourseNameArabic}";
 }
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb">
         <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">الرئيسية</a></li>
         <li class="breadcrumb-item"><a asp-controller="PublicCourses" asp-action="Index">الدورات</a></li>
-        <li class="breadcrumb-item active">@Model.CourseName</li>
+        <li class="breadcrumb-item active"><span dir="ltr">@Model.CourseNameEnglish</span> / @Model.CourseNameArabic</li>
     </ol>
 </nav>
 
 <div class="row g-4">
     <div class="col-lg-8">
-        <img src="@(string.IsNullOrWhiteSpace(Model.ImageUrl) ? "/images/course-placeholder.svg" : Model.ImageUrl)" class="course-hero-image mb-4" loading="eager" decoding="async" alt="صورة دورة @Model.CourseName" onerror="this.onerror=null;this.src='/images/course-placeholder.svg';" />
+        <img src="@(string.IsNullOrWhiteSpace(Model.ImageUrl) ? "/images/course-placeholder.svg" : Model.ImageUrl)" class="course-hero-image mb-4" loading="eager" decoding="async" alt="صورة دورة @Model.CourseNameEnglish / @Model.CourseNameArabic" onerror="this.onerror=null;this.src='/images/course-placeholder.svg';" />
         <div class="card shadow-sm">
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-start mb-3">
-                    <h2>@Model.CourseName</h2>
+                    <h2>
+                        <span dir="ltr">@Model.CourseNameEnglish</span>
+                        <span class="d-block text-muted fs-5 mt-1">@Model.CourseNameArabic</span>
+                    </h2>
                     @switch (Model.Status)
                     {
                         case "OpenForRegistration": <span class="badge bg-success fs-6">مفتوحة للتسجيل</span> break;

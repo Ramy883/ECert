@@ -43,6 +43,7 @@ builder.Services.AddSingleton<CertificateSecurityService>();
 builder.Services.AddSingleton<VerifyRequestGuardService>();
 builder.Services.AddScoped<CertificateSchemaMigrationService>();
 builder.Services.AddScoped<AcademicSchemaMigrationService>();
+builder.Services.AddScoped<CourseNameSchemaMigrationService>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -122,6 +123,8 @@ using (var scope = app.Services.CreateScope())
         await certificateMigration.EnsureAsync();
         var academicMigration = scope.ServiceProvider.GetRequiredService<AcademicSchemaMigrationService>();
         await academicMigration.EnsureAsync();
+        var courseNameMigration = scope.ServiceProvider.GetRequiredService<CourseNameSchemaMigrationService>();
+        await courseNameMigration.EnsureAsync();
     }
     catch (Exception ex)
     {

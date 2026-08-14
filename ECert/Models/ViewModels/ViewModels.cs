@@ -59,6 +59,8 @@ public class PublicRegistrationViewModel
 
     public int CourseId { get; set; }
     public string? CourseName { get; set; }
+    public string? CourseNameEnglish { get; set; }
+    public string? CourseNameArabic { get; set; }
 }
 
 public class DashboardViewModel
@@ -168,6 +170,8 @@ public class PublicCertificateVerificationViewModel
     public string? CertificateNumber { get; set; }
     public string? TraineeName { get; set; }
     public string? CourseName { get; set; }
+    public string? CourseNameEnglish { get; set; }
+    public string? CourseNameArabic { get; set; }
     public DateTime? IssueDate { get; set; }
     public string? Status { get; set; }
 }

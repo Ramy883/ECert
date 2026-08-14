@@ -32,7 +32,9 @@ public class RegistrationController : Controller
         var vm = new PublicRegistrationViewModel
         {
             CourseId = courseId,
-            CourseName = course.CourseName,
+            CourseName = course.CourseNameArabic,
+            CourseNameEnglish = course.CourseNameEnglish,
+            CourseNameArabic = course.CourseNameArabic,
             IncludeAcademicDetails = course.RequiresAcademicDetails
         };
         await PopulateRegistrationFormAsync(course);
@@ -127,7 +129,9 @@ public class RegistrationController : Controller
 
         ViewBag.RequestNumber = requestNumber;
         ViewBag.FullName = model.FullName;
-        ViewBag.CourseName = course.CourseName;
+        ViewBag.CourseName = course.CourseNameArabic;
+        ViewBag.CourseNameEnglish = course.CourseNameEnglish;
+        ViewBag.CourseNameArabic = course.CourseNameArabic;
         return View("Success");
     }
 
@@ -175,7 +179,9 @@ public class RegistrationController : Controller
 
     private async Task<IActionResult> ReturnFormAsync(PublicRegistrationViewModel model, Course course)
     {
-        model.CourseName = course.CourseName;
+        model.CourseName = course.CourseNameArabic;
+        model.CourseNameEnglish = course.CourseNameEnglish;
+        model.CourseNameArabic = course.CourseNameArabic;
         model.IncludeAcademicDetails = course.RequiresAcademicDetails || model.IncludeAcademicDetails;
         await PopulateAcademicDisplayNamesAsync(model);
         await PopulateRegistrationFormAsync(course);

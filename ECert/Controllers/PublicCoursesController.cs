@@ -25,7 +25,7 @@ public class PublicCoursesController : Controller
         if (categoryId.HasValue)
             query = query.Where(c => c.CategoryId == categoryId.Value);
         if (!string.IsNullOrWhiteSpace(search))
-            query = query.Where(c => c.CourseName.Contains(search));
+            query = query.Where(c => c.CourseNameEnglish.Contains(search) || c.CourseNameArabic.Contains(search) || c.CourseName.Contains(search));
 
         ViewBag.Courses = await query.OrderByDescending(c => c.CreatedAt).ToListAsync();
 

@@ -7,10 +7,19 @@ public class Course
     [Key]
     public int CourseId { get; set; }
 
-    [Required(ErrorMessage = "اسم الدورة مطلوب")]
     [StringLength(200)]
-    [Display(Name = "اسم الدورة")]
+    [Display(Name = "اسم الدورة القديم")]
     public string CourseName { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "اسم الدورة بالإنجليزية مطلوب")]
+    [StringLength(200)]
+    [Display(Name = "اسم الدورة بالإنجليزية")]
+    public string CourseNameEnglish { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "اسم الدورة بالعربية مطلوب")]
+    [StringLength(200)]
+    [Display(Name = "اسم الدورة بالعربية")]
+    public string CourseNameArabic { get; set; } = string.Empty;
 
     [Display(Name = "الصورة")]
     public string? ImageUrl { get; set; }

@@ -57,6 +57,8 @@ public class CertificatesController : Controller
             var trimmedSearch = search.Trim();
             query = query.Where(c =>
                 c.TraineeName.Contains(trimmedSearch) ||
+                c.CourseNameEnglish.Contains(trimmedSearch) ||
+                c.CourseNameArabic.Contains(trimmedSearch) ||
                 c.CourseName.Contains(trimmedSearch) ||
                 c.CertificateNumber.Contains(trimmedSearch) ||
                 c.PublicId.Contains(trimmedSearch));
@@ -88,7 +90,7 @@ public class CertificatesController : Controller
             CourseId = courseId,
             IssueFrom = issueFrom,
             IssueTo = issueTo,
-            Courses = await _db.Courses.OrderBy(c => c.CourseName).ToListAsync(),
+            Courses = await _db.Courses.OrderBy(c => c.CourseNameArabic).ToListAsync(),
             Certificates = certificates,
             VerificationUrls = certificates.ToDictionary(
                 c => c.CertificateId,
@@ -128,7 +130,7 @@ public class CertificatesController : Controller
             CourseId = courseId,
             RegistrationFrom = registrationFrom,
             RegistrationTo = registrationTo,
-            Courses = await _db.Courses.Where(c => c.Status == "Completed").OrderBy(c => c.CourseName).ToListAsync(),
+            Courses = await _db.Courses.Where(c => c.Status == "Completed").OrderBy(c => c.CourseNameArabic).ToListAsync(),
             EligibleRegistrations = await query.OrderByDescending(r => r.RegistrationDate).ThenBy(r => r.FullName).ToListAsync()
         };
 
@@ -196,7 +198,9 @@ public class CertificatesController : Controller
                 VerificationCode = await GenerateUniqueVerificationCodeAsync(reservedVerificationCodes),
                 RegistrationId = registration.RegistrationId,
                 TraineeName = registration.FullName,
-                CourseName = registration.Course?.CourseName ?? string.Empty,
+                CourseName = registration.Course?.CourseNameArabic ?? registration.Course?.CourseName ?? string.Empty,
+                CourseNameEnglish = registration.Course?.CourseNameEnglish ?? registration.Course?.CourseName ?? string.Empty,
+                CourseNameArabic = registration.Course?.CourseNameArabic ?? registration.Course?.CourseName ?? string.Empty,
                 IssueDate = DateTime.Now,
                 IssuedBy = User.Identity?.Name ?? "System",
                 Status = "Valid",
@@ -224,7 +228,7 @@ public class CertificatesController : Controller
                 registration.Phone,
                 registration.Email,
                 "CertificateIssued",
-                $"عزيزي {registration.FullName}، تم إصدار شهادتك في دورة {registration.Course?.CourseName}. رقم الشهادة: {certificate.CertificateNumber}",
+                $"عزيزي {registration.FullName}، تم إصدار شهادتك في دورة {registration.Course?.CourseNameEnglish} / {registration.Course?.CourseNameArabic}. رقم الشهادة: {certificate.CertificateNumber}",
                 "SMS",
                 "Certificate",
                 certificate.CertificateId);
@@ -279,6 +283,8 @@ public class CertificatesController : Controller
             var trimmedSearch = search.Trim();
             query = query.Where(c =>
                 c.TraineeName.Contains(trimmedSearch) ||
+                c.CourseNameEnglish.Contains(trimmedSearch) ||
+                c.CourseNameArabic.Contains(trimmedSearch) ||
                 c.CourseName.Contains(trimmedSearch) ||
                 c.CertificateNumber.Contains(trimmedSearch) ||
                 c.PublicId.Contains(trimmedSearch));
@@ -372,7 +378,8 @@ public class CertificatesController : Controller
         {
             "رقم الشهادة",
             "اسم الطالب",
-            "الدورة",
+            "الدورة (English)",
+            "الدورة (العربية)",
             "تاريخ الإصدار",
             "الحالة",
             "المعرف العام",
@@ -396,12 +403,13 @@ public class CertificatesController : Controller
 
             worksheet.Cell(excelRow, 1).Value = certificate.CertificateNumber;
             worksheet.Cell(excelRow, 2).Value = certificate.TraineeName;
-            worksheet.Cell(excelRow, 3).Value = certificate.CourseName;
-            worksheet.Cell(excelRow, 4).Value = certificate.IssueDate.ToString("yyyy-MM-dd");
-            worksheet.Cell(excelRow, 5).Value = MapCertificateStatus(certificate.Status);
-            worksheet.Cell(excelRow, 6).Value = certificate.PublicId;
-            worksheet.Cell(excelRow, 7).Value = certificate.VerificationCode;
-            worksheet.Cell(excelRow, 8).Value = BuildVerificationUrl(certificate);
+            worksheet.Cell(excelRow, 3).Value = certificate.CourseNameEnglish;
+            worksheet.Cell(excelRow, 4).Value = certificate.CourseNameArabic;
+            worksheet.Cell(excelRow, 5).Value = certificate.IssueDate.ToString("yyyy-MM-dd");
+            worksheet.Cell(excelRow, 6).Value = MapCertificateStatus(certificate.Status);
+            worksheet.Cell(excelRow, 7).Value = certificate.PublicId;
+            worksheet.Cell(excelRow, 8).Value = certificate.VerificationCode;
+            worksheet.Cell(excelRow, 9).Value = BuildVerificationUrl(certificate);
         }
 
         worksheet.Columns().AdjustToContents();
@@ -438,7 +446,9 @@ public class CertificatesController : Controller
                 : "تم العثور على الشهادة، لكن حالتها غير معروفة. يرجى مراجعة الجهة المصدرة.";
         model.CertificateNumber = certificate.CertificateNumber;
         model.TraineeName = certificate.TraineeName;
-        model.CourseName = certificate.CourseName;
+        model.CourseName = certificate.CourseNameArabic;
+        model.CourseNameEnglish = certificate.CourseNameEnglish;
+        model.CourseNameArabic = certificate.CourseNameArabic;
         model.IssueDate = certificate.IssueDate;
         model.Status = MapCertificateStatus(certificate.Status);
         return View("VerifyResult", model);

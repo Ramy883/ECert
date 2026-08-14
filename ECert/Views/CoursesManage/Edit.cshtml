@@ -8,16 +8,21 @@
 <div class="row justify-content-center">
     <div class="col-md-8">
         <div class="card shadow-sm border-0">
-            <div class="card-header bg-white"><h4 class="mb-0"><i class="bi bi-pencil"></i> تعديل دورة: @Model.CourseName</h4></div>
+            <div class="card-header bg-white"><h4 class="mb-0"><i class="bi bi-pencil"></i> تعديل دورة: @Model.CourseNameEnglish / @Model.CourseNameArabic</h4></div>
             <div class="card-body p-4">
                 <form asp-action="Edit" method="post" enctype="multipart/form-data">
                     @Html.AntiForgeryToken()
                     <input type="hidden" asp-for="CourseId" />
                     <div class="row g-3">
-                        <div class="col-md-8">
-                            <label asp-for="CourseName" class="form-label"></label>
-                            <input asp-for="CourseName" class="form-control" />
-                            <span asp-validation-for="CourseName" class="text-danger"></span>
+                        <div class="col-md-6">
+                            <label asp-for="CourseNameEnglish" class="form-label"></label>
+                            <input asp-for="CourseNameEnglish" class="form-control" dir="ltr" />
+                            <span asp-validation-for="CourseNameEnglish" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="CourseNameArabic" class="form-label"></label>
+                            <input asp-for="CourseNameArabic" class="form-control" dir="rtl" />
+                            <span asp-validation-for="CourseNameArabic" class="text-danger"></span>
                         </div>
                         <div class="col-md-4">
                             <label asp-for="Price" class="form-label"></label>

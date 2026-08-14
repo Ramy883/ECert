@@ -35,7 +35,7 @@ public class CoursesManageController : Controller
         if (!HasPermission("manage-courses")) return Forbid();
         var query = _db.Courses.Include(c => c.Category).Include(c => c.Instructor).Include(c => c.Registrations).AsQueryable();
         if (!string.IsNullOrEmpty(search))
-            query = query.Where(c => c.CourseName.Contains(search));
+            query = query.Where(c => c.CourseNameArabic.Contains(search) || c.CourseNameEnglish.Contains(search) || c.CourseName.Contains(search));
         ViewBag.Search = search;
         var courses = await query.OrderByDescending(c => c.CreatedAt).ToListAsync();
         return View(courses);
@@ -55,12 +55,24 @@ public class CoursesManageController : Controller
     public async Task<IActionResult> Create(Course course, IFormFile? image)
     {
         if (!HasPermission("manage-courses")) return Forbid();
+
+        course.CourseNameEnglish = course.CourseNameEnglish?.Trim() ?? string.Empty;
+        course.CourseNameArabic = course.CourseNameArabic?.Trim() ?? string.Empty;
+        course.CourseName = course.CourseNameArabic;
+
+        if (!ModelState.IsValid)
+        {
+            ViewBag.Categories = await _db.Categories.Where(c => c.IsActive).ToListAsync();
+            ViewBag.Instructors = await _db.Instructors.Where(i => i.IsActive).ToListAsync();
+            return View(course);
+        }
+
         course.CreatedAt = DateTime.Now;
         var imgPath = await SaveImage(image);
         if (imgPath != null) course.ImageUrl = imgPath;
         _db.Courses.Add(course);
         await _db.SaveChangesAsync();
-        await _audit.LogAsync(User.Identity?.Name ?? "", "Create", "Course", course.CourseId, null, course.CourseName);
+        await _audit.LogAsync(User.Identity?.Name ?? "", "Create", "Course", course.CourseId, null, $"{course.CourseNameEnglish} / {course.CourseNameArabic}");
         TempData["Success"] = "تمت إضافة الدورة بنجاح.";
         return RedirectToAction("Index");
     }
@@ -81,10 +93,24 @@ public class CoursesManageController : Controller
     public async Task<IActionResult> Edit(Course course, IFormFile? image)
     {
         if (!HasPermission("manage-courses")) return Forbid();
+
+        course.CourseNameEnglish = course.CourseNameEnglish?.Trim() ?? string.Empty;
+        course.CourseNameArabic = course.CourseNameArabic?.Trim() ?? string.Empty;
+        course.CourseName = course.CourseNameArabic;
+
+        if (!ModelState.IsValid)
+        {
+            ViewBag.Categories = await _db.Categories.Where(c => c.IsActive).ToListAsync();
+            ViewBag.Instructors = await _db.Instructors.Where(i => i.IsActive).ToListAsync();
+            return View(course);
+        }
+
         var existing = await _db.Courses.FindAsync(course.CourseId);
         if (existing == null) return NotFound();
 
-        existing.CourseName = course.CourseName;
+        existing.CourseName = course.CourseNameArabic;
+        existing.CourseNameEnglish = course.CourseNameEnglish;
+        existing.CourseNameArabic = course.CourseNameArabic;
         existing.ShortDescription = course.ShortDescription;
         existing.FullDescription = course.FullDescription;
         existing.Objectives = course.Objectives;
@@ -115,7 +141,7 @@ public class CoursesManageController : Controller
         }
 
         await _db.SaveChangesAsync();
-        await _audit.LogAsync(User.Identity?.Name ?? "", "Update", "Course", course.CourseId, null, course.CourseName);
+        await _audit.LogAsync(User.Identity?.Name ?? "", "Update", "Course", course.CourseId, null, $"{course.CourseNameEnglish} / {course.CourseNameArabic}");
         TempData["Success"] = "تم تعديل الدورة بنجاح.";
         return RedirectToAction("Index");
     }

@@ -196,11 +196,11 @@
                                     <div class="position-relative overflow-hidden">
                                         @if (!string.IsNullOrEmpty(course.ImageUrl))
                                         {
-                                            <img src="@course.ImageUrl" class="card-img-top course-img" alt="@course.CourseName" loading="eager" decoding="async" onerror="this.onerror=null;this.src='/images/course-placeholder.svg';" />
+                                            <img src="@course.ImageUrl" class="card-img-top course-img" alt="@course.CourseNameEnglish / @course.CourseNameArabic" loading="eager" decoding="async" onerror="this.onerror=null;this.src='/images/course-placeholder.svg';" />
                                         }
                                         else
                                         {
-                                            <img src="/images/course-placeholder.svg" class="card-img-top course-img" alt="صورة افتراضية لدورة @course.CourseName" loading="eager" decoding="async" />
+                                            <img src="/images/course-placeholder.svg" class="card-img-top course-img" alt="صورة افتراضية لدورة @course.CourseNameEnglish / @course.CourseNameArabic" loading="eager" decoding="async" />
                                         }
                                         <span class="badge course-badge">@course.Category?.CategoryName</span>
                                         @if (course.Status == "OpenForRegistration" && course.AvailableSeats > 0)
@@ -213,7 +213,10 @@
                                         }
                                     </div>
                                     <div class="card-body p-4">
-                                        <h6 class="card-title fw-bold mb-3" style="font-size:1.05rem;">@course.CourseName</h6>
+                                        <h6 class="card-title fw-bold mb-3" style="font-size:1.05rem;">
+                                            <span dir="ltr">@course.CourseNameEnglish</span>
+                                            <span class="d-block text-muted fs-6 mt-1">@course.CourseNameArabic</span>
+                                        </h6>
                                         <div class="course-meta small text-muted mb-3">
                                             <span><i class="bi bi-person-fill"></i> @course.Instructor?.FullName</span>
                                             <span><i class="bi bi-calendar3"></i> @course.StartDate?.ToString("yyyy/MM/dd")</span>
