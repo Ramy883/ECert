@@ -47,6 +47,8 @@ builder.Services.AddScoped<CourseNameSchemaMigrationService>();
 builder.Services.AddScoped<RegistrationNameSchemaMigrationService>();
 builder.Services.AddScoped<RegistrationInvoiceService>();
 builder.Services.AddScoped<InvoiceSchemaMigrationService>();
+builder.Services.AddScoped<CertificateDesignService>();
+builder.Services.AddScoped<CertificateDesignSchemaMigrationService>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -132,6 +134,8 @@ using (var scope = app.Services.CreateScope())
         await certificateMigration.EnsureAsync();
         var academicMigration = scope.ServiceProvider.GetRequiredService<AcademicSchemaMigrationService>();
         await academicMigration.EnsureAsync();
+        var certificateDesignMigration = scope.ServiceProvider.GetRequiredService<CertificateDesignSchemaMigrationService>();
+        await certificateDesignMigration.EnsureAsync();
     }
     catch (Exception ex)
     {
