@@ -1,8 +1,0 @@
-mysql://root:KXMaBAsjtnRMyDynTcJILvcjDLMlkAsL@:/railway
-
-مفتاح المستودع 
-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
-
-
-
-https://github.com/shbabe68-alt/ECert.git
