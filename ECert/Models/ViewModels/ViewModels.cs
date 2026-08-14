@@ -29,6 +29,14 @@ public class PublicRegistrationViewModel
     [Display(Name = "رقم الهاتف")]
     public string Phone { get; set; } = string.Empty;
 
+    [Required(ErrorMessage = "الجنس مطلوب")]
+    [Display(Name = "الجنس")]
+    public string? Gender { get; set; }
+
+    [Required(ErrorMessage = "المستند مطلوب")]
+    [Display(Name = "المستند / الوثيقة")]
+    public IFormFile? Document { get; set; }
+
     [Required(ErrorMessage = "الدولة مطلوبة")]
     [Display(Name = "الدولة")]
     public int CountryId { get; set; }
@@ -175,6 +183,8 @@ public class PublicCertificateVerificationViewModel
     public string Message { get; set; } = string.Empty;
     public string? CertificateNumber { get; set; }
     public string? TraineeName { get; set; }
+    public string? TraineeNameArabic { get; set; }
+    public string? TraineeNameEnglish { get; set; }
     public string? CourseName { get; set; }
     public string? CourseNameEnglish { get; set; }
     public string? CourseNameArabic { get; set; }

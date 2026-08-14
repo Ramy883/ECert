@@ -16,6 +16,10 @@ public class CourseNameSchemaMigrationService
         await EnsureColumnAsync("Courses", "CourseNameArabic", "VARCHAR(200) NULL");
         await EnsureColumnAsync("Certificates", "CourseNameEnglish", "VARCHAR(200) NULL");
         await EnsureColumnAsync("Certificates", "CourseNameArabic", "VARCHAR(200) NULL");
+        await EnsureColumnAsync("Certificates", "TraineeNameArabic", "VARCHAR(150) NULL");
+        await EnsureColumnAsync("Certificates", "TraineeNameEnglish", "VARCHAR(150) NULL");
+        await EnsureColumnAsync("Certificates", "TemplateSnapshotJson", "LONGTEXT NULL");
+        await EnsureColumnAsync("Certificates", "TemplateVersion", "INT NOT NULL DEFAULT 1");
 
         await BackfillNullNamesAsync();
         await NormalizeCoursesAsync();

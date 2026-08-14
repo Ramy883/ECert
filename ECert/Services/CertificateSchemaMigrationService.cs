@@ -18,11 +18,16 @@ public class CertificateSchemaMigrationService
 
     public async Task EnsureAsync()
     {
+        await EnsureCertificateTemplateTableAsync();
         await EnsureColumnAsync("PublicId", "VARCHAR(32) NULL");
         await EnsureColumnAsync("Status", "VARCHAR(20) NOT NULL DEFAULT 'Valid'");
         await EnsureColumnAsync("RevokedAt", "DATETIME NULL");
         await EnsureColumnAsync("RevokedReason", "VARCHAR(500) NULL");
         await EnsureColumnAsync("SignatureVersion", "INT NOT NULL DEFAULT 1");
+        await EnsureColumnAsync("TraineeNameArabic", "VARCHAR(150) NULL");
+        await EnsureColumnAsync("TraineeNameEnglish", "VARCHAR(150) NULL");
+        await EnsureColumnAsync("TemplateSnapshotJson", "LONGTEXT NULL");
+        await EnsureColumnAsync("TemplateVersion", "INT NOT NULL DEFAULT 1");
 
         // These columns are used by NotificationService after certificate issuance.
         // Older production databases may predate them, causing IssueBulk to fail after
@@ -40,6 +45,33 @@ public class CertificateSchemaMigrationService
         await EnsureUniqueIndexAsync("IX_Certificates_CertificateNumber", "CertificateNumber");
         await EnsureUniqueIndexAsync("IX_Certificates_PublicId", "PublicId");
         await EnsureUniqueIndexAsync("IX_Certificates_VerificationCode", "VerificationCode");
+    }
+
+    private async Task EnsureCertificateTemplateTableAsync()
+    {
+        await _db.Database.ExecuteSqlRawAsync(@"
+CREATE TABLE IF NOT EXISTS `CertificateTemplates` (
+    `CertificateTemplateSettingsId` INT NOT NULL AUTO_INCREMENT,
+    `CertificateTitle` VARCHAR(160) NOT NULL,
+    `MainText` VARCHAR(2000) NOT NULL,
+    `CenterName` VARCHAR(200) NOT NULL,
+    `AdditionalText` VARCHAR(1000) NULL,
+    `VerificationLabel` VARCHAR(200) NOT NULL,
+    `LogoPath` VARCHAR(500) NULL,
+    `RightSignaturePath` VARCHAR(500) NULL,
+    `LeftSignaturePath` VARCHAR(500) NULL,
+    `PrimaryColor` VARCHAR(7) NOT NULL,
+    `AccentColor` VARCHAR(7) NOT NULL,
+    `TextColor` VARCHAR(7) NOT NULL,
+    `ShowVerificationCode` TINYINT(1) NOT NULL,
+    `ShowCertificateNumber` TINYINT(1) NOT NULL,
+    `ShowIssueDate` TINYINT(1) NOT NULL,
+    `ShowVerificationUrl` TINYINT(1) NOT NULL,
+    `ElementOrder` VARCHAR(500) NOT NULL,
+    `TemplateVersion` INT NOT NULL,
+    `UpdatedAt` DATETIME NOT NULL,
+    PRIMARY KEY (`CertificateTemplateSettingsId`)
+) CHARACTER SET utf8mb4;");
     }
 
     private Task EnsureColumnAsync(string columnName, string definitionSql)
@@ -206,6 +238,25 @@ WHERE TABLE_SCHEMA = DATABASE()
             if (certificate.SignatureVersion <= 0)
             {
                 certificate.SignatureVersion = 1;
+                changed = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(certificate.TraineeNameArabic))
+            {
+                certificate.TraineeNameArabic = certificate.TraineeName;
+                changed = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(certificate.TraineeNameEnglish))
+            {
+                certificate.TraineeNameEnglish = certificate.TraineeName;
+                changed = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(certificate.TemplateSnapshotJson))
+            {
+                certificate.TemplateSnapshotJson = new CertificateTemplateService(_db).Serialize(CertificateTemplateService.DefaultTemplate());
+                certificate.TemplateVersion = 1;
                 changed = true;
             }
         }

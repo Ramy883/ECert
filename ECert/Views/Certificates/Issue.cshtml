@@ -63,7 +63,7 @@
         <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
                 <h6 class="mb-1">المتدربون المؤهلون للحصول على شهادة</h6>
-                <small class="text-muted">الإصدار من داخل النظام سينتج بيانات الشهادة فقط، ثم يمكنك تصديرها لاحقاً مع رابط QR للاستخدام في برامج التصميم الخارجية.</small>
+                <small class="text-muted">كل شهادة جديدة تحفظ لقطة مستقلة من القالب الحالي، ويمكن فتحها للطباعة من قائمة الشهادات. تعديل القالب لا يغيّر الشهادات الصادرة سابقاً.</small>
             </div>
             <button type="button" class="btn btn-success" id="issueSelectedBtn" disabled>
                 <i class="bi bi-award"></i> إصدار الشهادات للمحدد
@@ -96,7 +96,7 @@
                                 <tr>
                                     <td><input type="checkbox" class="row-checkbox" name="registrationIds" value="@reg.RegistrationId" /></td>
                                     <td><code>@reg.RequestNumber</code></td>
-                                    <td><strong>@reg.FullName</strong></td>
+                                    <td><strong>@(reg.FullNameArabic ?? reg.FullName)</strong><span class="d-block text-muted small" dir="ltr">@(reg.FullNameEnglish ?? reg.FullName)</span></td>
                                     <td>@reg.Course?.CourseName</td>
                                     <td>@reg.RegistrationDate.ToString("yyyy-MM-dd")</td>
                                     <td>@(reg.AcceptedDate?.ToString("yyyy-MM-dd") ?? "-")</td>

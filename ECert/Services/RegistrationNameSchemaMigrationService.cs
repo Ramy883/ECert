@@ -14,6 +14,9 @@ public class RegistrationNameSchemaMigrationService
     {
         await EnsureColumnAsync("Registrations", "FullNameArabic", "VARCHAR(100) NULL");
         await EnsureColumnAsync("Registrations", "FullNameEnglish", "VARCHAR(100) NULL");
+        await EnsureColumnAsync("Registrations", "Gender", "VARCHAR(20) NULL");
+        await EnsureColumnAsync("Registrations", "DocumentPath", "VARCHAR(500) NULL");
+        await EnsureColumnAsync("Registrations", "DocumentOriginalName", "VARCHAR(255) NULL");
 
         await _db.Database.ExecuteSqlRawAsync(@"
 UPDATE `Registrations`

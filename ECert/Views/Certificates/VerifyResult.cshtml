@@ -46,8 +46,12 @@
                                     <td><code>@Model.CertificateNumber</code></td>
                                 </tr>
                                 <tr>
-                                    <th scope="row">اسم المتدرب</th>
-                                    <td>@Model.TraineeName</td>
+                                    <th scope="row">اسم المتدرب بالعربية</th>
+                                    <td>@(Model.TraineeNameArabic ?? Model.TraineeName)</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">اسم المتدرب بالإنجليزية</th>
+                                    <td dir="ltr">@(Model.TraineeNameEnglish ?? Model.TraineeName)</td>
                                 </tr>
                                 <tr>
                                     <th scope="row">الدورة</th>

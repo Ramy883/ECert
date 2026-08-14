@@ -218,6 +218,11 @@
                                 <td data-label="المتدرب" class="trainee-cell">
                                     <strong>@(registration.FullNameArabic ?? registration.FullName)</strong>
                                     <span class="d-block text-muted small" dir="ltr">@(registration.FullNameEnglish ?? registration.FullName)</span>
+                                    <span class="d-block text-muted small">الجنس: @(registration.Gender == "Male" ? "ذكر" : registration.Gender == "Female" ? "أنثى" : "-")</span>
+                                    @if (!string.IsNullOrWhiteSpace(registration.DocumentPath))
+                                    {
+                                        <a asp-controller="Registration" asp-action="Document" asp-route-id="@registration.RegistrationId" target="_blank" rel="noopener" class="d-block small"><i class="bi bi-paperclip"></i> @(registration.DocumentOriginalName ?? "المستند")</a>
+                                    }
                                     <span class="d-lg-none text-muted small">@registration.Phone</span>
                                 </td>
                                 <td data-label="الهاتف" class="d-none d-lg-table-cell ltr-cell">@registration.Phone</td>

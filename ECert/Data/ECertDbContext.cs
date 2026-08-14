@@ -20,6 +20,7 @@ public class ECertDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Certificate> Certificates => Set<Certificate>();
+    public DbSet<CertificateTemplateSettings> CertificateTemplates => Set<CertificateTemplateSettings>();
     public DbSet<Post> Posts => Set<Post>();
     public DbSet<AppNotification> Notifications => Set<AppNotification>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
@@ -127,6 +128,8 @@ public class ECertDbContext : DbContext, IDataProtectionKeyContext
             .HasOne(p => p.Invoice)
             .WithMany(i => i.Payments)
             .HasForeignKey(p => p.InvoiceId);
+
+        modelBuilder.Entity<CertificateTemplateSettings>().ToTable("CertificateTemplates");
 
         // Certificate
         modelBuilder.Entity<Certificate>()

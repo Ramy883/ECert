@@ -45,6 +45,8 @@ builder.Services.AddScoped<CertificateSchemaMigrationService>();
 builder.Services.AddScoped<AcademicSchemaMigrationService>();
 builder.Services.AddScoped<CourseNameSchemaMigrationService>();
 builder.Services.AddScoped<RegistrationNameSchemaMigrationService>();
+builder.Services.AddScoped<CertificateTemplateService>();
+builder.Services.AddScoped<RegistrationDocumentService>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>

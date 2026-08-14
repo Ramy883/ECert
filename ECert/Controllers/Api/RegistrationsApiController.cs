@@ -31,7 +31,7 @@ public class RegistrationsApiController : ControllerBase
         var list = await query.OrderByDescending(r => r.RegistrationDate)
             .Select(r => new
             {
-                r.RegistrationId, r.RequestNumber, r.FullName, r.Phone, r.Email,
+                r.RegistrationId, r.RequestNumber, r.FullName, r.FullNameArabic, r.FullNameEnglish, r.Gender, r.DocumentOriginalName, r.Phone, r.Email,
                 courseName = r.Course!.CourseName, r.Status, r.RegistrationDate, r.ProcessedBy
             }).ToListAsync();
         return Ok(ApiResponse<object>.Ok(list));
@@ -49,7 +49,7 @@ public class RegistrationsApiController : ControllerBase
 
         return Ok(ApiResponse<object>.Ok(new
         {
-            reg.RegistrationId, reg.RequestNumber, reg.FullName, reg.Phone, reg.Email,
+            reg.RegistrationId, reg.RequestNumber, reg.FullName, reg.FullNameArabic, reg.FullNameEnglish, reg.Gender, reg.DocumentOriginalName, reg.Phone, reg.Email,
             reg.HeardFrom, courseName = reg.Course?.CourseName, reg.Status,
             reg.RegistrationDate, reg.AcceptedDate, reg.ProcessedBy, reg.RejectionReason
         }));

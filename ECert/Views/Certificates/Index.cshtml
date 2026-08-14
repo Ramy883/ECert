@@ -70,7 +70,7 @@
         <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
                 <h6 class="mb-1">بيانات الشهادات المصدرة</h6>
-                <small class="text-muted">لا توجد صفحة معاينة أو طباعة داخل النظام، ويتم تصدير بيانات الشهادة ورابط QR فقط لاستخدامها في البرامج الخارجية.</small>
+                <small class="text-muted">يمكن فتح الشهادة الموحدة وطباعتها من داخل النظام، كما يمكن تصدير بيانات الشهادة وروابط التحقق إلى Excel.</small>
             </div>
             <div class="d-flex flex-wrap gap-2">
                 <button type="submit" class="btn btn-success btn-sm" id="exportSelectedBtn" disabled>
@@ -112,7 +112,10 @@
                                         <div><code>@cert.CertificateNumber</code></div>
                                         <div class="small text-muted">@cert.PublicId</div>
                                     </td>
-                                    <td><strong>@cert.TraineeName</strong></td>
+                                    <td>
+                                        <strong>@(cert.TraineeNameArabic ?? cert.TraineeName)</strong>
+                                        <span class="d-block text-muted small" dir="ltr">@(cert.TraineeNameEnglish ?? cert.TraineeName)</span>
+                                    </td>
                                     <td>@cert.CourseName</td>
                                     <td>@cert.IssueDate.ToString("yyyy-MM-dd")</td>
                                     <td>
@@ -144,6 +147,9 @@
                                             {
                                                 <span class="small text-muted">الرابط غير متاح</span>
                                             }
+                                            <a asp-action="Print" asp-route-id="@cert.CertificateId" target="_blank" rel="noopener" class="btn btn-sm btn-outline-success">
+                                                <i class="bi bi-printer"></i> فتح الشهادة للطباعة
+                                            </a>
                                         </div>
                                     </td>
                                 </tr>

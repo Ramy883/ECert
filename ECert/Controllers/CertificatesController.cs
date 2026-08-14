@@ -21,6 +21,7 @@ public class CertificatesController : Controller
     private readonly VerifyRequestGuardService _verifyGuard;
     private readonly IConfiguration _configuration;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly CertificateTemplateService _certificateTemplates;
 
     public CertificatesController(
         ECertDbContext db,
@@ -29,7 +30,8 @@ public class CertificatesController : Controller
         CertificateSecurityService certificateSecurity,
         VerifyRequestGuardService verifyGuard,
         IConfiguration configuration,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory,
+        CertificateTemplateService certificateTemplates)
     {
         _db = db;
         _audit = audit;
@@ -38,6 +40,7 @@ public class CertificatesController : Controller
         _verifyGuard = verifyGuard;
         _configuration = configuration;
         _httpClientFactory = httpClientFactory;
+        _certificateTemplates = certificateTemplates;
     }
 
     private bool HasPermission(string perm) => User.HasClaim(c => c.Type == "Permission" && c.Value == perm);
@@ -98,6 +101,23 @@ public class CertificatesController : Controller
         };
 
         return View(model);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Print(int id)
+    {
+        if (!HasPermission("issue-certificates")) return Forbid();
+        var certificate = await _db.Certificates.AsNoTracking().FirstOrDefaultAsync(c => c.CertificateId == id);
+        if (certificate == null) return NotFound();
+
+        var template = _certificateTemplates.FromSnapshot(certificate.TemplateSnapshotJson, out var isLegacyTemplate);
+        return View(new CertificatePrintViewModel
+        {
+            Certificate = certificate,
+            Template = template,
+            VerificationUrl = BuildVerificationUrl(certificate),
+            IsLegacyTemplate = isLegacyTemplate
+        });
     }
 
     [HttpGet]
@@ -183,6 +203,8 @@ public class CertificatesController : Controller
             return RedirectToAction(nameof(Issue));
         }
 
+        var currentTemplate = await _certificateTemplates.GetCurrentAsync();
+        var templateSnapshotJson = _certificateTemplates.Serialize(currentTemplate);
         var issuedCertificates = new List<Certificate>();
         var reservedCertificateNumbers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var reservedPublicIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -197,7 +219,11 @@ public class CertificatesController : Controller
                 PublicId = await GenerateUniquePublicIdAsync(reservedPublicIds),
                 VerificationCode = await GenerateUniqueVerificationCodeAsync(reservedVerificationCodes),
                 RegistrationId = registration.RegistrationId,
-                TraineeName = registration.FullName,
+                TraineeName = registration.FullNameArabic ?? registration.FullName,
+                TraineeNameArabic = registration.FullNameArabic ?? registration.FullName,
+                TraineeNameEnglish = registration.FullNameEnglish ?? registration.FullName,
+                TemplateSnapshotJson = templateSnapshotJson,
+                TemplateVersion = currentTemplate.TemplateVersion,
                 CourseName = registration.Course?.CourseNameArabic ?? registration.Course?.CourseName ?? string.Empty,
                 CourseNameEnglish = registration.Course?.CourseNameEnglish ?? registration.Course?.CourseName ?? string.Empty,
                 CourseNameArabic = registration.Course?.CourseNameArabic ?? registration.Course?.CourseName ?? string.Empty,
@@ -377,7 +403,8 @@ public class CertificatesController : Controller
         var headers = new[]
         {
             "رقم الشهادة",
-            "اسم الطالب",
+            "اسم الطالب (العربية)",
+            "اسم الطالب (English)",
             "الدورة (English)",
             "الدورة (العربية)",
             "تاريخ الإصدار",
@@ -402,14 +429,15 @@ public class CertificatesController : Controller
             var excelRow = row + 2;
 
             worksheet.Cell(excelRow, 1).Value = certificate.CertificateNumber;
-            worksheet.Cell(excelRow, 2).Value = certificate.TraineeName;
-            worksheet.Cell(excelRow, 3).Value = certificate.CourseNameEnglish;
-            worksheet.Cell(excelRow, 4).Value = certificate.CourseNameArabic;
-            worksheet.Cell(excelRow, 5).Value = certificate.IssueDate.ToString("yyyy-MM-dd");
-            worksheet.Cell(excelRow, 6).Value = MapCertificateStatus(certificate.Status);
-            worksheet.Cell(excelRow, 7).Value = certificate.PublicId;
-            worksheet.Cell(excelRow, 8).Value = certificate.VerificationCode;
-            worksheet.Cell(excelRow, 9).Value = BuildVerificationUrl(certificate);
+            worksheet.Cell(excelRow, 2).Value = certificate.TraineeNameArabic ?? certificate.TraineeName;
+            worksheet.Cell(excelRow, 3).Value = certificate.TraineeNameEnglish ?? certificate.TraineeName;
+            worksheet.Cell(excelRow, 4).Value = certificate.CourseNameEnglish;
+            worksheet.Cell(excelRow, 5).Value = certificate.CourseNameArabic;
+            worksheet.Cell(excelRow, 6).Value = certificate.IssueDate.ToString("yyyy-MM-dd");
+            worksheet.Cell(excelRow, 7).Value = MapCertificateStatus(certificate.Status);
+            worksheet.Cell(excelRow, 8).Value = certificate.PublicId;
+            worksheet.Cell(excelRow, 9).Value = certificate.VerificationCode;
+            worksheet.Cell(excelRow, 10).Value = BuildVerificationUrl(certificate);
         }
 
         worksheet.Columns().AdjustToContents();
@@ -446,6 +474,8 @@ public class CertificatesController : Controller
                 : "تم العثور على الشهادة، لكن حالتها غير معروفة. يرجى مراجعة الجهة المصدرة.";
         model.CertificateNumber = certificate.CertificateNumber;
         model.TraineeName = certificate.TraineeName;
+        model.TraineeNameArabic = certificate.TraineeNameArabic ?? certificate.TraineeName;
+        model.TraineeNameEnglish = certificate.TraineeNameEnglish ?? certificate.TraineeName;
         model.CourseName = certificate.CourseNameArabic;
         model.CourseNameEnglish = certificate.CourseNameEnglish;
         model.CourseNameArabic = certificate.CourseNameArabic;

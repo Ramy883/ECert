@@ -15,12 +15,14 @@ public class RegistrationsController : Controller
     private readonly ECertDbContext _db;
     private readonly AuditLogService _audit;
     private readonly NotificationService _notify;
+    private readonly RegistrationDocumentService _documents;
 
-    public RegistrationsController(ECertDbContext db, AuditLogService audit, NotificationService notify)
+    public RegistrationsController(ECertDbContext db, AuditLogService audit, NotificationService notify, RegistrationDocumentService documents)
     {
         _db = db;
         _audit = audit;
         _notify = notify;
+        _documents = documents;
     }
 
     private bool HasPermission(string perm) => User.HasClaim(c => c.Type == "Permission" && c.Value == perm);
@@ -65,6 +67,31 @@ public class RegistrationsController : Controller
         ViewBag.PendingCount = registrations.Count(r => r.Status == "Pending");
         ViewBag.ReturnUrl = $"{Request.PathBase}{Request.Path}{Request.QueryString}";
         return View();
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UploadDocument(int id, IFormFile? document)
+    {
+        if (!HasPermission("manage-registrations")) return Forbid();
+        var registration = await _db.Registrations.FirstOrDefaultAsync(r => r.RegistrationId == id);
+        if (registration == null) return NotFound();
+
+        try
+        {
+            var saved = await _documents.SaveAsync(document);
+            registration.DocumentPath = saved.RelativePath;
+            registration.DocumentOriginalName = saved.OriginalName;
+            await _db.SaveChangesAsync();
+            await _audit.LogAsync(User.Identity?.Name ?? "", "UploadDocument", "Registration", id, null, saved.OriginalName);
+            TempData["Success"] = "تم رفع المستند وتحديث الطلب.";
+        }
+        catch (InvalidDataException exception)
+        {
+            TempData["Error"] = exception.Message;
+        }
+
+        return RedirectToAction(nameof(Details), new { id });
     }
 
     public async Task<IActionResult> Details(int id)
@@ -317,22 +344,26 @@ public class RegistrationsController : Controller
         ws.Cell(1, 1).Value = "رقم الطلب";
         ws.Cell(1, 2).Value = "الاسم بالعربية";
         ws.Cell(1, 3).Value = "الاسم بالإنجليزية";
-        ws.Cell(1, 4).Value = "الهاتف";
-        ws.Cell(1, 5).Value = "الدورة";
-        ws.Cell(1, 6).Value = "التاريخ";
-        ws.Cell(1, 7).Value = "الحالة";
-        ws.Cell(1, 8).Value = "الموظف";
+        ws.Cell(1, 4).Value = "الجنس";
+        ws.Cell(1, 5).Value = "الهاتف";
+        ws.Cell(1, 6).Value = "الدورة";
+        ws.Cell(1, 7).Value = "المستند";
+        ws.Cell(1, 8).Value = "التاريخ";
+        ws.Cell(1, 9).Value = "الحالة";
+        ws.Cell(1, 10).Value = "الموظف";
         int row = 2;
         foreach (var r in list)
         {
             ws.Cell(row, 1).Value = r.RequestNumber;
             ws.Cell(row, 2).Value = r.FullNameArabic ?? r.FullName;
             ws.Cell(row, 3).Value = r.FullNameEnglish ?? r.FullName;
-            ws.Cell(row, 4).Value = r.Phone;
-            ws.Cell(row, 5).Value = r.Course?.CourseName ?? "";
-            ws.Cell(row, 6).Value = r.RegistrationDate.ToString("yyyy-MM-dd");
-            ws.Cell(row, 7).Value = r.Status;
-            ws.Cell(row, 8).Value = r.ProcessedBy ?? "";
+            ws.Cell(row, 4).Value = r.Gender == "Male" ? "ذكر" : r.Gender == "Female" ? "أنثى" : "";
+            ws.Cell(row, 5).Value = r.Phone;
+            ws.Cell(row, 6).Value = r.Course?.CourseName ?? "";
+            ws.Cell(row, 7).Value = r.DocumentOriginalName ?? "";
+            ws.Cell(row, 8).Value = r.RegistrationDate.ToString("yyyy-MM-dd");
+            ws.Cell(row, 9).Value = r.Status;
+            ws.Cell(row, 10).Value = r.ProcessedBy ?? "";
             row++;
         }
         ws.Columns().AdjustToContents();

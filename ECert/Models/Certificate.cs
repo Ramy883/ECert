@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ECert.Models;
 
@@ -25,6 +26,14 @@ public class Certificate
     [StringLength(150)]
     [Display(Name = "اسم المتدرب")]
     public string TraineeName { get; set; } = string.Empty;
+
+    [StringLength(150)]
+    [Display(Name = "اسم المتدرب بالعربية")]
+    public string? TraineeNameArabic { get; set; }
+
+    [StringLength(150)]
+    [Display(Name = "اسم المتدرب بالإنجليزية")]
+    public string? TraineeNameEnglish { get; set; }
 
     [StringLength(200)]
     [Display(Name = "اسم الدورة القديم")]
@@ -65,6 +74,13 @@ public class Certificate
 
     [Display(Name = "إصدار التوقيع")]
     public int SignatureVersion { get; set; } = 1;
+
+    [Column(TypeName = "LONGTEXT")]
+    [Display(Name = "لقطة قالب الشهادة")]
+    public string? TemplateSnapshotJson { get; set; }
+
+    [Display(Name = "إصدار القالب")]
+    public int TemplateVersion { get; set; } = 1;
 
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 }

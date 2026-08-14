@@ -1,0 +1,117 @@
+@model ECert.Models.CertificateTemplateSettings
+@{
+    ViewData["Title"] = "إعدادات الشهادة";
+    ViewData["PageIcon"] = "bi-award";
+    ViewData["PageDesc"] = "تعديل قالب الشهادة للشهادات الجديدة فقط";
+    Layout = "_AdminLayout";
+}
+
+<div class="page-header mb-4">
+    <div>
+        <h2 class="mb-1"><i class="bi bi-award"></i> إعدادات الشهادة</h2>
+        <p class="text-muted mb-0">إدارة قالب موحد واحترافي. التعديلات تحفظ كإصدار جديد ولا تغيّر الشهادات الصادرة سابقاً.</p>
+    </div>
+</div>
+
+<div class="alert alert-info border-0 shadow-sm">
+    <i class="bi bi-shield-lock"></i>
+    <strong>حماية الشهادات القديمة:</strong> كل شهادة جديدة تحفظ لقطة مستقلة من القالب عند إصدارها، لذلك لا يؤثر تعديل هذه الصفحة على شهادة سبق إصدارها.
+</div>
+
+<form asp-action="Save" method="post" enctype="multipart/form-data">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="CertificateTemplateSettingsId" />
+    <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white"><h5 class="mb-0">النصوص وبيانات المركز</h5></div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="CertificateTitle" class="form-label"></label>
+                        <input asp-for="CertificateTitle" class="form-control" />
+                        <span asp-validation-for="CertificateTitle" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="CenterName" class="form-label"></label>
+                        <input asp-for="CenterName" class="form-control" />
+                        <span asp-validation-for="CenterName" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="MainText" class="form-label"></label>
+                        <textarea asp-for="MainText" class="form-control" rows="3"></textarea>
+                        <span asp-validation-for="MainText" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="AdditionalText" class="form-label"></label>
+                        <textarea asp-for="AdditionalText" class="form-control" rows="2"></textarea>
+                        <span asp-validation-for="AdditionalText" class="text-danger"></span>
+                    </div>
+                    <div>
+                        <label asp-for="VerificationLabel" class="form-label"></label>
+                        <input asp-for="VerificationLabel" class="form-control" />
+                        <span asp-validation-for="VerificationLabel" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white"><h5 class="mb-0">الشعار والتوقيعات</h5></div>
+                <div class="card-body">
+                    <p class="small text-muted">الحد الأقصى للصورة 2 ميغابايت. الأنواع المسموحة: PNG وJPG وJPEG وWEBP. يتم فحص محتوى الملف وليس امتداده فقط.</p>
+                    <div class="mb-3">
+                        <label class="form-label">الشعار</label>
+                        <input type="file" name="logo" class="form-control" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" />
+                        @if (!string.IsNullOrWhiteSpace(Model.LogoPath)) { <img src="@Model.LogoPath" alt="الشعار الحالي" class="mt-2" style="max-height:70px;max-width:220px;object-fit:contain" /> }
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">التوقيع الأيمن</label>
+                            <input type="file" name="rightSignature" class="form-control" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" />
+                            @if (!string.IsNullOrWhiteSpace(Model.RightSignaturePath)) { <img src="@Model.RightSignaturePath" alt="التوقيع الأيمن الحالي" class="mt-2" style="max-height:70px;max-width:180px;object-fit:contain" /> }
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">التوقيع الأيسر</label>
+                            <input type="file" name="leftSignature" class="form-control" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" />
+                            @if (!string.IsNullOrWhiteSpace(Model.LeftSignaturePath)) { <img src="@Model.LeftSignaturePath" alt="التوقيع الأيسر الحالي" class="mt-2" style="max-height:70px;max-width:180px;object-fit:contain" /> }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white"><h5 class="mb-0">عناصر التصميم</h5></div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-4"><label asp-for="PrimaryColor" class="form-label"></label><input asp-for="PrimaryColor" type="color" class="form-control form-control-color w-100" /><span asp-validation-for="PrimaryColor" class="text-danger"></span></div>
+                        <div class="col-4"><label asp-for="AccentColor" class="form-label"></label><input asp-for="AccentColor" type="color" class="form-control form-control-color w-100" /><span asp-validation-for="AccentColor" class="text-danger"></span></div>
+                        <div class="col-4"><label asp-for="TextColor" class="form-label"></label><input asp-for="TextColor" type="color" class="form-control form-control-color w-100" /><span asp-validation-for="TextColor" class="text-danger"></span></div>
+                    </div>
+                    <hr />
+                    <div class="form-check mb-2"><input asp-for="ShowCertificateNumber" class="form-check-input" /><label asp-for="ShowCertificateNumber" class="form-check-label"></label></div>
+                    <div class="form-check mb-2"><input asp-for="ShowIssueDate" class="form-check-input" /><label asp-for="ShowIssueDate" class="form-check-label"></label></div>
+                    <div class="form-check mb-2"><input asp-for="ShowVerificationCode" class="form-check-input" /><label asp-for="ShowVerificationCode" class="form-check-label"></label></div>
+                    <div class="form-check"><input asp-for="ShowVerificationUrl" class="form-check-input" /><label asp-for="ShowVerificationUrl" class="form-check-label"></label></div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white"><h5 class="mb-0">ترتيب العناصر</h5></div>
+                <div class="card-body">
+                    <label asp-for="ElementOrder" class="form-label"></label>
+                    <select asp-for="ElementOrder" class="form-select">
+                        <option value="logo,title,body,trainee,course,date,additional,verification,signatures">الشعار ثم العنوان ثم البيانات والتوقيعات</option>
+                        <option value="title,logo,body,trainee,course,date,additional,verification,signatures">العنوان ثم الشعار ثم البيانات والتوقيعات</option>
+                        <option value="logo,title,trainee,course,body,date,additional,verification,signatures">الشعار ثم العنوان ثم الاسم والدورة والنص</option>
+                    </select>
+                    <div class="form-text">يُسمح فقط بالعناصر المعروفة، ويكمل النظام أي عنصر مفقود تلقائياً.</div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg w-100"><i class="bi bi-save"></i> حفظ إصدار القالب</button>
+        </div>
+    </div>
+</form>
