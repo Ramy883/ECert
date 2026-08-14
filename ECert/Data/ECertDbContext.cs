@@ -21,6 +21,8 @@ public class ECertDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Certificate> Certificates => Set<Certificate>();
     public DbSet<CertificateTemplateSettings> CertificateTemplates => Set<CertificateTemplateSettings>();
+    public DbSet<CertificateDesign> CertificateDesigns => Set<CertificateDesign>();
+    public DbSet<CertificateDesignElement> CertificateDesignElements => Set<CertificateDesignElement>();
     public DbSet<Post> Posts => Set<Post>();
     public DbSet<AppNotification> Notifications => Set<AppNotification>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
@@ -130,6 +132,15 @@ public class ECertDbContext : DbContext, IDataProtectionKeyContext
             .HasForeignKey(p => p.InvoiceId);
 
         modelBuilder.Entity<CertificateTemplateSettings>().ToTable("CertificateTemplates");
+
+        modelBuilder.Entity<CertificateDesign>().ToTable("CertificateDesigns");
+        modelBuilder.Entity<CertificateDesign>().HasIndex(d => d.DesignKey).IsUnique();
+        modelBuilder.Entity<CertificateDesignElement>().ToTable("CertificateDesignElements");
+        modelBuilder.Entity<CertificateDesignElement>()
+            .HasOne(e => e.Design)
+            .WithMany(d => d.Elements)
+            .HasForeignKey(e => e.CertificateDesignId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         // Certificate
         modelBuilder.Entity<Certificate>()

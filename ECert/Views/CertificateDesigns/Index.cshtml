@@ -1,0 +1,336 @@
+@using System.Text.Json
+@model ECert.Models.ViewModels.CertificateDesignEditorViewModel
+
+@{
+    ViewData["Title"] = "مصمم الشهادات";
+    var templateJson = JsonSerializer.Serialize(Model.Design.Elements.OrderBy(e => e.SortOrder), new JsonSerializerOptions
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    });
+}
+
+<style>
+    .template-shell { color: #182338; }
+    .template-hero { background: linear-gradient(135deg, #13233f 0%, #1d4e6f 55%, #c9a227 160%); color: #fff; border-radius: 24px; overflow: hidden; position: relative; }
+    .template-hero::after { content: ""; position: absolute; inset: auto -10% -65% 45%; height: 260px; background: rgba(255,255,255,.08); border-radius: 50%; transform: rotate(-12deg); }
+    .editor-card { border: 1px solid #e7edf4; border-radius: 18px; background: #fff; box-shadow: 0 16px 40px rgba(28, 48, 80, .08); }
+    .toolbar-card { position: sticky; top: 1rem; z-index: 4; }
+    .canvas-wrap { background: #f1f5f9; border-radius: 18px; padding: clamp(10px, 2vw, 24px); overflow: auto; }
+    .canvas-stage { position: relative; margin: auto; min-height: 1px; }
+    .certificate-canvas { position: absolute; top: 0; left: 0; margin: 0; overflow: hidden; transform-origin: top left; direction: rtl; box-shadow: 0 22px 60px rgba(15, 23, 42, .2); background: #fffdf7; }
+    .certificate-element { position: absolute; display: flex; align-items: center; justify-content: center; padding: 6px 10px; overflow: hidden; white-space: pre-wrap; line-height: 1.25; user-select: none; cursor: grab; word-break: break-word; transition: outline-color .15s ease, background .15s ease; }
+    .certificate-element:active { cursor: grabbing; }
+    .certificate-element.selected { outline: 2px dashed #0d6efd; outline-offset: 3px; background: rgba(13, 110, 253, .07); }
+    .certificate-element[data-element-type="divider"] { padding: 0; min-height: 2px; border-top: 2px solid currentColor; }
+    .field-chip { cursor: pointer; border: 1px solid #dce5ef; background: #f8fafc; border-radius: 999px; padding: .4rem .65rem; font-size: .8rem; color: #334155; transition: .15s ease; }
+    .field-chip:hover { background: #eaf2ff; border-color: #93c5fd; color: #1d4ed8; }
+    .mini-label { font-size: .74rem; color: #64748b; font-weight: 700; margin-bottom: .3rem; display: block; }
+    .property-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .65rem; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: #94a3b8; }
+    .status-dot.live { background: #22c55e; box-shadow: 0 0 0 4px rgba(34,197,94,.12); }
+    .template-list .list-group-item { border: 0; border-bottom: 1px solid #eef2f7; padding: .7rem .85rem; }
+    .template-list .list-group-item.active { background: #edf5ff; color: #0b5ed7; border-radius: 12px; margin: 3px; }
+    .mobile-hint { color: #64748b; font-size: .78rem; }
+    @@media (max-width: 991.98px) { .toolbar-card { position: static; } .certificate-canvas { width: 920px; } .canvas-wrap { overflow-x: auto; } }
+    @@media (max-width: 575.98px) { .template-hero { border-radius: 16px; } .template-hero h1 { font-size: 1.25rem; } .editor-card { border-radius: 14px; } .certificate-canvas { width: 760px; } .property-grid { grid-template-columns: 1fr; } }
+</style>
+
+<div class="container-fluid py-3 template-shell">
+    <div class="template-hero p-4 p-lg-5 mb-4">
+        <div class="position-relative" style="z-index:1;">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                <span class="badge rounded-pill text-bg-light text-primary">نظام الهوية والشهادات</span>
+                @if (Model.Design.IsPublished) { <span class="badge rounded-pill bg-success-subtle text-success-emphasis"><span class="status-dot live"></span> منشور للمتدربين</span> }
+                else { <span class="badge rounded-pill bg-light text-secondary"><span class="status-dot"></span> مسودة خاصة</span> }
+            </div>
+            <h1 class="fw-bold mb-2">مصمم الشهادة</h1>
+            <p class="mb-0 opacity-75" style="max-width:720px;">صمّم واجهة الشهادة مرة واحدة، وسيظهر القالب المنشور في نتائج التحقق العامة مع بيانات كل متدرب بشكل تلقائي. البيانات الأصلية لا يمكن تعديلها من هذا المحرر.</p>
+        </div>
+    </div>
+
+    @if (TempData["Success"] is string success) { <div class="alert alert-success border-0 shadow-sm">@success</div> }
+    @if (TempData["Error"] is string error) { <div class="alert alert-danger border-0 shadow-sm">@error</div> }
+
+    <form id="templateForm" asp-action="Save" method="post" class="row g-3">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="CertificateDesignId" value="@Model.Design.CertificateDesignId" />
+        <input type="hidden" name="CanvasWidth" value="@Model.Design.CanvasWidth" />
+        <input type="hidden" name="CanvasHeight" value="@Model.Design.CanvasHeight" />
+        <input type="hidden" name="Publish" id="publishInput" value="false" />
+        <input type="hidden" name="ElementsJson" id="elementsJson" />
+
+        <div class="col-12 col-xl-2">
+            <div class="editor-card p-3 template-list h-100">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h6 class="fw-bold mb-0">التصاميم</h6>
+                    <a asp-action="New" class="btn btn-sm btn-outline-primary rounded-circle" title="تصميم جديد" aria-label="تصميم جديد"><i class="bi bi-plus-lg"></i></a>
+                </div>
+                <div class="list-group list-group-flush">
+                    @foreach (var item in Model.Designs)
+                    {
+                        <a asp-action="Index" asp-route-id="@item.CertificateDesignId" class="list-group-item list-group-item-action @(item.CertificateDesignId == Model.Design.CertificateDesignId ? "active" : "")">
+                            <div class="d-flex justify-content-between gap-2">
+                                <span class="text-truncate">@item.Name</span>
+                                @if (item.IsPublished) { <i class="bi bi-broadcast text-success" title="منشور"></i> }
+                            </div>
+                            <small class="opacity-75">@(item.IsPublished ? "يظهر للزوار" : "مسودة")</small>
+                        </a>
+                    }
+                </div>
+                <div class="small text-muted mt-3 pt-3 border-top">يمكن حفظ تعديلات القالب المنشور كمسودة لحماية تجربة التحقق الحالية.</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-7 order-xl-2">
+            <div class="editor-card p-2 p-md-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 px-2 mb-3">
+                    <div>
+                        <h5 class="fw-bold mb-1">المعاينة التفاعلية</h5>
+                        <div class="mobile-hint"><i class="bi bi-hand-index-thumb"></i> اسحب العناصر داخل مساحة الشهادة، ثم عدّل خصائص العنصر المحدد.</div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" id="zoomOut" class="btn btn-sm btn-light" title="تصغير"><i class="bi bi-dash-lg"></i></button>
+                        <span id="zoomLabel" class="small align-self-center text-muted">70%</span>
+                        <button type="button" id="zoomIn" class="btn btn-sm btn-light" title="تكبير"><i class="bi bi-plus-lg"></i></button>
+                    </div>
+                </div>
+                <div class="canvas-wrap" id="canvasWrap">
+                    <div id="canvasStage" class="canvas-stage">
+                        <div id="certificateCanvas" class="certificate-canvas" aria-label="مساحة تصميم الشهادة"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-3 order-xl-3">
+            <div class="editor-card p-3 toolbar-card">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h5 class="fw-bold mb-0">خصائص القالب</h5>
+                    <i class="bi bi-sliders2 text-primary"></i>
+                </div>
+                <div class="mb-3">
+                    <label class="mini-label" for="templateName">اسم القالب</label>
+                    <input class="form-control" id="templateName" name="Name" maxlength="120" value="@Model.Design.Name" required />
+                </div>
+                <div class="property-grid mb-3">
+                    <div><label class="mini-label" for="backgroundColor">الخلفية</label><input class="form-control form-control-color w-100" type="color" id="backgroundColor" name="BackgroundColor" value="@Model.Design.BackgroundColor" title="لون الخلفية" /></div>
+                    <div><label class="mini-label" for="borderColor">الإطار</label><input class="form-control form-control-color w-100" type="color" id="borderColor" name="BorderColor" value="@Model.Design.BorderColor" title="لون الإطار" /></div>
+                    <div><label class="mini-label" for="borderWidth">سماكة الإطار</label><input class="form-control" type="number" id="borderWidth" name="BorderWidth" min="0" max="24" value="@Model.Design.BorderWidth" /></div>
+                    <div><label class="mini-label" for="borderRadius">انحناء الزوايا</label><input class="form-control" type="number" id="borderRadius" name="BorderRadius" min="0" max="80" value="@Model.Design.BorderRadius" /></div>
+                </div>
+                <hr />
+                <h6 class="fw-bold mb-2">إضافة عنصر</h6>
+                <div class="d-flex gap-2 mb-2">
+                    <select id="elementType" class="form-select form-select-sm">
+                        <option value="field">بيان ديناميكي</option>
+                        <option value="text">نص ثابت</option>
+                        <option value="divider">فاصل بصري</option>
+                    </select>
+                    <button type="button" id="addElement" class="btn btn-primary btn-sm px-3"><i class="bi bi-plus-lg"></i></button>
+                </div>
+                <select id="fieldKey" class="form-select form-select-sm mb-2" aria-label="الحقل الديناميكي">
+                    @foreach (var field in Model.FieldLabels) { <option value="@field.Key">@field.Value</option> }
+                </select>
+                <input id="staticContent" class="form-control form-control-sm mb-2 d-none" maxlength="1000" placeholder="اكتب النص الثابت هنا" />
+                <div class="d-flex flex-wrap gap-1 mb-3">
+                    @foreach (var field in Model.FieldLabels) { <button type="button" class="field-chip quick-field" data-field="@field.Key">@field.Value</button> }
+                </div>
+                <div id="selectedPanel" class="d-none">
+                    <hr />
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="fw-bold mb-0">العنصر المحدد</h6>
+                        <button type="button" id="deleteElement" class="btn btn-sm btn-outline-danger" title="حذف العنصر"><i class="bi bi-trash3"></i></button>
+                    </div>
+                    <div class="mb-2"><label class="mini-label" for="selectedContent">النص أو المحتوى</label><textarea id="selectedContent" class="form-control form-control-sm" rows="2" maxlength="1000"></textarea></div>
+                    <div class="property-grid">
+                        <div><label class="mini-label" for="selectedFontSize">حجم الخط</label><input id="selectedFontSize" type="number" min="8" max="96" class="form-control form-control-sm" /></div>
+                        <div><label class="mini-label" for="selectedColor">لون النص</label><input id="selectedColor" type="color" class="form-control form-control-color w-100" /></div>
+                        <div><label class="mini-label" for="selectedAlign">المحاذاة</label><select id="selectedAlign" class="form-select form-select-sm"><option value="right">يمين</option><option value="center">وسط</option><option value="left">يسار</option></select></div>
+                        <div><label class="mini-label" for="selectedWeight">السماكة</label><select id="selectedWeight" class="form-select form-select-sm"><option value="400">عادي</option><option value="500">متوسط</option><option value="600">نصف عريض</option><option value="700">عريض</option><option value="800">ثقيل</option></select></div>
+                        <div><label class="mini-label" for="selectedFontFamily">الخط</label><select id="selectedFontFamily" class="form-select form-select-sm"><option value="Tajawal">Tajawal</option><option value="Arial">Arial</option><option value="Tahoma">Tahoma</option><option value="Georgia">Georgia</option><option value="Courier New">Courier New</option></select></div>
+                        <div><label class="mini-label" for="selectedX">الموضع الأفقي</label><input id="selectedX" type="number" min="0" class="form-control form-control-sm" /></div>
+                        <div><label class="mini-label" for="selectedY">الموضع الرأسي</label><input id="selectedY" type="number" min="0" class="form-control form-control-sm" /></div>
+                        <div><label class="mini-label" for="selectedWidth">العرض</label><input id="selectedWidth" type="number" min="20" class="form-control form-control-sm" /></div>
+                        <div><label class="mini-label" for="selectedHeight">الارتفاع</label><input id="selectedHeight" type="number" min="20" class="form-control form-control-sm" /></div>
+                    </div>
+                    <div class="form-check form-switch mt-3"><input id="selectedVisible" class="form-check-input" type="checkbox" checked /><label class="form-check-label small" for="selectedVisible">إظهار العنصر</label></div>
+                </div>
+                <hr />
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-outline-primary" data-publish="false"><i class="bi bi-save2"></i> حفظ كمسودة</button>
+                    <button type="submit" class="btn btn-success" data-publish="true"><i class="bi bi-broadcast"></i> حفظ ونشر للمتدربين</button>
+                </div>
+                <p class="small text-muted mt-3 mb-0"><i class="bi bi-shield-check"></i> لا يسمح المحرر بتعديل مصدر بيانات الشهادة أو إدخال HTML أو CSS حر.</p>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+(() => {
+    const canvas = document.getElementById('certificateCanvas');
+    const stage = document.getElementById('canvasStage');
+    const form = document.getElementById('templateForm');
+    const elementsInput = document.getElementById('elementsJson');
+    const publishInput = document.getElementById('publishInput');
+    const canvasWidth = @Model.Design.CanvasWidth;
+    const canvasHeight = @Model.Design.CanvasHeight;
+    let zoom = 0.70;
+    let selectedIndex = -1;
+    let elements = @Html.Raw(templateJson);
+    const sampleValues = {
+        certificate_number: 'EC-2026-0042',
+        trainee_name: 'أحمد محمد العتيبي',
+        course_name: 'القيادة الاستراتيجية وإدارة فرق العمل',
+        issue_date: '2026/08/14',
+        status: 'سارية ومعتمدة',
+        verification_code: 'EXAMPLE-VERIFY-CODE',
+        verification_url: 'ecert.example/v/sample'
+    };
+    const nodes = new Map();
+    const $ = id => document.getElementById(id);
+    const clamp = (n, min, max) => Math.max(min, Math.min(max, Number(n) || 0));
+
+    function contentFor(element) {
+        if (element.elementType === 'field') return sampleValues[element.fieldKey] || 'بيان ديناميكي';
+        return element.elementType === 'divider' ? '' : (element.content || 'نص جديد');
+    }
+
+    function styleFor(element) {
+        return {
+            left: `${element.x}px`, top: `${element.y}px`, width: `${element.width}px`, height: `${element.height}px`,
+            fontSize: `${element.fontSize}px`, color: element.fontColor || '#172033', fontFamily: `"${element.fontFamily || 'Tajawal'}", Arial, sans-serif`,
+            fontWeight: element.fontWeight || '600', textAlign: element.textAlign || 'center', zIndex: element.zIndex || 1,
+            borderTopColor: element.fontColor || '#172033'
+        };
+    }
+
+    function applyStyle(node, element) {
+        Object.assign(node.style, styleFor(element));
+        node.textContent = contentFor(element);
+        node.classList.toggle('selected', elements[selectedIndex] === element);
+        node.dataset.elementType = element.elementType;
+    }
+
+    function render() {
+        canvas.innerHTML = '';
+        nodes.clear();
+        canvas.style.width = `${canvasWidth}px`;
+        canvas.style.height = `${canvasHeight}px`;
+        canvas.style.transform = `scale(${zoom})`;
+        stage.style.width = `${canvasWidth * zoom}px`;
+        stage.style.height = `${canvasHeight * zoom}px`;
+        canvas.style.backgroundColor = $('backgroundColor').value;
+        canvas.style.border = `${$('borderWidth').value}px solid ${$('borderColor').value}`;
+        canvas.style.borderRadius = `${$('borderRadius').value}px`;
+        elements.forEach((element, index) => {
+            if (!element.isVisible) return;
+            const node = document.createElement('div');
+            node.className = 'certificate-element';
+            node.dataset.index = index;
+            applyStyle(node, element);
+            node.addEventListener('pointerdown', event => beginDrag(event, index, node));
+            node.addEventListener('click', event => { event.stopPropagation(); selectElement(index); });
+            canvas.appendChild(node);
+            nodes.set(index, node);
+        });
+        refreshSelectedPanel();
+        $('zoomLabel').textContent = `${Math.round(zoom * 100)}%`;
+    }
+
+    function selectElement(index) {
+        selectedIndex = index;
+        nodes.forEach((node, nodeIndex) => node.classList.toggle('selected', nodeIndex === index));
+        refreshSelectedPanel();
+    }
+
+    function refreshSelectedPanel() {
+        const panel = $('selectedPanel');
+        const element = elements[selectedIndex];
+        if (!element) { panel.classList.add('d-none'); return; }
+        panel.classList.remove('d-none');
+        $('selectedContent').value = element.content || '';
+        $('selectedContent').disabled = element.elementType === 'field' || element.elementType === 'divider';
+        $('selectedFontSize').value = element.fontSize;
+        $('selectedColor').value = element.fontColor || '#172033';
+        $('selectedAlign').value = element.textAlign || 'center';
+        $('selectedWeight').value = element.fontWeight || '600';
+        $('selectedFontFamily').value = element.fontFamily || 'Tajawal';
+        $('selectedX').value = element.x; $('selectedY').value = element.y;
+        $('selectedWidth').value = element.width; $('selectedHeight').value = element.height;
+        $('selectedVisible').checked = element.isVisible !== false;
+    }
+
+    function updateSelected(property, value) {
+        const element = elements[selectedIndex];
+        if (!element) return;
+        if (['fontSize', 'x', 'y', 'width', 'height'].includes(property)) value = Number(value) || 0;
+        element[property] = value;
+        if (property === 'x') element.x = clamp(value, 0, canvasWidth - 20);
+        if (property === 'y') element.y = clamp(value, 0, canvasHeight - 20);
+        if (property === 'width') element.width = clamp(value, 20, canvasWidth);
+        if (property === 'height') element.height = clamp(value, 20, canvasHeight);
+        if (property === 'fontSize') element.fontSize = clamp(value, 8, 96);
+        const node = nodes.get(selectedIndex);
+        if (node) applyStyle(node, element);
+        refreshSelectedPanel();
+    }
+
+    function beginDrag(event, index, node) {
+        event.preventDefault();
+        selectElement(index);
+        const element = elements[index];
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = rect.width / canvasWidth;
+        const scaleY = rect.height / canvasHeight;
+        const startX = event.clientX, startY = event.clientY, originalX = element.x, originalY = element.y;
+        node.setPointerCapture(event.pointerId);
+        const move = moveEvent => {
+            element.x = clamp(Math.round(originalX + (moveEvent.clientX - startX) / scaleX), 0, canvasWidth - 20);
+            element.y = clamp(Math.round(originalY + (moveEvent.clientY - startY) / scaleY), 0, canvasHeight - 20);
+            applyStyle(node, element);
+            refreshSelectedPanel();
+        };
+        const stop = () => { node.removeEventListener('pointermove', move); node.removeEventListener('pointerup', stop); };
+        node.addEventListener('pointermove', move);
+        node.addEventListener('pointerup', stop);
+    }
+
+    function addElement() {
+        const type = $('elementType').value;
+        const index = elements.length;
+        elements.push({
+            elementType: type,
+            fieldKey: type === 'field' ? $('fieldKey').value : '',
+            content: type === 'text' ? ($('staticContent').value || 'نص جديد') : '',
+            x: 220, y: 220 + (index % 5) * 74, width: 680, height: type === 'divider' ? 4 : 58,
+            fontSize: type === 'text' ? 22 : 28, fontFamily: 'Tajawal', fontColor: '#172033', fontWeight: '600', textAlign: 'center', isVisible: true, zIndex: index, sortOrder: index
+        });
+        selectedIndex = index;
+        render();
+    }
+
+    $('elementType').addEventListener('change', event => {
+        const fieldMode = event.target.value === 'field';
+        $('fieldKey').classList.toggle('d-none', !fieldMode);
+        $('staticContent').classList.toggle('d-none', fieldMode || event.target.value === 'divider');
+    });
+    $('addElement').addEventListener('click', addElement);
+    document.querySelectorAll('.quick-field').forEach(button => button.addEventListener('click', () => { $('elementType').value = 'field'; $('fieldKey').value = button.dataset.field; $('elementType').dispatchEvent(new Event('change')); addElement(); }));
+    $('deleteElement').addEventListener('click', () => { if (selectedIndex < 0) return; elements.splice(selectedIndex, 1); selectedIndex = -1; render(); });
+    [['selectedContent','content'],['selectedFontSize','fontSize'],['selectedColor','fontColor'],['selectedAlign','textAlign'],['selectedWeight','fontWeight'],['selectedFontFamily','fontFamily'],['selectedX','x'],['selectedY','y'],['selectedWidth','width'],['selectedHeight','height'],['selectedVisible','isVisible']].forEach(([id, property]) => {
+        $(id).addEventListener('input', event => updateSelected(property, property === 'isVisible' ? event.target.checked : event.target.value));
+        $(id).addEventListener('change', event => updateSelected(property, property === 'isVisible' ? event.target.checked : event.target.value));
+    });
+    ['backgroundColor','borderColor','borderWidth','borderRadius'].forEach(id => $(id).addEventListener('input', render));
+    $('zoomIn').addEventListener('click', () => { zoom = Math.min(1.2, zoom + .1); render(); });
+    $('zoomOut').addEventListener('click', () => { zoom = Math.max(.35, zoom - .1); render(); });
+    canvas.addEventListener('click', () => { selectedIndex = -1; render(); });
+    form.querySelectorAll('button[type="submit"]').forEach(button => button.addEventListener('click', () => { publishInput.value = button.dataset.publish; }));
+    form.addEventListener('submit', event => {
+        elementsInput.value = JSON.stringify(elements.map((element, index) => ({ ...element, sortOrder: index })));
+    });
+    $('elementType').dispatchEvent(new Event('change'));
+    render();
+})();
+</script>

@@ -6,7 +6,11 @@ public static class DbSeeder
 {
     public static void Seed(ECertDbContext db)
     {
-        if (db.Roles.Any()) return;
+        if (db.Roles.Any())
+        {
+            EnsureCertificateDesignPermission(db);
+            return;
+        }
 
         // Create Permissions
         var permissions = new List<Permission>
@@ -19,6 +23,7 @@ public static class DbSeeder
             new() { PermissionName = "manage-payments", Description = "إدارة الدفعات" },
             new() { PermissionName = "view-reports", Description = "مشاهدة التقارير" },
             new() { PermissionName = "issue-certificates", Description = "إصدار الشهادات" },
+            new() { PermissionName = "manage-certificate-designs", Description = "إدارة تصميم الشهادات" },
             new() { PermissionName = "manage-posts", Description = "إدارة المنشورات" },
             new() { PermissionName = "manage-news", Description = "إدارة الأخبار" },
             new() { PermissionName = "manage-users", Description = "إدارة المستخدمين" },
@@ -176,6 +181,29 @@ public static class DbSeeder
 
         // Seed Homepage CMS
         SeedHomepageCms(db);
+    }
+
+    private static void EnsureCertificateDesignPermission(ECertDbContext db)
+    {
+        const string permissionName = "manage-certificate-designs";
+        var permission = db.Permissions.FirstOrDefault(p => p.PermissionName == permissionName);
+        if (permission == null)
+        {
+            permission = new Permission
+            {
+                PermissionName = permissionName,
+                Description = "إدارة تصميم الشهادات"
+            };
+            db.Permissions.Add(permission);
+            db.SaveChanges();
+        }
+
+        var superAdmin = db.Roles.FirstOrDefault(r => r.RoleName == "SuperAdmin");
+        if (superAdmin != null && !db.RolePermissions.Any(rp => rp.RoleId == superAdmin.RoleId && rp.PermissionId == permission.PermissionId))
+        {
+            db.RolePermissions.Add(new RolePermission { RoleId = superAdmin.RoleId, PermissionId = permission.PermissionId });
+            db.SaveChanges();
+        }
     }
 
     public static void SeedHomepageCms(ECertDbContext db)

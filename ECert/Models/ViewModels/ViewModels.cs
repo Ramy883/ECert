@@ -186,6 +186,16 @@ public class PublicCertificateVerificationViewModel
     public string? CourseNameArabic { get; set; }
     public DateTime? IssueDate { get; set; }
     public string? Status { get; set; }
+
+    // القيم أدناه لا تمثل بيانات الشهادة الأصلية؛ هي إعدادات عرض مُطبّعة لخدمة التحقق العامة.
+    public bool HasPublishedDesign { get; set; }
+    public int DesignCanvasWidth { get; set; } = 1120;
+    public int DesignCanvasHeight { get; set; } = 792;
+    public string DesignBackgroundColor { get; set; } = "#fffdf7";
+    public string DesignBorderColor { get; set; } = "#c9a227";
+    public int DesignBorderWidth { get; set; } = 12;
+    public int DesignBorderRadius { get; set; } = 8;
+    public List<PublicCertificateDesignElementViewModel> DesignElements { get; set; } = new();
 }
 
 public class RoleFormViewModel
@@ -201,4 +211,41 @@ public class RoleFormViewModel
 
     [MinLength(1, ErrorMessage = "اختر صلاحية واحدة على الأقل لهذا الدور")]
     public List<int> PermissionIds { get; set; } = new();
+}
+
+public class CertificateDesignEditorViewModel
+{
+    public CertificateDesign Design { get; set; } = new();
+    public List<CertificateDesign> Designs { get; set; } = new();
+    public IReadOnlyDictionary<string, string> FieldLabels { get; set; } = new Dictionary<string, string>();
+}
+
+public class CertificateDesignEditorPostModel
+{
+    public int CertificateDesignId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public int CanvasWidth { get; set; }
+    public int CanvasHeight { get; set; }
+    public string BackgroundColor { get; set; } = "#fffdf7";
+    public string BorderColor { get; set; } = "#c9a227";
+    public int BorderWidth { get; set; }
+    public int BorderRadius { get; set; }
+    public bool Publish { get; set; }
+    public string ElementsJson { get; set; } = "[]";
+}
+
+public class PublicCertificateDesignElementViewModel
+{
+    public string ElementType { get; set; } = "text";
+    public string Content { get; set; } = string.Empty;
+    public int X { get; set; }
+    public int Y { get; set; }
+    public int Width { get; set; }
+    public int Height { get; set; }
+    public int FontSize { get; set; }
+    public string FontFamily { get; set; } = "Tajawal";
+    public string FontColor { get; set; } = "#172033";
+    public string FontWeight { get; set; } = "600";
+    public string TextAlign { get; set; } = "center";
+    public int ZIndex { get; set; }
 }
