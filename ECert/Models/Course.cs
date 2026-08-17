@@ -81,6 +81,10 @@ public class Course
 
     public int AvailableSeats => TotalSeats - BookedSeats;
 
+    [Display(Name = "قالب الشهادة")]
+    public int? CertificateDesignId { get; set; }
+    public CertificateDesign? CertificateDesign { get; set; }
+
     [Display(Name = "حالة الدورة")]
     public string Status { get; set; } = "Draft";
     // Draft, Published, OpenForRegistration, Full, InProgress, Completed, Archived
