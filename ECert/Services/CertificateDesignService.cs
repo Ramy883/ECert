@@ -15,26 +15,8 @@ public sealed class CertificateDesignService
         {
             ["certificate_number"] = "رقم الشهادة",
             ["trainee_name"] = "اسم المتدرب",
-            ["trainee_name_arabic"] = "اسم المتدرب بالعربية",
-            ["trainee_name_english"] = "اسم المتدرب بالإنجليزية",
-            ["trainee_gender"] = "جنس المتدرب",
-            ["trainee_university"] = "جامعة المتدرب",
-            ["trainee_college"] = "كلية المتدرب",
-            ["trainee_specialization"] = "تخصص المتدرب",
-            ["trainee_academic_level"] = "المستوى الدراسي",
             ["course_name"] = "اسم الدورة",
-            ["course_name_arabic"] = "اسم الدورة بالعربية",
-            ["course_name_english"] = "اسم الدورة بالإنجليزية",
-            ["course_short_description"] = "الوصف المختصر للدورة",
-            ["course_location"] = "مكان الدورة",
-            ["course_category"] = "تصنيف الدورة",
-            ["course_start_date"] = "تاريخ بداية الدورة",
-            ["course_end_date"] = "تاريخ نهاية الدورة",
-            ["instructor_name"] = "اسم المدرب",
-            ["instructor_specialization"] = "تخصص المدرب",
-            ["instructor_bio"] = "نبذة عن المدرب",
             ["issue_date"] = "تاريخ الإصدار",
-            ["issued_by"] = "أصدرها",
             ["status"] = "الحالة",
             ["verification_code"] = "رمز التحقق",
             ["verification_url"] = "رابط التحقق"
@@ -64,6 +46,30 @@ public sealed class CertificateDesignService
             .OrderByDescending(t => t.UpdatedAt)
             .FirstOrDefaultAsync();
 
+    public async Task<CertificateDesign?> GetForCourseAsync(int? courseId)
+    {
+        if (courseId.HasValue)
+        {
+            var assignedDesignId = await _db.Courses
+                .AsNoTracking()
+                .Where(c => c.CourseId == courseId.Value)
+                .Select(c => c.CertificateDesignId)
+                .FirstOrDefaultAsync();
+
+            if (assignedDesignId.HasValue)
+            {
+                var assigned = await _db.CertificateDesigns
+                    .AsNoTracking()
+                    .Include(t => t.Elements)
+                    .FirstOrDefaultAsync(t => t.CertificateDesignId == assignedDesignId.Value);
+                if (assigned != null)
+                    return assigned;
+            }
+        }
+
+        return await GetPublishedAsync();
+    }
+
     public static CertificateDesign CreateDefault(string? updatedBy)
     {
         var now = DateTime.Now;
@@ -90,56 +96,27 @@ public sealed class CertificateDesignService
             Element("field", "trainee_name", "", 130, 265, 860, 74, 34, "#172033", "800", 2),
             Element("text", "", "بنجاح وإتقان", 300, 345, 520, 36, 18, "#64748b", "500", 3),
             Element("field", "course_name", "", 120, 400, 880, 66, 28, "#1d4ed8", "700", 4),
-            Element("field", "instructor_name", "", 190, 475, 360, 42, 18, "#334155", "600", 5),
-            Element("field", "issue_date", "", 570, 475, 360, 42, 18, "#334155", "600", 6),
-            Element("field", "certificate_number", "", 190, 535, 360, 42, 18, "#334155", "600", 7),
-            Element("field", "status", "", 570, 535, 360, 42, 17, "#15803d", "700", 8),
-            Element("field", "verification_code", "", 280, 665, 560, 34, 14, "#64748b", "500", 9)
+            Element("field", "issue_date", "", 190, 505, 360, 42, 18, "#334155", "600", 5),
+            Element("field", "certificate_number", "", 570, 505, 360, 42, 18, "#334155", "600", 6),
+            Element("field", "status", "", 350, 590, 420, 42, 17, "#15803d", "700", 7),
+            Element("field", "verification_code", "", 280, 665, 560, 34, 14, "#64748b", "500", 8)
         };
 
         return design;
     }
 
     public static string ResolveFieldValue(string key, Certificate certificate, string verificationUrl)
-        => ResolveFieldValue(key, certificate, certificate.Registration, verificationUrl);
-
-    public static string ResolveFieldValue(string key, Certificate certificate, Registration? registration, string verificationUrl)
-    {
-        var course = registration?.Course;
-        var instructor = course?.Instructor;
-        var category = course?.Category;
-        var normalizedKey = key.Trim().ToLowerInvariant();
-
-        return normalizedKey switch
+        => key.Trim().ToLowerInvariant() switch
         {
             "certificate_number" => certificate.CertificateNumber ?? string.Empty,
-            "trainee_name" => FirstNonEmpty(certificate.TraineeName, certificate.TraineeNameArabic, registration?.FullNameArabic, registration?.FullName),
-            "trainee_name_arabic" => FirstNonEmpty(certificate.TraineeNameArabic, registration?.FullNameArabic, certificate.TraineeName, registration?.FullName),
-            "trainee_name_english" => FirstNonEmpty(certificate.TraineeNameEnglish, registration?.FullNameEnglish),
-            "trainee_gender" => registration?.Gender ?? string.Empty,
-            "trainee_university" => registration?.UniversityNameSnapshot ?? string.Empty,
-            "trainee_college" => registration?.CollegeNameSnapshot ?? string.Empty,
-            "trainee_specialization" => registration?.SpecializationNameSnapshot ?? string.Empty,
-            "trainee_academic_level" => registration?.AcademicLevel ?? string.Empty,
-            "course_name" => FirstNonEmpty(certificate.CourseName, certificate.CourseNameArabic, course?.CourseNameArabic, course?.CourseName),
-            "course_name_arabic" => FirstNonEmpty(certificate.CourseNameArabic, certificate.CourseName, course?.CourseNameArabic, course?.CourseName),
-            "course_name_english" => FirstNonEmpty(certificate.CourseNameEnglish, course?.CourseNameEnglish, course?.CourseName),
-            "course_short_description" => course?.ShortDescription ?? string.Empty,
-            "course_location" => course?.Location ?? string.Empty,
-            "course_category" => category?.CategoryName ?? string.Empty,
-            "course_start_date" => FormatDate(course?.StartDate),
-            "course_end_date" => FormatDate(course?.EndDate),
-            "instructor_name" => instructor?.FullName ?? string.Empty,
-            "instructor_specialization" => instructor?.Specialization ?? string.Empty,
-            "instructor_bio" => instructor?.Bio ?? string.Empty,
+            "trainee_name" => certificate.TraineeName ?? string.Empty,
+            "course_name" => certificate.CourseName ?? string.Empty,
             "issue_date" => certificate.IssueDate.ToString("yyyy/MM/dd"),
-            "issued_by" => certificate.IssuedBy ?? string.Empty,
             "status" => MapStatus(certificate.Status),
             "verification_code" => certificate.VerificationCode ?? string.Empty,
             "verification_url" => verificationUrl,
             _ => string.Empty
         };
-    }
 
     public static bool IsValidElementType(string value)
         => AllowedElementTypes.Contains(value?.Trim() ?? string.Empty);
@@ -185,12 +162,6 @@ public sealed class CertificateDesignService
             SortOrder = order,
             ZIndex = order
         };
-
-    private static string FirstNonEmpty(params string?[] values)
-        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
-
-    private static string FormatDate(DateTime? value)
-        => value.HasValue ? value.Value.ToString("yyyy/MM/dd") : string.Empty;
 
     private static string MapStatus(string? status)
         => status?.Trim().ToLowerInvariant() switch
