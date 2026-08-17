@@ -20,6 +20,8 @@ public class ECertDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Certificate> Certificates => Set<Certificate>();
+    public DbSet<CertificateDesign> CertificateDesigns => Set<CertificateDesign>();
+    public DbSet<CertificateDesignElement> CertificateDesignElements => Set<CertificateDesignElement>();
     public DbSet<Post> Posts => Set<Post>();
     public DbSet<AppNotification> Notifications => Set<AppNotification>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
