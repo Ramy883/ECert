@@ -4,6 +4,7 @@
     Layout = "_AdminLayout";
     var categories = ViewBag.Categories as List<Category> ?? new();
     var instructors = ViewBag.Instructors as List<Instructor> ?? new();
+    var certificateDesigns = ViewBag.CertificateDesigns as List<CertificateDesign> ?? new();
 }
 <div class="row justify-content-center">
     <div class="col-md-8">
@@ -79,6 +80,17 @@
                                 }
                             </select>
                             <span asp-validation-for="InstructorId" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="CertificateDesignId" class="form-label">قالب شهادة هذه الدورة</label>
+                            <select asp-for="CertificateDesignId" class="form-select">
+                                <option value="">القالب العام المنشور (افتراضي)</option>
+                                @foreach (var design in certificateDesigns)
+                                {
+                                    <option value="@design.CertificateDesignId">@design.Name@(design.IsPublished ? " — منشور" : " — مسودة")</option>
+                                }
+                            </select>
+                            <div class="form-text">يُستخدم هذا القالب عند التحقق من شهادات الدورة. اتركه فارغاً لاستخدام القالب العام المنشور.</div>
                         </div>
                         <div class="col-md-4">
                             <label asp-for="StartDate" class="form-label"></label>
