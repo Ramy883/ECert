@@ -22,6 +22,16 @@ public class CoursesManageController : Controller
 
     private bool HasPermission(string perm) => User.HasClaim(c => c.Type == "Permission" && c.Value == perm);
 
+    private async Task LoadCourseFormOptions()
+    {
+        ViewBag.Categories = await _db.Categories.Where(c => c.IsActive).ToListAsync();
+        ViewBag.Instructors = await _db.Instructors.Where(i => i.IsActive).ToListAsync();
+        ViewBag.CertificateDesigns = await _db.CertificateDesigns
+            .OrderByDescending(d => d.IsPublished)
+            .ThenBy(d => d.Name)
+            .ToListAsync();
+    }
+
     private async Task<string?> SaveImage(IFormFile? image)
     {
         if (image == null || image.Length == 0) return null;
@@ -49,8 +59,7 @@ public class CoursesManageController : Controller
     public async Task<IActionResult> Create()
     {
         if (!HasPermission("manage-courses")) return Forbid();
-        ViewBag.Categories = await _db.Categories.Where(c => c.IsActive).ToListAsync();
-        ViewBag.Instructors = await _db.Instructors.Where(i => i.IsActive).ToListAsync();
+        await LoadCourseFormOptions();
         return View();
     }
 
@@ -370,8 +379,7 @@ public class CoursesManageController : Controller
         if (!HasPermission("manage-courses")) return Forbid();
         var course = await _db.Courses.FindAsync(id);
         if (course == null) return NotFound();
-        ViewBag.Categories = await _db.Categories.Where(c => c.IsActive).ToListAsync();
-        ViewBag.Instructors = await _db.Instructors.Where(i => i.IsActive).ToListAsync();
+        await LoadCourseFormOptions();
         return View(course);
     }
 
@@ -404,6 +412,7 @@ public class CoursesManageController : Controller
         existing.Content = course.Content;
         existing.CategoryId = course.CategoryId;
         existing.InstructorId = course.InstructorId;
+        existing.CertificateDesignId = course.CertificateDesignId;
         existing.StartDate = course.StartDate;
         existing.EndDate = course.EndDate;
         existing.Location = course.Location;
