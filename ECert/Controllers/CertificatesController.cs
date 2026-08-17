@@ -21,7 +21,7 @@ public class CertificatesController : Controller
     private readonly VerifyRequestGuardService _verifyGuard;
     private readonly IConfiguration _configuration;
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly CertificateDesignService _certificateDesigns;
+    private readonly CertificateDesignService _certificateDesignService;
 
     public CertificatesController(
         ECertDbContext db,
@@ -31,7 +31,7 @@ public class CertificatesController : Controller
         VerifyRequestGuardService verifyGuard,
         IConfiguration configuration,
         IHttpClientFactory httpClientFactory,
-        CertificateDesignService certificateDesigns)
+        CertificateDesignService certificateDesignService)
     {
         _db = db;
         _audit = audit;
@@ -40,7 +40,7 @@ public class CertificatesController : Controller
         _verifyGuard = verifyGuard;
         _configuration = configuration;
         _httpClientFactory = httpClientFactory;
-        _certificateDesigns = certificateDesigns;
+        _certificateDesignService = certificateDesignService;
     }
 
     private bool HasPermission(string perm) => User.HasClaim(c => c.Type == "Permission" && c.Value == perm);
@@ -348,10 +348,13 @@ public class CertificatesController : Controller
         if (string.IsNullOrWhiteSpace(normalizedCode))
             return BuildInvalidVerifyResult(code);
 
-        var certificate = await LoadCertificateForVerificationAsync(
-            c => c.CertificateNumber == normalizedCode || c.VerificationCode == normalizedCode);
+        var certificate = await _db.Certificates
+            .AsNoTracking()
+            .Include(c => c.Registration)
+            .ThenInclude(r => r!.Course)
+            .FirstOrDefaultAsync(c => c.CertificateNumber == normalizedCode || c.VerificationCode == normalizedCode);
 
-        return await BuildVerifyResult(certificate, code);
+        return await BuildVerifyResultAsync(certificate, code);
     }
 
     [AllowAnonymous]
@@ -365,9 +368,13 @@ public class CertificatesController : Controller
             return BuildInvalidVerifyResult(publicId);
 
         var normalizedPublicId = publicId.Trim();
-        var certificate = await LoadCertificateForVerificationAsync(c => c.PublicId == normalizedPublicId);
+        var certificate = await _db.Certificates
+            .AsNoTracking()
+            .Include(c => c.Registration)
+            .ThenInclude(r => r!.Course)
+            .FirstOrDefaultAsync(c => c.PublicId == normalizedPublicId);
 
-        return await BuildVerifyResult(certificate, normalizedPublicId);
+        return await BuildVerifyResultAsync(certificate, normalizedPublicId);
     }
 
     private FileResult BuildExcelExport(List<Certificate> certificates, string scope)
@@ -427,19 +434,7 @@ public class CertificatesController : Controller
         return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
     }
 
-    private Task<Certificate?> LoadCertificateForVerificationAsync(
-        System.Linq.Expressions.Expression<Func<Certificate, bool>> predicate)
-        => _db.Certificates
-            .AsNoTracking()
-            .Include(c => c.Registration)
-                .ThenInclude(r => r!.Course)
-                    .ThenInclude(course => course!.Instructor)
-            .Include(c => c.Registration)
-                .ThenInclude(r => r!.Course)
-                    .ThenInclude(course => course!.Category)
-            .FirstOrDefaultAsync(predicate);
-
-    private async Task<IActionResult> BuildVerifyResult(Certificate? certificate, string? searchCode)
+    private async Task<IActionResult> BuildVerifyResultAsync(Certificate? certificate, string? searchCode)
     {
         var model = new PublicCertificateVerificationViewModel
         {
@@ -470,37 +465,36 @@ public class CertificatesController : Controller
         model.IssueDate = certificate.IssueDate;
         model.Status = MapCertificateStatus(certificate.Status);
 
-        var publishedDesign = await _certificateDesigns.GetPublishedAsync();
-        if (publishedDesign != null)
+        var design = await _certificateDesignService.GetForCourseAsync(certificate.Registration?.CourseId);
+        if (design != null)
         {
-            var verificationUrl = BuildVerificationUrl(certificate);
             model.HasPublishedDesign = true;
-            model.DesignCanvasWidth = publishedDesign.CanvasWidth;
-            model.DesignCanvasHeight = publishedDesign.CanvasHeight;
-            model.DesignBackgroundColor = CertificateDesignService.NormalizeColor(publishedDesign.BackgroundColor, "#fffdf7");
-            model.DesignBorderColor = CertificateDesignService.NormalizeColor(publishedDesign.BorderColor, "#c9a227");
-            model.DesignBorderWidth = Math.Clamp(publishedDesign.BorderWidth, 0, 24);
-            model.DesignBorderRadius = Math.Clamp(publishedDesign.BorderRadius, 0, 80);
-            model.DesignElements = publishedDesign.Elements
-                .Where(element => element.IsVisible)
-                .OrderBy(element => element.ZIndex)
-                .ThenBy(element => element.SortOrder)
-                .Select(element => new PublicCertificateDesignElementViewModel
+            model.DesignCanvasWidth = design.CanvasWidth;
+            model.DesignCanvasHeight = design.CanvasHeight;
+            model.DesignBackgroundColor = design.BackgroundColor;
+            model.DesignBorderColor = design.BorderColor;
+            model.DesignBorderWidth = design.BorderWidth;
+            model.DesignBorderRadius = design.BorderRadius;
+            var verificationUrl = BuildVerificationUrl(certificate);
+            model.DesignElements = design.Elements
+                .Where(e => e.IsVisible)
+                .OrderBy(e => e.SortOrder)
+                .Select(e => new PublicCertificateDesignElementViewModel
                 {
-                    ElementType = element.ElementType,
-                    Content = string.Equals(element.ElementType, "field", StringComparison.OrdinalIgnoreCase)
-                        ? CertificateDesignService.ResolveFieldValue(element.FieldKey, certificate, certificate.Registration, verificationUrl)
-                        : element.Content,
-                    X = element.X,
-                    Y = element.Y,
-                    Width = element.Width,
-                    Height = element.Height,
-                    FontSize = element.FontSize,
-                    FontFamily = CertificateDesignService.NormalizeFontFamily(element.FontFamily),
-                    FontColor = CertificateDesignService.NormalizeColor(element.FontColor, "#172033"),
-                    FontWeight = CertificateDesignService.NormalizeFontWeight(element.FontWeight),
-                    TextAlign = CertificateDesignService.NormalizeTextAlign(element.TextAlign),
-                    ZIndex = element.ZIndex
+                    ElementType = e.ElementType,
+                    Content = string.Equals(e.ElementType, "field", StringComparison.OrdinalIgnoreCase)
+                        ? CertificateDesignService.ResolveFieldValue(e.FieldKey, certificate, verificationUrl)
+                        : e.Content,
+                    X = e.X,
+                    Y = e.Y,
+                    Width = e.Width,
+                    Height = e.Height,
+                    FontSize = e.FontSize,
+                    FontFamily = e.FontFamily,
+                    FontColor = e.FontColor,
+                    FontWeight = e.FontWeight,
+                    TextAlign = e.TextAlign,
+                    ZIndex = e.ZIndex
                 })
                 .ToList();
         }
