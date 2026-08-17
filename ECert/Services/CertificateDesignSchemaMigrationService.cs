@@ -60,6 +60,22 @@ CREATE TABLE IF NOT EXISTS `CertificateDesignElements` (
         ON DELETE CASCADE
 ) CHARACTER SET utf8mb4;");
 
+        var courseDesignColumnExists = await _db.Database
+            .SqlQueryRaw<int>("SELECT COUNT(*) AS `Value` FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Courses' AND COLUMN_NAME = 'CertificateDesignId'")
+            .SingleAsync() > 0;
+        if (!courseDesignColumnExists)
+        {
+            await _db.Database.ExecuteSqlRawAsync("ALTER TABLE `Courses` ADD COLUMN `CertificateDesignId` INT NULL");
+        }
+
+        var courseDesignIndexExists = await _db.Database
+            .SqlQueryRaw<int>("SELECT COUNT(*) AS `Value` FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Courses' AND INDEX_NAME = 'IX_Courses_CertificateDesignId'")
+            .SingleAsync() > 0;
+        if (!courseDesignIndexExists)
+        {
+            await _db.Database.ExecuteSqlRawAsync("CREATE INDEX `IX_Courses_CertificateDesignId` ON `Courses` (`CertificateDesignId`)");
+        }
+
         if (!await _db.CertificateDesigns.AnyAsync())
         {
             _db.CertificateDesigns.Add(CertificateDesignService.CreateDefault("system"));
