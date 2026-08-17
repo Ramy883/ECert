@@ -36,8 +36,6 @@ public class ECertDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<University> Universities => Set<University>();
     public DbSet<College> Colleges => Set<College>();
     public DbSet<AcademicSpecialization> AcademicSpecializations => Set<AcademicSpecialization>();
-    public DbSet<CertificateDesign> CertificateDesigns => Set<CertificateDesign>();
-    public DbSet<CertificateDesignElement> CertificateDesignElements => Set<CertificateDesignElement>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -80,6 +78,12 @@ public class ECertDbContext : DbContext, IDataProtectionKeyContext
             .HasOne(c => c.Instructor)
             .WithMany(i => i.Courses)
             .HasForeignKey(c => c.InstructorId);
+
+        modelBuilder.Entity<Course>()
+            .HasOne(c => c.CertificateDesign)
+            .WithMany()
+            .HasForeignKey(c => c.CertificateDesignId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         // Academic catalog
         modelBuilder.Entity<College>()
@@ -147,13 +151,6 @@ public class ECertDbContext : DbContext, IDataProtectionKeyContext
         modelBuilder.Entity<Certificate>()
             .HasIndex(c => c.VerificationCode)
             .IsUnique();
-
-        // Visual certificate designer layer
-        modelBuilder.Entity<CertificateDesign>()
-            .HasMany(design => design.Elements)
-            .WithOne(element => element.Design)
-            .HasForeignKey(element => element.CertificateDesignId)
-            .OnDelete(DeleteBehavior.Cascade);
 
     }
 }
