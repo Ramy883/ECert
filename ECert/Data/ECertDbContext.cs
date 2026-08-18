@@ -38,6 +38,7 @@ public class ECertDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<University> Universities => Set<University>();
     public DbSet<College> Colleges => Set<College>();
     public DbSet<AcademicSpecialization> AcademicSpecializations => Set<AcademicSpecialization>();
+    public DbSet<AcademicLevelOption> AcademicLevelOptions => Set<AcademicLevelOption>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -98,6 +99,16 @@ public class ECertDbContext : DbContext, IDataProtectionKeyContext
             .WithMany(c => c.Specializations)
             .HasForeignKey(s => s.CollegeId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AcademicLevelOption>()
+            .HasOne(l => l.AcademicSpecialization)
+            .WithMany(s => s.Levels)
+            .HasForeignKey(l => l.AcademicSpecializationId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<AcademicLevelOption>()
+            .HasIndex(l => new { l.AcademicSpecializationId, l.LevelName })
+            .IsUnique();
 
         // Registration
         modelBuilder.Entity<Registration>()

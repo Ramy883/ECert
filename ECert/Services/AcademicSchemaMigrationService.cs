@@ -13,6 +13,7 @@ public class AcademicSchemaMigrationService
     public async Task EnsureAsync()
     {
         await CreateAcademicTablesAsync();
+        await SeedDefaultLevelsAsync();
 
         await EnsureColumnAsync("Courses", "RequiresAcademicDetails", "TINYINT(1) NOT NULL DEFAULT 0");
 
@@ -61,8 +62,57 @@ CREATE TABLE IF NOT EXISTS `AcademicSpecializations` (
     PRIMARY KEY (`AcademicSpecializationId`),
     UNIQUE KEY `UX_AcademicSpecializations_CollegeId_SpecializationName` (`CollegeId`, `SpecializationName`),
     KEY `IX_AcademicSpecializations_CollegeId` (`CollegeId`),
-    CONSTRAINT `FK_AcademicSpecializations_Colleges_CollegeId` FOREIGN KEY (`CollegeId`) REFERENCES `Colleges` (`CollegeId`) ON DELETE RESTRICT
+    CONSTRAINT `FK_AcademicSpecializations_Colleges_CollegeId` FOREIGN KEY (`CollegeId`) REFERENCES `Colleges` (`CollegeId`) ON DELETE RESTRICT	) ENGINE=InnoDB;");
+
+        await _db.Database.ExecuteSqlRawAsync(@"
+CREATE TABLE IF NOT EXISTS `AcademicLevelOptions` (
+    `AcademicLevelOptionId` INT NOT NULL AUTO_INCREMENT,
+    `AcademicSpecializationId` INT NOT NULL,
+    `LevelName` VARCHAR(80) NOT NULL,
+    `SortOrder` INT NOT NULL DEFAULT 0,
+    `IsActive` TINYINT(1) NOT NULL DEFAULT 1,
+    PRIMARY KEY (`AcademicLevelOptionId`),
+    UNIQUE KEY `UX_AcademicLevelOptions_SpecializationId_LevelName` (`AcademicSpecializationId`, `LevelName`),
+    KEY `IX_AcademicLevelOptions_AcademicSpecializationId` (`AcademicSpecializationId`),
+    CONSTRAINT `FK_AcademicLevelOptions_AcademicSpecializations_AcademicSpecializationId` FOREIGN KEY (`AcademicSpecializationId`) REFERENCES `AcademicSpecializations` (`AcademicSpecializationId`) ON DELETE CASCADE
 ) ENGINE=InnoDB;");
+    }
+
+    private async Task SeedDefaultLevelsAsync()
+    {
+        var specializations = await _db.AcademicSpecializations
+            .Select(s => s.AcademicSpecializationId)
+            .ToListAsync();
+        if (specializations.Count == 0) return;
+
+        var levelCounts = await _db.AcademicLevelOptions
+            .GroupBy(l => l.AcademicSpecializationId)
+            .Select(g => new { AcademicSpecializationId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.AcademicSpecializationId, x => x.Count);
+
+        var additions = new List<AcademicLevelOption>();
+        foreach (var specializationId in specializations)
+        {
+            // Seed the suggested defaults only for a brand-new specialization.
+            // Once an administrator customizes or removes levels, never recreate them on startup.
+            if (levelCounts.ContainsKey(specializationId)) continue;
+
+            for (var index = 0; index < AcademicLevelCatalog.Levels.Count; index++)
+            {
+                additions.Add(new AcademicLevelOption
+                {
+                    AcademicSpecializationId = specializationId,
+                    LevelName = AcademicLevelCatalog.Levels[index],
+                    SortOrder = index + 1
+                });
+            }
+        }
+
+        if (additions.Count > 0)
+        {
+            _db.AcademicLevelOptions.AddRange(additions);
+            await _db.SaveChangesAsync();
+        }
     }
 
     private async Task EnsureColumnAsync(string tableName, string columnName, string definitionSql)

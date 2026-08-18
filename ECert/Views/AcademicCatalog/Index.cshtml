@@ -125,6 +125,111 @@
     </div>
 </div>
 
+<div class="card shadow-sm border-0 mt-4">
+    <div class="card-header bg-white border-0 pt-4 px-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div>
+                <h5 class="mb-1"><i class="bi bi-list-ol ms-2 text-info"></i>المستويات الدراسية حسب التخصص</h5>
+                <small class="text-muted">أنشئ مستويات مختلفة لكل تخصص ورتبها كما تظهر للمتدرب.</small>
+            </div>
+            <span class="badge rounded-pill bg-info-subtle text-info-emphasis px-3 py-2">@Model.Levels.Count مستوى</span>
+        </div>
+    </div>
+    <div class="card-body px-4">
+        <div class="row g-2 align-items-center mb-4">
+            <div class="col-12 col-lg-7">
+                <label for="levelFilter" class="form-label small fw-semibold">عرض مستويات تخصص محدد</label>
+                <select id="levelFilter" class="form-select">
+                    <option value="">كل التخصصات</option>
+                    @foreach (var specialization in Model.Specializations)
+                    {
+                        <option value="@specialization.AcademicSpecializationId">@specialization.SpecializationName — @specialization.College?.CollegeName</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12 col-lg-5 d-flex align-items-end">
+                <div class="alert alert-info-subtle border-0 small mb-0 w-100 py-2">
+                    <i class="bi bi-lightbulb ms-1"></i> لا توجد قائمة إجبارية؛ لكل تخصص مستوياته الخاصة.
+                </div>
+            </div>
+        </div>
+
+        <form asp-action="CreateLevel" method="post" class="row g-2 align-items-end bg-light rounded-3 p-3 mb-4">
+            @Html.AntiForgeryToken()
+            <div class="col-12 col-lg-5">
+                <label class="form-label small fw-semibold">التخصص</label>
+                <select name="academicSpecializationId" class="form-select" required>
+                    <option value="">اختر التخصص</option>
+                    @foreach (var specialization in Model.Specializations.Where(s => s.IsActive && s.College?.IsActive == true && s.College.University?.IsActive == true))
+                    {
+                        <option value="@specialization.AcademicSpecializationId">@specialization.SpecializationName — @specialization.College?.CollegeName</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12 col-md-6 col-lg-4">
+                <label class="form-label small fw-semibold">اسم المستوى</label>
+                <input name="levelName" class="form-control" maxlength="80" placeholder="مثال: المستوى الأول أو الفصل السادس" required />
+            </div>
+            <div class="col-8 col-md-4 col-lg-2">
+                <label class="form-label small fw-semibold">الترتيب</label>
+                <input name="sortOrder" type="number" min="0" max="999" value="0" class="form-control" />
+            </div>
+            <div class="col-4 col-md-2 col-lg-1 d-grid">
+                <button class="btn btn-info text-white" type="submit" title="إضافة مستوى"><i class="bi bi-plus-lg"></i></button>
+            </div>
+        </form>
+
+        <div id="levelsEmpty" class="alert alert-light border small d-none">لا توجد مستويات مطابقة للتصفية الحالية.</div>
+        <div class="row g-3" id="levelsGrid">
+            @foreach (var level in Model.Levels)
+            {
+                <div class="col-12 col-md-6 col-xl-4 level-item" data-specialization-id="@level.AcademicSpecializationId">
+                    <form asp-action="UpdateLevel" method="post" class="border rounded-3 p-3 h-100 bg-white">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="academicLevelOptionId" value="@level.AcademicLevelOptionId" />
+                        <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                            <span class="small text-muted text-truncate" title="@level.AcademicSpecialization?.SpecializationName">@level.AcademicSpecialization?.SpecializationName</span>
+                            <span class="badge @(level.IsActive ? "bg-success-subtle text-success-emphasis" : "bg-secondary-subtle text-secondary-emphasis")">@(level.IsActive ? "نشط" : "متوقف")</span>
+                        </div>
+                        <select name="academicSpecializationId" class="form-select form-select-sm mb-2" required>
+                            @foreach (var specialization in Model.Specializations)
+                            {
+                                <option value="@specialization.AcademicSpecializationId" selected="@(specialization.AcademicSpecializationId == level.AcademicSpecializationId)">@specialization.SpecializationName — @specialization.College?.CollegeName</option>
+                            }
+                        </select>
+                        <div class="row g-2 align-items-center">
+                            <div class="col"><input name="levelName" value="@level.LevelName" class="form-control form-control-sm" maxlength="80" required /></div>
+                            <div class="col-auto" style="width: 88px"><input name="sortOrder" type="number" min="0" max="999" value="@level.SortOrder" class="form-control form-control-sm" title="الترتيب" /></div>
+                            <div class="col-auto form-check form-switch m-0"><input class="form-check-input" type="checkbox" name="isActive" value="true" checked="@level.IsActive" aria-label="تفعيل المستوى" /></div>
+                            <div class="col-auto"><button class="btn btn-sm btn-outline-info" type="submit" title="حفظ"><i class="bi bi-check-lg"></i></button></div>
+                        </div>
+                    </form>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
 <div class="alert alert-light border mt-4 mb-0 small">
     <i class="bi bi-shield-check ms-1"></i> للحفاظ على سجلات التسجيل، لا يُحذف أي عنصر مستخدم؛ يمكنك تعطيله لإخفائه من التسجيلات الجديدة.
 </div>
+
+@section Scripts {
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const filter = document.getElementById('levelFilter');
+        const items = Array.from(document.querySelectorAll('.level-item'));
+        const empty = document.getElementById('levelsEmpty');
+        filter?.addEventListener('change', function () {
+            const value = this.value;
+            let visible = 0;
+            items.forEach(item => {
+                const show = !value || item.dataset.specializationId === value;
+                item.classList.toggle('d-none', !show);
+                if (show) visible++;
+            });
+            empty?.classList.toggle('d-none', visible > 0);
+        });
+    });
+</script>
+}

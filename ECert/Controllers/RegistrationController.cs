@@ -9,8 +9,6 @@ namespace ECert.Controllers;
 
 public class RegistrationController : Controller
 {
-    private static readonly IReadOnlyList<string> AcademicLevels = AcademicLevelCatalog.Levels;
-
     private readonly ECertDbContext _db;
     public RegistrationController(ECertDbContext db)
     {
@@ -142,7 +140,7 @@ public class RegistrationController : Controller
             ModelState.AddModelError(nameof(model.AcademicSpecializationId), "اختر التخصص من القائمة.");
 
         var level = model.AcademicLevel?.Trim();
-        if (string.IsNullOrEmpty(level) || !AcademicLevels.Contains(level))
+        if (string.IsNullOrEmpty(level))
             ModelState.AddModelError(nameof(model.AcademicLevel), "اختر المستوى الدراسي من القائمة.");
 
         if (!ModelState.IsValid || !model.UniversityId.HasValue || !model.CollegeId.HasValue || !model.AcademicSpecializationId.HasValue)
@@ -171,6 +169,13 @@ public class RegistrationController : Controller
             return null;
         }
 
+        var levelIsValid = await _db.AcademicLevelOptions.AnyAsync(l => l.AcademicSpecializationId == specialization.AcademicSpecializationId && l.LevelName == level && l.IsActive);
+        if (!levelIsValid)
+        {
+            ModelState.AddModelError(nameof(model.AcademicLevel), "المستوى المختار غير متاح لهذا التخصص.");
+            return null;
+        }
+
         return new AcademicSelection(university, college, specialization, level!);
     }
 
@@ -189,7 +194,6 @@ public class RegistrationController : Controller
     {
         ViewBag.Countries = await _db.PhoneCountries.Where(c => c.IsActive).OrderBy(c => c.CountryName).ToListAsync();
         ViewBag.RequiresAcademicDetails = course.RequiresAcademicDetails;
-        ViewBag.AcademicLevels = AcademicLevels;
     }
 
     private async Task PopulateAcademicDisplayNamesAsync(PublicRegistrationViewModel model)

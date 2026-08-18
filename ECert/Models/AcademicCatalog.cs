@@ -56,6 +56,29 @@ public class AcademicSpecialization
 
     [Display(Name = "الحالة")]
     public bool IsActive { get; set; } = true;
+
+    public ICollection<AcademicLevelOption> Levels { get; set; } = new List<AcademicLevelOption>();
+}
+
+public class AcademicLevelOption
+{
+    [Key]
+    public int AcademicLevelOptionId { get; set; }
+
+    [Required]
+    public int AcademicSpecializationId { get; set; }
+    public AcademicSpecialization? AcademicSpecialization { get; set; }
+
+    [Required(ErrorMessage = "اسم المستوى مطلوب")]
+    [StringLength(80)]
+    [Display(Name = "المستوى الدراسي")]
+    public string LevelName { get; set; } = string.Empty;
+
+    [Display(Name = "الترتيب")]
+    public int SortOrder { get; set; }
+
+    [Display(Name = "الحالة")]
+    public bool IsActive { get; set; } = true;
 }
 
 public static class AcademicLevelCatalog

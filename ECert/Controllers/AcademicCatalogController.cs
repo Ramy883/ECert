@@ -29,7 +29,8 @@ public class AcademicCatalogController : Controller
         {
             Universities = await _db.Universities.OrderBy(u => u.UniversityName).ToListAsync(),
             Colleges = await _db.Colleges.Include(c => c.University).OrderBy(c => c.University!.UniversityName).ThenBy(c => c.CollegeName).ToListAsync(),
-            Specializations = await _db.AcademicSpecializations.Include(s => s.College).ThenInclude(c => c!.University).OrderBy(s => s.College!.University!.UniversityName).ThenBy(s => s.College!.CollegeName).ThenBy(s => s.SpecializationName).ToListAsync()
+            Specializations = await _db.AcademicSpecializations.Include(s => s.College).ThenInclude(c => c!.University).OrderBy(s => s.College!.University!.UniversityName).ThenBy(s => s.College!.CollegeName).ThenBy(s => s.SpecializationName).ToListAsync(),
+            Levels = await _db.AcademicLevelOptions.Include(l => l.AcademicSpecialization).ThenInclude(s => s!.College).ThenInclude(c => c!.University).OrderBy(l => l.AcademicSpecialization!.SpecializationName).ThenBy(l => l.SortOrder).ThenBy(l => l.LevelName).ToListAsync()
         };
         return View(model);
     }
@@ -151,6 +152,77 @@ public class AcademicCatalogController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateLevel(int academicSpecializationId, string levelName, int sortOrder = 0)
+    {
+        if (!IsSuperAdmin()) return Forbid();
+        levelName = NormalizeName(levelName);
+        if (string.IsNullOrEmpty(levelName)) return CatalogError("اسم المستوى مطلوب.");
+        if (levelName.Length > 80) return CatalogError("اسم المستوى لا يمكن أن يتجاوز 80 حرفاً.");
+        var specialization = await _db.AcademicSpecializations.FindAsync(academicSpecializationId);
+        if (specialization == null) return CatalogError("التخصص المختار غير موجود.");
+        if (await _db.AcademicLevelOptions.AnyAsync(l => l.AcademicSpecializationId == academicSpecializationId && l.LevelName == levelName))
+            return CatalogError("هذا المستوى موجود بالفعل لهذا التخصص.");
+
+        var level = new AcademicLevelOption { AcademicSpecializationId = academicSpecializationId, LevelName = levelName, SortOrder = Math.Max(0, sortOrder) };
+        _db.AcademicLevelOptions.Add(level);
+        await _db.SaveChangesAsync();
+        await _audit.LogAsync(User.Identity?.Name ?? string.Empty, "Create", "AcademicLevelOption", level.AcademicLevelOptionId, null, levelName);
+        TempData["Success"] = "تمت إضافة المستوى للتخصص بنجاح.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateLevel(int academicLevelOptionId, int academicSpecializationId, string levelName, int sortOrder, bool isActive)
+    {
+        if (!IsSuperAdmin()) return Forbid();
+        var level = await _db.AcademicLevelOptions.FindAsync(academicLevelOptionId);
+        if (level == null) return NotFound();
+        levelName = NormalizeName(levelName);
+        if (string.IsNullOrEmpty(levelName)) return CatalogError("اسم المستوى مطلوب.");
+        if (!await _db.AcademicSpecializations.AnyAsync(s => s.AcademicSpecializationId == academicSpecializationId)) return CatalogError("التخصص المختار غير موجود.");
+        if (await _db.AcademicLevelOptions.AnyAsync(l => l.AcademicLevelOptionId != academicLevelOptionId && l.AcademicSpecializationId == academicSpecializationId && l.LevelName == levelName))
+            return CatalogError("هذا المستوى موجود بالفعل لهذا التخصص.");
+
+        level.AcademicSpecializationId = academicSpecializationId;
+        level.LevelName = levelName;
+        level.SortOrder = Math.Max(0, sortOrder);
+        level.IsActive = isActive;
+        await _db.SaveChangesAsync();
+        await _audit.LogAsync(User.Identity?.Name ?? string.Empty, "Update", "AcademicLevelOption", academicLevelOptionId, null, levelName);
+        TempData["Success"] = "تم تحديث المستوى الدراسي.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteLevel(int id)
+    {
+        if (!IsSuperAdmin()) return Forbid();
+        var level = await _db.AcademicLevelOptions.FindAsync(id);
+        if (level == null) return NotFound();
+        _db.AcademicLevelOptions.Remove(level);
+        await _db.SaveChangesAsync();
+        await _audit.LogAsync(User.Identity?.Name ?? string.Empty, "Delete", "AcademicLevelOption", id);
+        TempData["Success"] = "تم حذف المستوى الدراسي.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [AllowAnonymous]
+    [HttpGet]
+    public async Task<IActionResult> Levels(int specializationId, string? q)
+    {
+        var query = NormalizeName(q ?? string.Empty);
+        var items = await _db.AcademicLevelOptions
+            .Where(l => l.AcademicSpecializationId == specializationId && l.IsActive && l.AcademicSpecialization!.IsActive && (string.IsNullOrEmpty(query) || l.LevelName.Contains(query)))
+            .OrderBy(l => l.SortOrder).ThenBy(l => l.LevelName)
+            .Select(l => new { id = l.AcademicLevelOptionId, name = l.LevelName })
+            .ToListAsync();
+        return Json(items);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteUniversity(int id)
     {
         if (!IsSuperAdmin()) return Forbid();
@@ -254,4 +326,5 @@ public class AcademicCatalogPageViewModel
     public List<University> Universities { get; set; } = new();
     public List<College> Colleges { get; set; } = new();
     public List<AcademicSpecialization> Specializations { get; set; } = new();
+    public List<AcademicLevelOption> Levels { get; set; } = new();
 }

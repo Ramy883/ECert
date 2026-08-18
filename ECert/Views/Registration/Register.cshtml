@@ -2,7 +2,6 @@
 @{
     ViewData["Title"] = "التسجيل في الدورة";
     var countries = ViewBag.Countries as List<ECert.Models.PhoneCountry> ?? new();
-    var academicLevels = ViewBag.AcademicLevels as string[] ?? Array.Empty<string>();
     var courseRequiresAcademic = ViewBag.RequiresAcademicDetails as bool? ?? false;
 }
 <div class="row justify-content-center">
@@ -132,13 +131,10 @@
 
                         <div class="mb-0">
                             <label asp-for="AcademicLevel" class="form-label"></label>
-                            <select asp-for="AcademicLevel" class="form-select" id="academicLevel">
-                                <option value="">اختر المستوى الدراسي</option>
-                                @foreach (var level in academicLevels)
-                                {
-                                    <option value="@level">@level</option>
-                                }
+                            <select asp-for="AcademicLevel" class="form-select" id="academicLevel" data-selected="@Model.AcademicLevel" disabled>
+                                <option value="">اختر التخصص أولاً</option>
                             </select>
+                            <div class="form-text">تظهر المستويات المتاحة وفقاً للتخصص الذي اخترته.</div>
                             <span asp-validation-for="AcademicLevel" class="text-danger"></span>
                         </div>
                     </section>
@@ -168,11 +164,11 @@
         const phoneInput = document.getElementById('phoneInput');
         const phoneHint = document.getElementById('phoneHint');
         const academicSection = document.getElementById('academicDetails');
+        const academicLevel = document.getElementById('academicLevel');
         const academicToggle = document.getElementById('includeAcademicDetails');
         const university = createSearchSelect('university', '/AcademicCatalog/Universities');
         const college = createSearchSelect('college', '/AcademicCatalog/Colleges', () => university.idInput.value);
         const specialization = createSearchSelect('specialization', '/AcademicCatalog/Specializations', () => college.idInput.value);
-        const academicLevel = document.getElementById('academicLevel');
 
         function updateCountryHint() {
             const opt = countrySelect.options[countrySelect.selectedIndex];
@@ -221,8 +217,8 @@
                 },
                 clearSelection() {
                     idInput.value = '';
-                    if (key === 'university') { college.reset(); specialization.reset(); }
-                    if (key === 'college') specialization.reset();
+                    if (key === 'university') { college.reset(); specialization.reset(); loadAcademicLevels('', ''); }
+                    if (key === 'college') { specialization.reset(); loadAcademicLevels('', ''); }
                 }
             };
 
@@ -258,8 +254,9 @@
                                 event.preventDefault();
                                 idInput.value = item.id;
                                 input.value = item.name;
-                                if (key === 'university') { college.reset(); specialization.reset(); college.input.disabled = false; college.input.placeholder = 'اكتب اسم الكلية للبحث'; }
-                                if (key === 'college') { specialization.reset(); specialization.input.disabled = false; specialization.input.placeholder = 'اكتب اسم التخصص للبحث'; }
+                                if (key === 'university') { college.reset(); specialization.reset(); loadAcademicLevels('', ''); college.input.disabled = false; college.input.placeholder = 'اكتب اسم الكلية للبحث'; }
+                                if (key === 'college') { specialization.reset(); loadAcademicLevels('', ''); specialization.input.disabled = false; specialization.input.placeholder = 'اكتب اسم التخصص للبحث'; }
+                                if (key === 'specialization') loadAcademicLevels(item.id, '');
                                 hideResults();
                             });
                             results.append(option);
@@ -282,6 +279,22 @@
             return api;
         }
 
+        async function loadAcademicLevels(specializationId, selectedValue) {
+            academicLevel.disabled = true;
+            academicLevel.replaceChildren(new Option(specializationId ? 'جارٍ تحميل المستويات...' : 'اختر التخصص أولاً', ''));
+            if (!specializationId) return;
+            try {
+                const response = await fetch(`/AcademicCatalog/Levels?specializationId=${encodeURIComponent(specializationId)}`, { headers: { 'Accept': 'application/json' } });
+                const items = response.ok ? await response.json() : [];
+                academicLevel.replaceChildren(new Option(items.length ? 'اختر المستوى الدراسي' : 'لا توجد مستويات مضافة لهذا التخصص', ''));
+                items.forEach(item => academicLevel.add(new Option(item.name, item.name, false, item.name === selectedValue)));
+                academicLevel.disabled = items.length === 0;
+            } catch {
+                academicLevel.replaceChildren(new Option('تعذر تحميل المستويات، حاول مرة أخرى', ''));
+                academicLevel.disabled = true;
+            }
+        }
+
         countrySelect.addEventListener('change', updateCountryHint);
         academicToggle?.addEventListener('change', setAcademicVisibility);
         updateCountryHint();
@@ -293,6 +306,7 @@
             specialization.input.disabled = false;
             specialization.input.placeholder = 'اكتب اسم التخصص للبحث';
         }
+        loadAcademicLevels(specialization.idInput.value, academicLevel.dataset.selected || academicLevel.value);
         setAcademicVisibility();
 
         document.getElementById('regForm').addEventListener('submit', function (e) {
