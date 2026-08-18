@@ -206,6 +206,36 @@ public class RegistrationsController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Restore(int id, string? returnUrl)
+    {
+        if (!HasPermission("manage-registrations")) return Forbid();
+
+        var reg = await _db.Registrations
+            .Include(r => r.Invoice)
+            .FirstOrDefaultAsync(r => r.RegistrationId == id);
+        if (reg == null) return NotFound();
+
+        if (reg.Status != "Archived")
+        {
+            TempData["Error"] = "يمكن استعادة الطلبات المؤرشفة فقط.";
+            return ReturnToList(returnUrl);
+        }
+
+        // Archived records created by the previous workflow do not store the prior status.
+        // Use the persisted acceptance/invoice data to restore the most likely original state.
+        reg.Status = reg.AcceptedDate.HasValue || reg.Invoice != null ? "Accepted" : "Rejected";
+        reg.ArchivedDate = null;
+
+        await _db.SaveChangesAsync();
+        await _audit.LogAsync(User.Identity?.Name ?? "", "Restore", "Registration", id, null, $"Restored to: {reg.Status}");
+        TempData["Success"] = reg.Status == "Accepted"
+            ? "تمت استعادة الطلب إلى قائمة المقبولين."
+            : "تمت استعادة الطلب إلى قائمة المرفوضين، ويمكن إعادة فتحه عند الحاجة.";
+        return ReturnToList(returnUrl);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id, string? returnUrl)
     {
         var isSuperAdmin = User.HasClaim(c => c.Type == "Role" && c.Value == "SuperAdmin");

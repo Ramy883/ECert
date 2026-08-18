@@ -258,6 +258,15 @@
                                                 </button>
                                             </form>
                                         }
+                                        @if (registration.Status == "Archived")
+                                        {
+                                            <form asp-action="Restore" asp-route-id="@registration.RegistrationId" asp-route-returnUrl="@returnUrl" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-outline-primary btn-icon" title="استعادة الطلب" aria-label="استعادة طلب @registration.RequestNumber" onclick="return confirm('هل تريد استعادة هذا الطلب؟');">
+                                                    <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+                                                </button>
+                                            </form>
+                                        }
                                         <a asp-action="Details" asp-route-id="@registration.RegistrationId" class="btn btn-sm btn-light btn-icon" title="عرض التفاصيل" aria-label="عرض تفاصيل طلب @registration.RequestNumber">
                                             <i class="bi bi-eye" aria-hidden="true"></i>
                                         </a>
