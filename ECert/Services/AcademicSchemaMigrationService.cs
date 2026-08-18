@@ -1,5 +1,6 @@
 using System.Data;
 using ECert.Data;
+using ECert.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECert.Services;
