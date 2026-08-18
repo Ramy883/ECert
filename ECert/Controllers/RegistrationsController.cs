@@ -147,9 +147,6 @@ public class RegistrationsController : Controller
         reg.RejectedDate = DateTime.Now;
         reg.ProcessedBy = User.Identity?.Name ?? "System";
 
-        var course = await _db.Courses.FindAsync(reg.CourseId);
-        if (course != null && course.BookedSeats > 0) course.BookedSeats--;
-
         await _db.SaveChangesAsync();
 
         await _audit.LogAsync(User.Identity?.Name ?? "", "Reject", "Registration", model.RegistrationId, null, $"Reason: {model.Reason}");
@@ -178,9 +175,6 @@ public class RegistrationsController : Controller
         reg.ReopenedDate = DateTime.Now;
         reg.RejectionReason = null;
         reg.RejectedDate = null;
-
-        var course = await _db.Courses.FindAsync(reg.CourseId);
-        if (course != null) course.BookedSeats++;
 
         await _db.SaveChangesAsync();
         await _audit.LogAsync(User.Identity?.Name ?? "", "Reopen", "Registration", id, null, "Reopened to Pending");
@@ -278,20 +272,12 @@ public class RegistrationsController : Controller
         }
         else
         {
-            var courseIds = eligible.Select(r => r.CourseId).Distinct().ToArray();
-            var coursesById = await _db.Courses
-                .Where(c => courseIds.Contains(c.CourseId))
-                .ToDictionaryAsync(c => c.CourseId);
-
             foreach (var registration in eligible)
             {
                 registration.Status = "Rejected";
                 registration.RejectionReason = string.IsNullOrWhiteSpace(note) ? "تم الرفض ضمن إجراء جماعي" : note.Trim();
                 registration.RejectedDate = now;
                 registration.ProcessedBy = processedBy;
-
-                if (coursesById.TryGetValue(registration.CourseId, out var course) && course.BookedSeats > 0)
-                    course.BookedSeats--;
             }
         }
 

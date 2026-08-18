@@ -44,7 +44,6 @@ public class ECertDbContext : DbContext, IDataProtectionKeyContext
         base.OnModelCreating(modelBuilder);
 
         // Ignore computed properties
-        modelBuilder.Entity<Course>().Ignore(c => c.AvailableSeats);
         modelBuilder.Entity<Course>().Ignore(c => c.FinalPrice);
         modelBuilder.Entity<Invoice>().Ignore(i => i.RemainingAmount);
 

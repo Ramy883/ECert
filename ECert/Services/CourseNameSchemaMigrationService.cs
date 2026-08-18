@@ -52,6 +52,12 @@ WHERE `CourseNameArabic` IS NULL
 
         foreach (var course in courses)
         {
+            if (string.Equals(course.Status, "Full", StringComparison.OrdinalIgnoreCase))
+            {
+                course.Status = "OpenForRegistration";
+                changed = true;
+            }
+
             var legacyName = course.CourseName?.Trim() ?? string.Empty;
             var englishName = course.CourseNameEnglish?.Trim() ?? string.Empty;
             var arabicName = course.CourseNameArabic?.Trim() ?? string.Empty;

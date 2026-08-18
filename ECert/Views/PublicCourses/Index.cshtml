@@ -90,7 +90,6 @@
                                 {
                                     case "OpenForRegistration": <span class="badge bg-success">مفتوحة</span> break;
                                     case "Published": <span class="badge bg-warning text-dark">قريباً</span> break;
-                                    case "Full": <span class="badge bg-danger">ممتلئة</span> break;
                                     case "InProgress": <span class="badge bg-warning text-dark">جارية</span> break;
                                     case "Completed": <span class="badge bg-secondary">منتهية</span> break;
                                 }
@@ -105,7 +104,6 @@
                             <p class="small mb-1"><i class="bi bi-calendar"></i> تبدأ: @(course.StartDate?.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("ar-SA")) ?? "يحدد لاحقاً")</p>
                             <p class="small mb-1"><i class="bi bi-hourglass-split"></i> المدة: @course.DurationText</p>
                             <p class="small mb-1"><i class="bi bi-geo-alt"></i> @(string.IsNullOrWhiteSpace(course.Location) ? "عن بعد أو يحدد لاحقاً" : course.Location)</p>
-                            <p class="small mb-1"><i class="bi bi-people"></i> المقاعد: @(course.TotalSeats - course.BookedSeats) / @course.TotalSeats</p>
                             @if (!string.IsNullOrEmpty(course.DiscountType) && course.DiscountValue > 0)
                             {
                                 <p class="mb-0"><span class="text-muted text-decoration-line-through small">@course.Price.ToString("N0") ريال</span> <span class="fw-bold text-danger fs-5">@course.FinalPrice.ToString("N0") ريال</span></p>
@@ -117,13 +115,9 @@
                         </div>
                         <div class="card-footer bg-white">
                             <a asp-controller="PublicCourses" asp-action="Details" asp-route-id="@course.CourseId" class="btn btn-outline-primary btn-sm">التفاصيل</a>
-                            @if (course.Status == "OpenForRegistration" && course.AvailableSeats > 0)
+                            @if (course.Status == "OpenForRegistration")
                             {
                                 <a asp-controller="Registration" asp-action="Register" asp-route-courseId="@course.CourseId" class="btn btn-primary btn-sm">سجّل الآن</a>
-                            }
-                            else if (course.Status == "Full" || course.AvailableSeats <= 0)
-                            {
-                                <span class="btn btn-secondary btn-sm disabled"><i class="bi bi-x-circle"></i> العدد مكتمل</span>
                             }
                         </div>
                     </div>

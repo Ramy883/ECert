@@ -203,13 +203,13 @@
                                             <img src="/images/course-placeholder.svg" class="card-img-top course-img" alt="صورة افتراضية لدورة @course.CourseNameEnglish / @course.CourseNameArabic" loading="eager" decoding="async" />
                                         }
                                         <span class="badge course-badge">@course.Category?.CategoryName</span>
-                                        @if (course.Status == "OpenForRegistration" && course.AvailableSeats > 0)
+                                        @if (course.Status == "OpenForRegistration")
                                         {
                                             <span class="badge bg-success status-badge"><i class="bi bi-check-circle-fill"></i> متاح للتسجيل</span>
                                         }
                                         else
                                         {
-                                            <span class="badge bg-secondary status-badge"><i class="bi bi-x-circle-fill"></i> مكتمل</span>
+                                            <span class="badge bg-secondary status-badge"><i class="bi bi-info-circle-fill"></i> غير متاحة حالياً</span>
                                         }
                                     </div>
                                     <div class="card-body p-4">
@@ -235,26 +235,14 @@
                                             {
                                                 <span class="fw-bold text-primary fs-5">@course.Price.ToString("N0") ريال</span>
                                             }
-                                            <small class="text-muted"><i class="bi bi-people-fill"></i> @course.AvailableSeats مقعد</small>
-                                        </div>
-                                        @{
-                                            var totalSeats = course.TotalSeats > 0 ? course.TotalSeats : 1;
-                                            var bookedPercent = (int)((double)course.BookedSeats / totalSeats * 100);
-                                        }
-                                        <div class="seats-bar">
-                                            <div class="seats-bar-fill" style="width: @(100 - bookedPercent)%"></div>
                                         </div>
                                     </div>
                                     <div class="card-footer bg-white border-0 px-4 pb-4 pt-0">
                                         <div class="d-flex gap-2">
                                             <a asp-controller="PublicCourses" asp-action="Details" asp-route-id="@course.CourseId" class="btn btn-outline-primary btn-sm flex-fill rounded-pill">التفاصيل</a>
-                                            @if (course.Status == "OpenForRegistration" && course.AvailableSeats > 0)
+                                            @if (course.Status == "OpenForRegistration")
                                             {
                                                 <a asp-controller="Registration" asp-action="Register" asp-route-courseId="@course.CourseId" class="btn btn-primary btn-sm flex-fill rounded-pill">سجّل الآن</a>
-                                            }
-                                            else
-                                            {
-                                                <span class="btn btn-secondary btn-sm flex-fill rounded-pill disabled">مكتمل</span>
                                             }
                                         </div>
                                     </div>

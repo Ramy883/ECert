@@ -2,7 +2,7 @@
 @{
     ViewData["Title"] = "إدارة الدورات";
     ViewData["PageIcon"] = "bi-book";
-    ViewData["PageDesc"] = "إضافة وتعديل الدورات التدريبية ومتابعة المقاعد والأسعار";
+    ViewData["PageDesc"] = "إضافة وتعديل الدورات التدريبية ومتابعة حالاتها وأسعارها";
     Layout = "_AdminLayout";
 }
 <div class="page-header">
@@ -37,7 +37,6 @@
                         <th>الفئة</th>
                         <th>المدرب</th>
                         <th>السعر</th>
-                        <th>المقاعد</th>
                         <th>الحالة</th>
                         <th>التاريخ</th>
                         <th>إجراءات</th>
@@ -57,17 +56,11 @@
                                 <td>@course.Instructor?.FullName</td>
                                 <td>@course.Price.ToString("N0") ريال</td>
                                 <td>
-                                    <span class="@(course.AvailableSeats <= 0 ? "text-danger" : "text-success")">
-                                        @course.BookedSeats / @course.TotalSeats
-                                    </span>
-                                </td>
-                                <td>
                                     @switch (course.Status)
                                     {
                                         case "Draft": <span class="badge bg-secondary">مسودة</span> break;
                                         case "Published": <span class="badge bg-info">منشورة</span> break;
                                         case "OpenForRegistration": <span class="badge bg-success">مفتوحة للتسجيل</span> break;
-                                        case "Full": <span class="badge bg-danger">ممتلئة</span> break;
                                         case "InProgress": <span class="badge bg-primary">جارية</span> break;
                                         case "Completed": <span class="badge bg-dark">مكتملة</span> break;
                                         case "Archived": <span class="badge bg-warning text-dark">مؤرشفة</span> break;
@@ -96,7 +89,7 @@
                     }
                     else
                     {
-                        <tr><td colspan="8" class="text-center text-muted py-4">لا توجد دورات بعد</td></tr>
+                        <tr><td colspan="7" class="text-center text-muted py-4">لا توجد دورات بعد</td></tr>
                     }
                 </tbody>
             </table>

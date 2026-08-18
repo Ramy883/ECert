@@ -31,7 +31,6 @@ public class CoursesApiController : ControllerBase
             .Select(c => new
             {
                 c.CourseId, c.CourseName, c.ShortDescription, c.Price,
-                c.TotalSeats, c.BookedSeats, availableSeats = c.TotalSeats - c.BookedSeats,
                 c.Status, c.StartDate, c.EndDate, c.Location,
                 categoryName = c.Category!.CategoryName,
                 instructorName = c.Instructor!.FullName
@@ -42,7 +41,7 @@ public class CoursesApiController : ControllerBase
     public record CreateCourseRequest(
         string CourseName, string? ShortDescription, string? FullDescription,
         int CategoryId, int InstructorId, DateTime? StartDate, DateTime? EndDate,
-        string? Location, decimal Price, int TotalSeats, string Status);
+        string? Location, decimal Price, string Status);
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateCourseRequest req)
@@ -64,7 +63,6 @@ public class CoursesApiController : ControllerBase
             EndDate = req.EndDate,
             Location = req.Location,
             Price = req.Price,
-            TotalSeats = req.TotalSeats,
             Status = req.Status ?? "Draft",
             CreatedAt = DateTime.Now
         };
@@ -79,7 +77,7 @@ public class CoursesApiController : ControllerBase
     public record UpdateCourseRequest(
         string CourseName, string? ShortDescription, string? FullDescription,
         int CategoryId, int InstructorId, DateTime? StartDate, DateTime? EndDate,
-        string? Location, decimal Price, int TotalSeats, string Status);
+        string? Location, decimal Price, string Status);
 
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateCourseRequest req)
@@ -99,7 +97,6 @@ public class CoursesApiController : ControllerBase
         course.EndDate = req.EndDate;
         course.Location = req.Location;
         course.Price = req.Price;
-        course.TotalSeats = req.TotalSeats;
         course.Status = req.Status;
         await _db.SaveChangesAsync();
         await _audit.LogAsync(User.Identity?.Name ?? "", "Update", "Course", id, null, req.CourseName);

@@ -61,12 +61,12 @@ else
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light"><tr><th>الصف</th><th>الدورة</th><th>الفئة</th><th>المدرب</th><th>السعر</th><th>المقاعد</th><th>الحالة</th><th>التحقق</th></tr></thead>
+                    <thead class="table-light"><tr><th>الصف</th><th>الدورة</th><th>الفئة</th><th>المدرب</th><th>السعر</th><th>الحالة</th><th>التحقق</th></tr></thead>
                     <tbody>
                     @foreach (var row in Model.Preview.Rows)
                     {
                         <tr class="@(row.IsValid ? "" : "table-danger")">
-                            <td>@row.RowNumber</td><td><strong>@row.CourseName</strong></td><td>@row.Category</td><td>@row.Instructor</td><td>@row.Price.ToString("N0") ريال</td><td>@row.TotalSeats</td><td>@row.Status</td>
+                            <td>@row.RowNumber</td><td><strong>@row.CourseName</strong></td><td>@row.Category</td><td>@row.Instructor</td><td>@row.Price.ToString("N0") ريال</td><td>@row.Status</td>
                             <td>@if (row.IsValid) { <span class="badge bg-success">سليم</span> } else { <span class="text-danger small">@string.Join("، ", row.Errors)</span> }</td>
                         </tr>
                     }

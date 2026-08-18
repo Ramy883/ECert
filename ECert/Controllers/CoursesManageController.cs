@@ -79,7 +79,7 @@ public class CoursesManageController : Controller
         var headers = new[]
         {
             "CourseName", "Category", "Instructor", "Price", "DiscountType", "DiscountValue",
-            "TotalSeats", "BookedSeats", "StartDate", "EndDate", "Location", "Status",
+            "StartDate", "EndDate", "Location", "Status",
             "IsFeatured", "RequiresAcademicDetails", "ShortDescription", "FullDescription", "Objectives", "Content"
         };
         for (var i = 0; i < headers.Length; i++) sheet.Cell(1, i + 1).Value = headers[i];
@@ -92,13 +92,11 @@ public class CoursesManageController : Controller
         sheet.Cell(2, 4).Value = 1200;
         sheet.Cell(2, 5).Value = "Percentage";
         sheet.Cell(2, 6).Value = 10;
-        sheet.Cell(2, 7).Value = 20;
-        sheet.Cell(2, 8).Value = 0;
-        sheet.Cell(2, 9).Value = DateTime.Today.AddDays(7);
-        sheet.Cell(2, 10).Value = DateTime.Today.AddDays(14);
-        sheet.Cell(2, 12).Value = "Draft";
-        sheet.Cell(2, 13).Value = false;
-        sheet.Cell(2, 14).Value = false;
+        sheet.Cell(2, 7).Value = DateTime.Today.AddDays(7);
+        sheet.Cell(2, 8).Value = DateTime.Today.AddDays(14);
+        sheet.Cell(2, 10).Value = "Draft";
+        sheet.Cell(2, 11).Value = false;
+        sheet.Cell(2, 12).Value = false;
         sheet.Row(2).Style.Font.FontColor = XLColor.Gray;
         sheet.SheetView.FreezeRows(1);
         sheet.Columns().AdjustToContents();
@@ -199,8 +197,6 @@ public class CoursesManageController : Controller
                     Price = row.Price,
                     DiscountType = row.DiscountType,
                     DiscountValue = row.DiscountValue,
-                    TotalSeats = row.TotalSeats,
-                    BookedSeats = row.BookedSeats,
                     StartDate = row.StartDate,
                     EndDate = row.EndDate,
                     Location = row.Location,
@@ -236,7 +232,7 @@ public class CoursesManageController : Controller
         if (used.RowCount() < 2 || used.ColumnCount() < 4) throw new InvalidDataException();
         if (used.RowCount() > 5001) throw new InvalidDataException("The workbook exceeds the 5000-row limit.");
         var headers = Enumerable.Range(1, used.ColumnCount()).ToDictionary(i => CanonicalHeader(sheet.Cell(1, i).GetString()), i => i);
-        var required = new[] { "coursename", "category", "instructor", "price", "totalseats" };
+        var required = new[] { "coursename", "category", "instructor", "price" };
         var missing = required.Where(h => !headers.ContainsKey(h)).ToList();
         if (missing.Count > 0) throw new InvalidDataException($"Missing columns: {string.Join(",", missing)}");
 
@@ -260,8 +256,6 @@ public class CoursesManageController : Controller
             row.RequiresAcademicDetails = ParseBool(sheet, headers, rowNumber, "requiresacademicdetails");
             row.Price = ParseDecimal(sheet, headers, rowNumber, "price", row.Errors);
             row.DiscountValue = ParseDecimal(sheet, headers, rowNumber, "discountvalue", row.Errors);
-            row.TotalSeats = ParseInt(sheet, headers, rowNumber, "totalseats", row.Errors);
-            row.BookedSeats = ParseInt(sheet, headers, rowNumber, "bookedseats", row.Errors);
             row.StartDate = ParseDate(sheet, headers, rowNumber, "startdate", row.Errors);
             row.EndDate = ParseDate(sheet, headers, rowNumber, "enddate", row.Errors);
             if (string.IsNullOrWhiteSpace(row.CourseName)) row.Errors.Add("اسم الدورة مطلوب");
@@ -274,10 +268,8 @@ public class CoursesManageController : Controller
             if (row.DiscountValue < 0) row.Errors.Add("الخصم لا يمكن أن يكون سالباً");
             if (row.DiscountType is not (null or "" or "Percentage" or "Fixed")) row.Errors.Add("نوع الخصم يجب أن يكون Percentage أو Fixed");
             if (row.DiscountType == "Percentage" && row.DiscountValue > 100) row.Errors.Add("الخصم النسبي لا يمكن أن يتجاوز 100%");
-            if (row.TotalSeats <= 0) row.Errors.Add("عدد المقاعد يجب أن يكون أكبر من صفر");
-            if (row.BookedSeats < 0 || row.BookedSeats > row.TotalSeats) row.Errors.Add("المقاعد المحجوزة خارج النطاق");
             if (row.StartDate.HasValue && row.EndDate.HasValue && row.EndDate < row.StartDate) row.Errors.Add("تاريخ النهاية قبل تاريخ البداية");
-            var statuses = new[] { "Draft", "Published", "OpenForRegistration", "Full", "InProgress", "Completed", "Archived" };
+            var statuses = new[] { "Draft", "Published", "OpenForRegistration", "InProgress", "Completed", "Archived" };
             if (!statuses.Contains(row.Status, StringComparer.OrdinalIgnoreCase)) row.Errors.Add("حالة الدورة غير معروفة");
             preview.Rows.Add(row);
         }
@@ -300,8 +292,6 @@ public class CoursesManageController : Controller
             "السعر" or "سعر الدورة" or "سعر الدوره" => "price",
             "نوع الخصم" => "discounttype",
             "قيمة الخصم" => "discountvalue",
-            "عدد المقاعد" => "totalseats",
-            "المقاعد المحجوزة" or "المقاعد المحجوزه" => "bookedseats",
             "تاريخ البداية" or "تاريخ البدء" => "startdate",
             "تاريخ النهاية" or "تاريخ الانتهاء" => "enddate",
             "المكان" => "location",
@@ -419,7 +409,6 @@ public class CoursesManageController : Controller
         existing.Price = course.Price;
         existing.DiscountType = course.DiscountType;
         existing.DiscountValue = course.DiscountValue;
-        existing.TotalSeats = course.TotalSeats;
         existing.Status = course.Status;
         existing.IsFeatured = course.IsFeatured;
         existing.RequiresAcademicDetails = course.RequiresAcademicDetails;

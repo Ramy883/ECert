@@ -60,7 +60,6 @@ public class StudentsApiController : ControllerBase
             ProcessedBy = User.Identity?.Name ?? "System"
         };
 
-        course.BookedSeats++;
         _db.Registrations.Add(reg);
         await _db.SaveChangesAsync();
         await _audit.LogAsync(User.Identity?.Name ?? "", "Create", "Student", reg.RegistrationId, null, req.FullName);

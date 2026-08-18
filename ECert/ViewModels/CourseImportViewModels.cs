@@ -29,8 +29,6 @@ public sealed class CourseImportRow
     public decimal Price { get; set; }
     public decimal DiscountValue { get; set; }
     public string? DiscountType { get; set; }
-    public int TotalSeats { get; set; }
-    public int BookedSeats { get; set; }
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
     public string? Location { get; set; }

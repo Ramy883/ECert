@@ -13,14 +13,14 @@ public class PublicCoursesController : Controller
     {
         ViewBag.Categories = await _db.Categories
             .Where(c => c.IsActive)
-            .Include(c => c.Courses.Where(co => co.Status == "OpenForRegistration" || co.Status == "Published" || co.Status == "Full" || co.Status == "InProgress" || co.Status == "Completed"))
+            .Include(c => c.Courses.Where(co => co.Status == "OpenForRegistration" || co.Status == "Published" || co.Status == "InProgress" || co.Status == "Completed"))
             .ToListAsync();
 
         ViewBag.CurrentCategoryId = categoryId;
         ViewBag.Search = search;
 
         var query = _db.Courses.Include(c => c.Instructor).Include(c => c.Category)
-            .Where(c => c.Status == "OpenForRegistration" || c.Status == "Published" || c.Status == "Full" || c.Status == "InProgress" || c.Status == "Completed");
+            .Where(c => c.Status == "OpenForRegistration" || c.Status == "Published" || c.Status == "InProgress" || c.Status == "Completed");
 
         if (categoryId.HasValue)
             query = query.Where(c => c.CategoryId == categoryId.Value);

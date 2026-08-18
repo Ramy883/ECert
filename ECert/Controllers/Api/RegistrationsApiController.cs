@@ -92,9 +92,6 @@ public class RegistrationsApiController : ControllerBase
         reg.RejectedDate = DateTime.Now;
         reg.ProcessedBy = User.Identity?.Name ?? "System";
 
-        var course = await _db.Courses.FindAsync(reg.CourseId);
-        if (course != null && course.BookedSeats > 0) course.BookedSeats--;
-
         await _db.SaveChangesAsync();
         await _audit.LogAsync(User.Identity?.Name ?? "", "Reject", "Registration", id, null, $"Reason: {req.Reason}");
 
@@ -114,9 +111,6 @@ public class RegistrationsApiController : ControllerBase
         reg.ReopenedDate = DateTime.Now;
         reg.RejectionReason = null;
         reg.RejectedDate = null;
-
-        var course = await _db.Courses.FindAsync(reg.CourseId);
-        if (course != null) course.BookedSeats++;
 
         await _db.SaveChangesAsync();
         await _audit.LogAsync(User.Identity?.Name ?? "", "Reopen", "Registration", id);

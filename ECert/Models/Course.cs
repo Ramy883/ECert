@@ -80,21 +80,13 @@ public class Course
         _ => Price
     };
 
-    [Display(Name = "عدد المقاعد")]
-    public int TotalSeats { get; set; }
-
-    [Display(Name = "المقاعد المحجوزة")]
-    public int BookedSeats { get; set; } = 0;
-
-    public int AvailableSeats => TotalSeats - BookedSeats;
-
     [Display(Name = "قالب الشهادة")]
     public int? CertificateDesignId { get; set; }
     public CertificateDesign? CertificateDesign { get; set; }
 
     [Display(Name = "حالة الدورة")]
     public string Status { get; set; } = "Draft";
-    // Draft, Published, OpenForRegistration, Full, InProgress, Completed, Archived
+    // Draft, Published, OpenForRegistration, InProgress, Completed, Archived
 
     public bool IsFeatured { get; set; } = false;
 

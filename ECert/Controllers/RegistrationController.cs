@@ -27,12 +27,6 @@ public class RegistrationController : Controller
             TempData["Error"] = "التسجيل غير متاح لهذه الدورة حالياً.";
             return RedirectToAction("Details", "PublicCourses", new { id = courseId });
         }
-        if (course.AvailableSeats <= 0)
-        {
-            TempData["Error"] = "عذراً، العدد مكتمل في هذه الدورة.";
-            return RedirectToAction("Details", "PublicCourses", new { id = courseId });
-        }
-
         var vm = new PublicRegistrationViewModel
         {
             CourseId = courseId,
@@ -102,12 +96,6 @@ public class RegistrationController : Controller
             if (academic == null) return await ReturnFormAsync(model, course);
         }
 
-        if (course.AvailableSeats <= 0)
-        {
-            ModelState.AddModelError(string.Empty, "عذراً، لا توجد مقاعد متاحة في هذه الدورة.");
-            return await ReturnFormAsync(model, course);
-        }
-
         var requestNumber = $"REG-{DateTime.Now:yyyy}-{new Random().Next(10000, 99999)}";
         var registration = new Registration
         {
@@ -132,8 +120,6 @@ public class RegistrationController : Controller
         };
 
         _db.Registrations.Add(registration);
-        course.BookedSeats++;
-        if (course.AvailableSeats <= 0) course.Status = "Full";
         await _db.SaveChangesAsync();
 
         ViewBag.RequestNumber = requestNumber;
