@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS `AcademicLevelOptions` (
     PRIMARY KEY (`AcademicLevelOptionId`),
     UNIQUE KEY `UX_AcademicLevelOptions_SpecializationId_LevelName` (`AcademicSpecializationId`, `LevelName`),
     KEY `IX_AcademicLevelOptions_AcademicSpecializationId` (`AcademicSpecializationId`),
-    CONSTRAINT `FK_AcademicLevelOptions_AcademicSpecializations_AcademicSpecializationId` FOREIGN KEY (`AcademicSpecializationId`) REFERENCES `AcademicSpecializations` (`AcademicSpecializationId`) ON DELETE CASCADE
+    CONSTRAINT `FK_LevelOptions_Specialization` FOREIGN KEY (`AcademicSpecializationId`) REFERENCES `AcademicSpecializations` (`AcademicSpecializationId`) ON DELETE CASCADE
 ) ENGINE=InnoDB;");
     }
 
