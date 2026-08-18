@@ -47,6 +47,7 @@ builder.Services.AddScoped<CourseNameSchemaMigrationService>();
 builder.Services.AddScoped<RegistrationNameSchemaMigrationService>();
 builder.Services.AddScoped<RegistrationInvoiceService>();
 builder.Services.AddScoped<InvoiceSchemaMigrationService>();
+builder.Services.AddScoped<FeeExemptionSchemaMigrationService>();
 builder.Services.AddScoped<CertificateDesignService>();
 builder.Services.AddScoped<CertificateDesignSchemaMigrationService>();
 
@@ -131,6 +132,8 @@ using (var scope = app.Services.CreateScope())
         await registrationNameMigration.EnsureAsync();
         var invoiceMigration = scope.ServiceProvider.GetRequiredService<InvoiceSchemaMigrationService>();
         await invoiceMigration.EnsureAsync();
+        var feeExemptionMigration = scope.ServiceProvider.GetRequiredService<FeeExemptionSchemaMigrationService>();
+        await feeExemptionMigration.EnsureAsync();
         var certificateMigration = scope.ServiceProvider.GetRequiredService<CertificateSchemaMigrationService>();
         await certificateMigration.EnsureAsync();
         var academicMigration = scope.ServiceProvider.GetRequiredService<AcademicSchemaMigrationService>();

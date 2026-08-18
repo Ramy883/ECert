@@ -16,8 +16,13 @@
                     <tr><th>الهاتف</th><td>@Model.TraineePhone</td></tr>
                     <tr><th>الدورة بالعربية</th><td>@(Model.CourseNameArabic ?? Model.CourseName)</td></tr>
                     <tr><th>الدورة بالإنجليزية</th><td dir="ltr">@(Model.CourseNameEnglish ?? Model.CourseName)</td></tr>
-                    <tr><th>المبلغ الإجمالي</th><td class="fw-bold">@Model.TotalAmount.ToString("N0") ريال</td></tr>
-                    <tr><th>المبلغ المدفوع</th><td class="text-success">@Model.PaidAmount.ToString("N0") ريال</td></tr>
+                    <tr><th>الرسوم الأصلية</th><td>@Model.OriginalAmount.ToString("N2") ريال</td></tr>
+                    @if (Model.ExemptionAmount > 0)
+                    {
+                        <tr><th>الإعفاء</th><td class="text-success">@Model.ExemptionAmount.ToString("N2") ريال@(string.IsNullOrWhiteSpace(Model.ExemptionReason) ? "" : $" — {Model.ExemptionReason}")</td></tr>
+                    }
+                    <tr><th>المبلغ المستحق</th><td class="fw-bold">@Model.TotalAmount.ToString("N2") ريال</td></tr>
+                    <tr><th>المبلغ المدفوع</th><td class="text-success">@Model.PaidAmount.ToString("N2") ريال</td></tr>
                     <tr><th>المبلغ المتبقي</th><td class="text-danger">@Model.RemainingAmount.ToString("N0") ريال</td></tr>
                     <tr><th>الحالة</th><td>
                         @switch (Model.Status)

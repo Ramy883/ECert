@@ -34,6 +34,7 @@ public class ReportsController : Controller
         {
             var invoices = c.Registrations.Where(r => r.Invoice != null).Select(r => r.Invoice!).ToList();
             var payments = invoices.SelectMany(i => i.Payments).Where(p => !p.IsCancelled).ToList();
+            var exemptions = invoices.Sum(i => i.ExemptionAmount);
             var expected = invoices.Sum(i => i.TotalAmount);
             var paid = payments.Sum(p => p.Amount);
             var cash = payments.Where(p => p.PaymentMethod == "Cash").Sum(p => p.Amount);
@@ -42,6 +43,8 @@ public class ReportsController : Controller
             {
                 c.CourseName,
                 Registrations = c.Registrations.Count(r => r.Status == "Accepted"),
+                Original = invoices.Sum(i => i.OriginalAmount),
+                Exemptions = exemptions,
                 Expected = expected,
                 Paid = paid,
                 Remaining = expected - paid,
@@ -67,14 +70,16 @@ public class ReportsController : Controller
         var ws = wb.Worksheets.Add("إيرادات الدورات");
         ws.Cell(1, 1).Value = "الدورة";
         ws.Cell(1, 2).Value = "عدد المسجلين";
-        ws.Cell(1, 3).Value = "الإيراد المتوقع";
-        ws.Cell(1, 4).Value = "المدفوع";
-        ws.Cell(1, 5).Value = "المتبقي";
-        ws.Cell(1, 6).Value = "سداد كامل";
-        ws.Cell(1, 7).Value = "جزئي";
-        ws.Cell(1, 8).Value = "غير مسدد";
-        ws.Cell(1, 9).Value = "نقدي";
-        ws.Cell(1, 10).Value = "محافظ إلكترونية";
+        ws.Cell(1, 3).Value = "الرسوم الأصلية";
+        ws.Cell(1, 4).Value = "الإعفاءات";
+        ws.Cell(1, 5).Value = "الإيراد المتوقع";
+        ws.Cell(1, 6).Value = "المدفوع";
+        ws.Cell(1, 7).Value = "المتبقي";
+        ws.Cell(1, 8).Value = "سداد كامل";
+        ws.Cell(1, 9).Value = "جزئي";
+        ws.Cell(1, 10).Value = "غير مسدد";
+        ws.Cell(1, 11).Value = "نقدي";
+        ws.Cell(1, 12).Value = "محافظ إلكترونية";
         int row = 2;
         foreach (var c in courses)
         {
@@ -82,14 +87,16 @@ public class ReportsController : Controller
             var payments = invoices.SelectMany(i => i.Payments).Where(p => !p.IsCancelled).ToList();
             ws.Cell(row, 1).Value = c.CourseName;
             ws.Cell(row, 2).Value = c.Registrations.Count(r => r.Status == "Accepted");
-            ws.Cell(row, 3).Value = (double)invoices.Sum(i => i.TotalAmount);
-            ws.Cell(row, 4).Value = (double)payments.Sum(p => p.Amount);
-            ws.Cell(row, 5).Value = (double)(invoices.Sum(i => i.TotalAmount) - payments.Sum(p => p.Amount));
-            ws.Cell(row, 6).Value = invoices.Count(i => i.Status == "Paid");
-            ws.Cell(row, 7).Value = invoices.Count(i => i.Status == "PartiallyPaid");
-            ws.Cell(row, 8).Value = invoices.Count(i => i.Status == "Unpaid");
-            ws.Cell(row, 9).Value = (double)payments.Where(p => p.PaymentMethod == "Cash").Sum(p => p.Amount);
-            ws.Cell(row, 10).Value = (double)payments.Where(p => p.PaymentMethod != "Cash").Sum(p => p.Amount);
+            ws.Cell(row, 3).Value = (double)invoices.Sum(i => i.OriginalAmount);
+            ws.Cell(row, 4).Value = (double)invoices.Sum(i => i.ExemptionAmount);
+            ws.Cell(row, 5).Value = (double)invoices.Sum(i => i.TotalAmount);
+            ws.Cell(row, 6).Value = (double)payments.Sum(p => p.Amount);
+            ws.Cell(row, 7).Value = (double)(invoices.Sum(i => i.TotalAmount) - payments.Sum(p => p.Amount));
+            ws.Cell(row, 8).Value = invoices.Count(i => i.Status == "Paid");
+            ws.Cell(row, 9).Value = invoices.Count(i => i.Status == "PartiallyPaid");
+            ws.Cell(row, 10).Value = invoices.Count(i => i.Status == "Unpaid");
+            ws.Cell(row, 11).Value = (double)payments.Where(p => p.PaymentMethod == "Cash").Sum(p => p.Amount);
+            ws.Cell(row, 12).Value = (double)payments.Where(p => p.PaymentMethod != "Cash").Sum(p => p.Amount);
             row++;
         }
         ws.Columns().AdjustToContents();

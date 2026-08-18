@@ -47,6 +47,8 @@
                         <tr>
                             <th>الدورة</th>
                             <th>المسجلين</th>
+                            <th>الأصلي</th>
+                            <th>الإعفاءات</th>
                             <th>المتوقع</th>
                             <th>المدفوع</th>
                             <th>المتبقي</th>
@@ -63,6 +65,8 @@
                             <tr>
                                 <td class="fw-bold">@item.CourseName</td>
                                 <td>@item.Registrations</td>
+                                <td>@(((decimal)item.Original).ToString("N0")) ريال</td>
+                                <td class="text-success">@(((decimal)item.Exemptions).ToString("N0")) ريال</td>
                                 <td>@(((decimal)item.Expected).ToString("N0")) ريال</td>
                                 <td class="text-success">@(((decimal)item.Paid).ToString("N0")) ريال</td>
                                 <td class="text-danger">@(((decimal)item.Remaining).ToString("N0")) ريال</td>

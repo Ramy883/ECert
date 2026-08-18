@@ -39,8 +39,18 @@ public class Invoice
     [Display(Name = "الدورة بالعربية")]
     public string? CourseNameArabic { get; set; }
 
-    [Display(Name = "المبلغ الإجمالي")]
+    [Display(Name = "المبلغ الأصلي")]
+    public decimal OriginalAmount { get; set; }
+
+    [Display(Name = "مبلغ الإعفاء")]
+    public decimal ExemptionAmount { get; set; }
+
+    [Display(Name = "المبلغ الإجمالي المستحق")]
     public decimal TotalAmount { get; set; }
+
+    [Display(Name = "سبب الإعفاء")]
+    [StringLength(500)]
+    public string? ExemptionReason { get; set; }
 
     [Display(Name = "المبلغ المدفوع")]
     public decimal PaidAmount { get; set; } = 0;

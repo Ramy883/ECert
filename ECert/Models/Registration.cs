@@ -93,6 +93,19 @@ public class Registration
     [Display(Name = "تاريخ الأرشفة")]
     public DateTime? ArchivedDate { get; set; }
 
+    [Display(Name = "مبلغ الإعفاء")]
+    public decimal ExemptionAmount { get; set; } = 0;
+
+    [StringLength(500)]
+    [Display(Name = "سبب الإعفاء")]
+    public string? ExemptionReason { get; set; }
+
+    [Display(Name = "طبّق الإعفاء بواسطة")]
+    public string? ExemptionAppliedBy { get; set; }
+
+    [Display(Name = "تاريخ تطبيق الإعفاء")]
+    public DateTime? ExemptionAppliedAt { get; set; }
+
     public Invoice? Invoice { get; set; }
     public Certificate? Certificate { get; set; }
 }

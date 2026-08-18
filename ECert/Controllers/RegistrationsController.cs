@@ -184,6 +184,48 @@ public class RegistrationsController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ApplyExemption(ApplyExemptionViewModel model)
+    {
+        if (!HasPermission("manage-registrations")) return Forbid();
+
+        var reg = await _db.Registrations
+            .Include(r => r.Course)
+            .Include(r => r.Invoice)
+            .FirstOrDefaultAsync(r => r.RegistrationId == model.RegistrationId);
+        if (reg == null) return NotFound();
+
+        if (reg.Status is not ("Pending" or "Accepted"))
+        {
+            TempData["Error"] = "يمكن تطبيق الإعفاء على التسجيلات المعلقة أو المقبولة فقط.";
+            return RedirectToAction(nameof(Details), new { id = model.RegistrationId });
+        }
+
+        if (!ModelState.IsValid)
+        {
+            TempData["Error"] = string.Join(" ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
+            return RedirectToAction(nameof(Details), new { id = model.RegistrationId });
+        }
+
+        try
+        {
+            await _invoiceService.ApplyExemptionAsync(reg, model.ExemptionAmount, model.Reason, User.Identity?.Name ?? "System");
+            await _db.SaveChangesAsync();
+            await _audit.LogAsync(User.Identity?.Name ?? "", "ApplyExemption", "Registration", reg.RegistrationId, null,
+                $"Exemption: {reg.ExemptionAmount}; Reason: {reg.ExemptionReason ?? "-"}");
+            TempData["Success"] = reg.ExemptionAmount > 0
+                ? $"تم تطبيق إعفاء بقيمة {reg.ExemptionAmount:N2} ريال بنجاح."
+                : "تم إلغاء الإعفاء وإعادة الرسوم إلى قيمتها الأصلية.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Details), new { id = model.RegistrationId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Archive(int id, string? returnUrl)
     {
         if (!HasPermission("manage-registrations")) return Forbid();

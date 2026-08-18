@@ -94,6 +94,19 @@ public class RejectRegistrationViewModel
     public string Reason { get; set; } = string.Empty;
 }
 
+public class ApplyExemptionViewModel
+{
+    public int RegistrationId { get; set; }
+
+    [Display(Name = "مبلغ الإعفاء")]
+    [Range(0, double.MaxValue, ErrorMessage = "مبلغ الإعفاء لا يمكن أن يكون سالباً")]
+    public decimal ExemptionAmount { get; set; }
+
+    [StringLength(500, ErrorMessage = "سبب الإعفاء لا يمكن أن يتجاوز 500 حرف")]
+    [Display(Name = "سبب الإعفاء")]
+    public string? Reason { get; set; }
+}
+
 public class AddPaymentViewModel
 {
     public int InvoiceId { get; set; }
