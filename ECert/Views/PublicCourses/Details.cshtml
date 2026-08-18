@@ -58,7 +58,7 @@
                 <h5 class="card-title">معلومات الدورة</h5>
                 <hr />
                 <p><i class="bi bi-calendar"></i> <strong>البداية:</strong> @Model.StartDate?.ToString("yyyy-MM-dd")</p>
-                <p><i class="bi bi-calendar-check"></i> <strong>النهاية:</strong> @Model.EndDate?.ToString("yyyy-MM-dd")</p>
+                <p><i class="bi bi-hourglass-split"></i> <strong>المدة:</strong> @Model.DurationText</p>
                 <p><i class="bi bi-geo-alt"></i> <strong>المكان:</strong> @Model.Location</p>
                 <p><i class="bi bi-people"></i> <strong>المقاعد المتاحة:</strong> @(Model.TotalSeats - Model.BookedSeats) من @Model.TotalSeats</p>
                 @if (!string.IsNullOrEmpty(Model.DiscountType) && Model.DiscountValue > 0)

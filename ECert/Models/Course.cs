@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ECert.Models;
 
@@ -54,6 +55,12 @@ public class Course
 
     [Display(Name = "المكان")]
     public string? Location { get; set; }
+
+    /// <summary>
+    /// Public-facing duration derived from the stored date range; dates remain available to administration.
+    /// </summary>
+    [NotMapped]
+    public string DurationText => CourseDurationFormatter.Format(StartDate, EndDate);
 
     [Display(Name = "السعر")]
     [Range(0, double.MaxValue, ErrorMessage = "السعر يجب أن يكون موجباً")]

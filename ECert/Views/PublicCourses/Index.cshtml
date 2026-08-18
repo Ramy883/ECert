@@ -103,11 +103,7 @@
                             <hr />
                             <p class="small mb-1"><i class="bi bi-person"></i> @course.Instructor?.FullName</p>
                             <p class="small mb-1"><i class="bi bi-calendar"></i> تبدأ: @(course.StartDate?.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("ar-SA")) ?? "يحدد لاحقاً")</p>
-                            @if (course.StartDate.HasValue && course.EndDate.HasValue)
-                            {
-                                var durationDays = Math.Max(1, (course.EndDate.Value.Date - course.StartDate.Value.Date).Days + 1);
-                                <p class="small mb-1"><i class="bi bi-clock"></i> المدة: @durationDays يوم</p>
-                            }
+                            <p class="small mb-1"><i class="bi bi-hourglass-split"></i> المدة: @course.DurationText</p>
                             <p class="small mb-1"><i class="bi bi-geo-alt"></i> @(string.IsNullOrWhiteSpace(course.Location) ? "عن بعد أو يحدد لاحقاً" : course.Location)</p>
                             <p class="small mb-1"><i class="bi bi-people"></i> المقاعد: @(course.TotalSeats - course.BookedSeats) / @course.TotalSeats</p>
                             @if (!string.IsNullOrEmpty(course.DiscountType) && course.DiscountValue > 0)
