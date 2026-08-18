@@ -122,6 +122,9 @@ using (var scope = app.Services.CreateScope())
                 `Xml` LONGTEXT NOT NULL,
                 PRIMARY KEY (`Id`)
             ) CHARACTER SET utf8mb4;");
+        // Run this before every migration that queries Courses, because the EF model already includes CertificateDesignId.
+        var certificateDesignMigration = scope.ServiceProvider.GetRequiredService<CertificateDesignSchemaMigrationService>();
+        await certificateDesignMigration.EnsureAsync();
         var courseNameMigration = scope.ServiceProvider.GetRequiredService<CourseNameSchemaMigrationService>();
         await courseNameMigration.EnsureAsync();
         var registrationNameMigration = scope.ServiceProvider.GetRequiredService<RegistrationNameSchemaMigrationService>();
@@ -132,9 +135,6 @@ using (var scope = app.Services.CreateScope())
         await certificateMigration.EnsureAsync();
         var academicMigration = scope.ServiceProvider.GetRequiredService<AcademicSchemaMigrationService>();
         await academicMigration.EnsureAsync();
-        // This must run before seeding because the seeder queries Courses and related entities.
-        var certificateDesignMigration = scope.ServiceProvider.GetRequiredService<CertificateDesignSchemaMigrationService>();
-        await certificateDesignMigration.EnsureAsync();
         DbSeeder.Seed(db);
         DbSeeder.SeedHomepageCms(db);
     }
