@@ -128,14 +128,15 @@ using (var scope = app.Services.CreateScope())
         await registrationNameMigration.EnsureAsync();
         var invoiceMigration = scope.ServiceProvider.GetRequiredService<InvoiceSchemaMigrationService>();
         await invoiceMigration.EnsureAsync();
-        DbSeeder.Seed(db);
-        DbSeeder.SeedHomepageCms(db);
         var certificateMigration = scope.ServiceProvider.GetRequiredService<CertificateSchemaMigrationService>();
         await certificateMigration.EnsureAsync();
         var academicMigration = scope.ServiceProvider.GetRequiredService<AcademicSchemaMigrationService>();
         await academicMigration.EnsureAsync();
+        // This must run before seeding because the seeder queries Courses and related entities.
         var certificateDesignMigration = scope.ServiceProvider.GetRequiredService<CertificateDesignSchemaMigrationService>();
         await certificateDesignMigration.EnsureAsync();
+        DbSeeder.Seed(db);
+        DbSeeder.SeedHomepageCms(db);
     }
     catch (Exception ex)
     {
