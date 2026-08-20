@@ -143,6 +143,10 @@
                         <label asp-for="WebsiteUrl">موقع الويب</label>
                         <input asp-for="WebsiteUrl" tabindex="-1" autocomplete="off" />
                     </div>
+                    @if (!string.IsNullOrWhiteSpace(ViewBag.TurnstileSiteKey as string))
+                    {
+                        <div class="cf-turnstile mb-3" data-sitekey="@ViewBag.TurnstileSiteKey" data-action="registration"></div>
+                    }
                     <button type="submit" class="btn btn-primary w-100 btn-lg">إرسال طلب التسجيل</button>
                 </form>
             </div>
@@ -151,6 +155,10 @@
 </div>
 
 @section Scripts {
+@if (!string.IsNullOrWhiteSpace(ViewBag.TurnstileSiteKey as string))
+{
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+}
 <style>
     .search-select { position: relative; }
     .search-results { z-index: 1050; max-height: 220px; overflow-y: auto; }
