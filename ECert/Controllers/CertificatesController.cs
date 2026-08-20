@@ -6,6 +6,7 @@ using ECert.Models.ViewModels;
 using ECert.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECert.Controllers;
@@ -335,6 +336,7 @@ public class CertificatesController : Controller
     [AllowAnonymous]
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [EnableRateLimiting("public-verification")]
     public async Task<IActionResult> Verify(string code)
     {
         if (!IsVerifyRequestAllowed())
@@ -359,6 +361,7 @@ public class CertificatesController : Controller
 
     [AllowAnonymous]
     [HttpGet("/v/{publicId}")]
+    [EnableRateLimiting("public-verification")]
     public async Task<IActionResult> PublicVerify(string publicId, string? sig)
     {
         if (!IsVerifyRequestAllowed())

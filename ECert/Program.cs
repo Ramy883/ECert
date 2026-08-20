@@ -6,7 +6,9 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.ResponseCompression;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using System.Threading.RateLimiting;
 using Microsoft.Net.Http.Headers;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -95,6 +97,32 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddAuthorization();
 
+// Protect anonymous, database-backed endpoints from automated abuse. The key is the
+// client address observed from Render's forwarded headers; this is intentionally
+// endpoint-specific so normal browsing is not throttled by registration traffic.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("public-registration", context =>
+        RateLimitPartition.GetFixedWindowLimiter(GetClientAddress(context), _ =>
+            new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 3,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+    options.AddPolicy("public-verification", context =>
+        RateLimitPartition.GetFixedWindowLimiter(GetClientAddress(context), _ =>
+            new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 20,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+});
+
 builder.Services.AddResponseCompression(options =>
 {
     options.EnableForHttps = true;
@@ -159,6 +187,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseResponseCompression();
+app.UseRateLimiter();
 
 app.UseStaticFiles(new StaticFileOptions
 {
@@ -194,6 +223,15 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
+
+static string GetClientAddress(HttpContext context)
+{
+    var forwarded = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+    if (!string.IsNullOrWhiteSpace(forwarded))
+        return forwarded.Split(',')[0].Trim();
+
+    return context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+}
 
 static string ResolveMySqlConnectionString(IConfiguration configuration)
 {

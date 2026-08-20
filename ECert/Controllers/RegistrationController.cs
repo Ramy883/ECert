@@ -3,6 +3,7 @@ using ECert.Data;
 using ECert.Models.ViewModels;
 using ECert.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECert.Controllers;
@@ -39,6 +40,7 @@ public class RegistrationController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [EnableRateLimiting("public-registration")]
     public async Task<IActionResult> Register(PublicRegistrationViewModel model)
     {
         var course = await _db.Courses.FindAsync(model.CourseId);
@@ -84,6 +86,18 @@ public class RegistrationController : Controller
             }
         }
 
+        var normalizedPhone = $"{country.CountryCode}{phone}";
+        var duplicateExists = await _db.Registrations.AsNoTracking().AnyAsync(r =>
+            r.CourseId == model.CourseId &&
+            r.Phone == normalizedPhone &&
+            r.Status != "Rejected" &&
+            r.Status != "Archived");
+        if (duplicateExists)
+        {
+            ModelState.AddModelError(nameof(model.Phone), "يوجد تسجيل قائم بهذا الرقم لهذه الدورة بالفعل.");
+            return await ReturnFormAsync(model, course);
+        }
+
         var hasAnyAcademicValue = model.UniversityId.HasValue || model.CollegeId.HasValue ||
                                   model.AcademicSpecializationId.HasValue || !string.IsNullOrWhiteSpace(model.AcademicLevel);
         var needsAcademicDetails = course.RequiresAcademicDetails || model.IncludeAcademicDetails || hasAnyAcademicValue;
@@ -102,7 +116,7 @@ public class RegistrationController : Controller
             FullNameArabic = model.FullNameArabic.Trim(),
             FullNameEnglish = model.FullNameEnglish!.Trim(),
             Gender = model.Gender,
-            Phone = $"{country.CountryCode}{phone}",
+            Phone = normalizedPhone,
             Email = model.Email?.Trim(),
             HeardFrom = model.HeardFrom?.Trim(),
             CourseId = model.CourseId,
