@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECert.Controllers.Api;
@@ -17,21 +18,41 @@ public class AuthApiController : ControllerBase
 {
     private readonly ECertDbContext _db;
     private readonly AuditLogService _audit;
-    public AuthApiController(ECertDbContext db, AuditLogService audit) { _db = db; _audit = audit; }
+    private readonly LoginAttemptGuard _loginGuard;
+    public AuthApiController(ECertDbContext db, AuditLogService audit, LoginAttemptGuard loginGuard)
+    {
+        _db = db;
+        _audit = audit;
+        _loginGuard = loginGuard;
+    }
 
     [HttpPost("login")]
     [IgnoreAntiforgeryToken]
+    [EnableRateLimiting("admin-login")]
     public async Task<IActionResult> Login([FromBody] LoginViewModel model)
     {
         if (!ModelState.IsValid)
             return BadRequest(ApiResponse.Fail("البيانات المدخلة غير صحيحة"));
 
+        var username = model.Username.Trim();
+        var clientAddress = GetClientAddress();
+        var accountDelayed = _loginGuard.IsAccountDelayed(username, out var accountDelay);
+        var addressDelayed = _loginGuard.IsDelayed(username, clientAddress, out var addressDelay);
+        if (accountDelayed || addressDelayed)
+            await Task.Delay(accountDelayed ? accountDelay : addressDelay, HttpContext.RequestAborted);
+
         var user = await _db.Users
             .Include(u => u.UserRoles).ThenInclude(ur => ur.Role).ThenInclude(r => r!.RolePermissions).ThenInclude(rp => rp.Permission)
-            .FirstOrDefaultAsync(u => u.Username == model.Username && u.IsActive);
+            .FirstOrDefaultAsync(u => u.Username == username && u.IsActive);
 
         if (user == null || !BCrypt.Net.BCrypt.Verify(model.Password, user.PasswordHash))
+        {
+            _loginGuard.RegisterFailure(username, clientAddress);
+            _loginGuard.RegisterAccountFailure(username);
             return Ok(ApiResponse.Fail("اسم المستخدم أو كلمة المرور غير صحيحة"));
+        }
+
+        _loginGuard.RegisterSuccess(username, clientAddress);
 
         var claims = new List<Claim>
         {
@@ -68,6 +89,15 @@ public class AuthApiController : ControllerBase
             role = roleName,
             permissions
         }, "تم تسجيل الدخول بنجاح"));
+    }
+
+    private string GetClientAddress()
+    {
+        var forwarded = Request.Headers["X-Forwarded-For"].FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(forwarded))
+            return forwarded.Split(',')[0].Trim();
+
+        return HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
     }
 
     [Authorize]

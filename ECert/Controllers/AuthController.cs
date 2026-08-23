@@ -5,6 +5,7 @@ using ECert.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECert.Controllers;
@@ -13,16 +14,30 @@ public class AuthController : Controller
 {
     private readonly ECertDbContext _db;
     private readonly AuditLogService _audit;
-    public AuthController(ECertDbContext db, AuditLogService audit) { _db = db; _audit = audit; }
+    private readonly LoginAttemptGuard _loginGuard;
+    public AuthController(ECertDbContext db, AuditLogService audit, LoginAttemptGuard loginGuard)
+    {
+        _db = db;
+        _audit = audit;
+        _loginGuard = loginGuard;
+    }
 
     [HttpGet]
     public IActionResult Login() => View();
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [EnableRateLimiting("admin-login")]
     public async Task<IActionResult> Login(LoginViewModel model)
     {
         if (!ModelState.IsValid) return View(model);
+
+        var username = model.Username.Trim();
+        var clientAddress = GetClientAddress();
+        var accountDelayed = _loginGuard.IsAccountDelayed(username, out var accountDelay);
+        var addressDelayed = _loginGuard.IsDelayed(username, clientAddress, out var addressDelay);
+        if (accountDelayed || addressDelayed)
+            await Task.Delay(accountDelayed ? accountDelay : addressDelay, HttpContext.RequestAborted);
 
         var user = await _db.Users
             .Include(u => u.UserRoles).ThenInclude(ur => ur.Role).ThenInclude(r => r!.RolePermissions).ThenInclude(rp => rp.Permission)
@@ -30,9 +45,13 @@ public class AuthController : Controller
 
         if (user == null || !BCrypt.Net.BCrypt.Verify(model.Password, user.PasswordHash))
         {
+            _loginGuard.RegisterFailure(username, clientAddress);
+            _loginGuard.RegisterAccountFailure(username);
             ModelState.AddModelError("", "اسم المستخدم أو كلمة المرور غير صحيحة");
             return View(model);
         }
+
+        _loginGuard.RegisterSuccess(username, clientAddress);
 
         var claims = new List<Claim>
         {
@@ -66,6 +85,15 @@ public class AuthController : Controller
             "Finance" => RedirectToAction("Index", "FinanceDashboard"),
             _ => RedirectToAction("Index", "Dashboard")
         };
+    }
+
+    private string GetClientAddress()
+    {
+        var forwarded = Request.Headers["X-Forwarded-For"].FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(forwarded))
+            return forwarded.Split(',')[0].Trim();
+
+        return HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
     }
 
     public async Task<IActionResult> Logout()

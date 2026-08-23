@@ -43,6 +43,7 @@ builder.Services.AddScoped<AuditLogService>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddSingleton<CertificateSecurityService>();
 builder.Services.AddSingleton<VerifyRequestGuardService>();
+builder.Services.AddSingleton<LoginAttemptGuard>();
 builder.Services.AddScoped<CertificateSchemaMigrationService>();
 builder.Services.AddScoped<AcademicSchemaMigrationService>();
 builder.Services.AddScoped<CourseNameSchemaMigrationService>();
@@ -117,6 +118,15 @@ builder.Services.AddRateLimiter(options =>
             new FixedWindowRateLimiterOptions
             {
                 PermitLimit = 20,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+    options.AddPolicy("admin-login", context =>
+        RateLimitPartition.GetFixedWindowLimiter(GetClientAddress(context), _ =>
+            new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0,
                 AutoReplenishment = true
