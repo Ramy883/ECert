@@ -12,6 +12,13 @@
     <partial name="_PageHeader" />
 </div>
 
+<div class="alert alert-info d-flex align-items-start gap-2">
+    <i class="bi bi-info-circle-fill fs-5 mt-1"></i>
+    <div>
+        <strong>طريقة الظهور للعامة:</strong> الرابط يظهر للزوار في تذييل الموقع فقط عندما تكون <strong>الحالة مفعّلة</strong> (محددة) <strong>وبرابط حقيقي</strong> يبدأ بـ <code>https://</code> — الروابط التي قيمتها <code>#</code> أو فارغة لا تظهر أبداً.
+    </div>
+</div>
+
 <div class="row">
     <div class="col-md-8">
         <form method="post" action="/HomepageManage/SaveSocial">
@@ -42,8 +49,6 @@
                                         <input type="checkbox" name="links[@i].IsActive" value="true" class="form-check-input" @(l.IsActive ? "checked" : "") />
                                     </td>
                                     <td>
-                                        <a href="/HomepageManage/DeleteSocial/@l.SocialLinkId" class="btn btn-sm btn-outline-danger" onclick="event.preventDefault();this.closest('tr').querySelector('form')?.submit()">
-                                        </a>
                                         <form method="post" action="/HomepageManage/DeleteSocial" class="d-inline" onsubmit="return confirm('حذف؟')">
                                             <input type="hidden" name="id" value="@l.SocialLinkId" />
                                             <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>

@@ -332,6 +332,7 @@ public class HomepageManageController : Controller
             existing.IconClass = l.IconClass;
             existing.Url = l.Url;
             existing.IsActive = l.IsActive;
+            existing.SortOrder = l.SortOrder;
         }
         await _db.SaveChangesAsync();
         TempData["Success"] = "تم حفظ الروابط";
