@@ -73,6 +73,14 @@ public class Course
     [Range(0, double.MaxValue, ErrorMessage = "قيمة الخصم يجب أن تكون موجبة")]
     public decimal DiscountValue { get; set; } = 0;
 
+    // Retained for schema compatibility: production databases created by an older schema still
+    // expose TotalSeats/BookedSeats as NOT NULL columns without defaults. Keeping them on the
+    // model guarantees every EF INSERT (including course import) supplies a value.
+    [Display(Name = "المقاعد الإجمالية")]
+    public int TotalSeats { get; set; }
+    [Display(Name = "المقاعد المحجوزة")]
+    public int BookedSeats { get; set; }
+
     public decimal FinalPrice => DiscountType switch
     {
         "Percentage" => Price - (Price * DiscountValue / 100),

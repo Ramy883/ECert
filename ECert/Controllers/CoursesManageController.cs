@@ -110,6 +110,78 @@ public class CoursesManageController : Controller
         return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "courses-import-template.xlsx");
     }
 
+    [HttpGet]
+    public async Task<IActionResult> Export()
+    {
+        if (!HasPermission("manage-courses")) return Forbid();
+
+        var courses = await _db.Courses
+            .Include(c => c.Category)
+            .Include(c => c.Instructor)
+            .OrderByDescending(c => c.CreatedAt)
+            .ToListAsync();
+
+        using var workbook = new XLWorkbook();
+        var sheet = workbook.Worksheets.Add("Courses");
+        sheet.RightToLeft = true;
+
+        var headers = new[]
+        {
+            "رقم الدورة", "اسم الدورة (عربي)", "اسم الدورة (إنجليزي)", "الفئة", "المدرب", "السعر", "الخصم",
+            "تاريخ البداية", "تاريخ النهاية", "المكان", "الحالة", "مميزة", "الوصف المختصر"
+        };
+        for (var i = 0; i < headers.Length; i++)
+        {
+            var cell = sheet.Cell(1, i + 1);
+            cell.Value = headers[i];
+            cell.Style.Font.Bold = true;
+            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#2563eb");
+            cell.Style.Font.FontColor = XLColor.White;
+            cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+        }
+
+        for (var row = 0; row < courses.Count; row++)
+        {
+            var course = courses[row];
+            var excelRow = row + 2;
+            sheet.Cell(excelRow, 1).Value = course.CourseId;
+            sheet.Cell(excelRow, 2).Value = course.CourseNameArabic ?? course.CourseName;
+            sheet.Cell(excelRow, 3).Value = course.CourseNameEnglish ?? course.CourseName;
+            sheet.Cell(excelRow, 4).Value = course.Category?.CategoryName;
+            sheet.Cell(excelRow, 5).Value = course.Instructor?.FullName;
+            sheet.Cell(excelRow, 6).Value = course.Price;
+            sheet.Cell(excelRow, 7).Value = course.DiscountType == null ? "" : $"{course.DiscountType} ({course.DiscountValue})";
+            sheet.Cell(excelRow, 8).Value = course.StartDate?.ToString("yyyy-MM-dd") ?? "";
+            sheet.Cell(excelRow, 9).Value = course.EndDate?.ToString("yyyy-MM-dd") ?? "";
+            sheet.Cell(excelRow, 10).Value = course.Location;
+            sheet.Cell(excelRow, 11).Value = MapCourseStatus(course.Status);
+            sheet.Cell(excelRow, 12).Value = course.IsFeatured ? "نعم" : "لا";
+            sheet.Cell(excelRow, 13).Value = course.ShortDescription;
+        }
+
+        sheet.SheetView.FreezeRows(1);
+        sheet.Columns().AdjustToContents();
+        sheet.Column(2).Width = 40;
+        sheet.Column(3).Width = 34;
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        stream.Position = 0;
+        var fileName = $"courses_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+        return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+    }
+
+    private static string MapCourseStatus(string status) => status switch
+    {
+        "Draft" => "مسودة",
+        "Published" => "منشورة",
+        "OpenForRegistration" => "مفتوحة للتسجيل",
+        "InProgress" => "جارية",
+        "Completed" => "مكتملة",
+        "Archived" => "مؤرشفة",
+        _ => status
+    };
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequestSizeLimit(10_000_000)]
@@ -192,6 +264,8 @@ public class CoursesManageController : Controller
                 _db.Courses.Add(new Course
                 {
                     CourseName = row.CourseName,
+                    CourseNameEnglish = row.CourseName,
+                    CourseNameArabic = row.CourseName,
                     CategoryId = row.CategoryId!.Value,
                     InstructorId = row.InstructorId!.Value,
                     Price = row.Price,
@@ -207,6 +281,8 @@ public class CoursesManageController : Controller
                     FullDescription = row.FullDescription,
                     Objectives = row.Objectives,
                     Content = row.Content,
+                    TotalSeats = 0,
+                    BookedSeats = 0,
                     CreatedAt = DateTime.Now
                 });
             }
