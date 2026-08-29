@@ -232,6 +232,7 @@ public class CertificateDesignsController : Controller
                 TextAlign = CertificateDesignService.NormalizeTextAlign(payload.TextAlign),
                 IsVisible = payload.IsVisible,
                 ZIndex = Math.Clamp(payload.ZIndex, -100, 100),
+                Rotation = Math.Clamp(payload.Rotation, -180, 180),
                 SortOrder = result.Count
             };
 
@@ -266,5 +267,6 @@ public class CertificateDesignsController : Controller
         public string? TextAlign { get; set; }
         public bool IsVisible { get; set; } = true;
         public int ZIndex { get; set; }
+        public int Rotation { get; set; }
     }
 }

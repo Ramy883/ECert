@@ -60,6 +60,14 @@ CREATE TABLE IF NOT EXISTS `CertificateDesignElements` (
         ON DELETE CASCADE
 ) CHARACTER SET utf8mb4;");
 
+        var rotationColumnExists = await _db.Database
+            .SqlQueryRaw<int>("SELECT COUNT(*) AS `Value` FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'CertificateDesignElements' AND COLUMN_NAME = 'Rotation'")
+            .SingleAsync() > 0;
+        if (!rotationColumnExists)
+        {
+            await _db.Database.ExecuteSqlRawAsync("ALTER TABLE `CertificateDesignElements` ADD COLUMN `Rotation` INT NOT NULL DEFAULT 0");
+        }
+
         var courseDesignColumnExists = await _db.Database
             .SqlQueryRaw<int>("SELECT COUNT(*) AS `Value` FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Courses' AND COLUMN_NAME = 'CertificateDesignId'")
             .SingleAsync() > 0;

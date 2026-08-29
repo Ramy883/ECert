@@ -24,6 +24,7 @@
             e.TextAlign,
             e.IsVisible,
             e.ZIndex,
+            e.Rotation,
             e.SortOrder
         }), new JsonSerializerOptions
     {
@@ -31,389 +32,1108 @@
     });
     var fieldGroups = new[]
     {
-        new { Label = "الشهادة", Keys = new[] { "certificate_number", "issue_date", "issued_by", "status", "verification_code", "verification_url" } },
-        new { Label = "المتدرب", Keys = new[] { "trainee_name", "trainee_name_arabic", "trainee_name_english", "trainee_gender", "trainee_university", "trainee_college", "trainee_specialization", "trainee_academic_level" } },
-        new { Label = "الدورة", Keys = new[] { "course_name", "course_name_arabic", "course_name_english", "course_short_description", "course_location", "course_category", "course_start_date", "course_end_date" } },
-        new { Label = "المدرب", Keys = new[] { "instructor_name", "instructor_specialization", "instructor_bio" } }
+        new { Label = "بيانات الشهادة", Keys = new[] { "certificate_number", "issue_date", "status", "verification_code", "verification_url", "issued_by" } },
+        new { Label = "بيانات المتدرب", Keys = new[] { "trainee_name", "trainee_name_arabic", "trainee_name_english" } },
+        new { Label = "بيانات الدورة", Keys = new[] { "course_name", "course_name_arabic", "course_name_english" } }
     };
 }
 
 <style>
-    .template-shell { color: #182338; }
-    .template-hero { background: linear-gradient(135deg, #13233f 0%, #1d4e6f 55%, #c9a227 160%); color: #fff; border-radius: 24px; overflow: hidden; position: relative; }
-    .template-hero::after { content: ""; position: absolute; inset: auto -10% -65% 45%; height: 260px; background: rgba(255,255,255,.08); border-radius: 50%; transform: rotate(-12deg); }
-    .editor-card { border: 1px solid #e7edf4; border-radius: 18px; background: #fff; box-shadow: 0 16px 40px rgba(28, 48, 80, .08); }
-    .toolbar-card { position: sticky; top: 1rem; z-index: 4; }
-    .canvas-wrap { background: #f1f5f9; border-radius: 18px; padding: clamp(10px, 2vw, 24px); overflow: auto; }
-    .canvas-stage { position: relative; margin: auto; min-height: 1px; }
-    .certificate-canvas { position: absolute; top: 0; left: 0; margin: 0; overflow: hidden; transform-origin: top left; direction: rtl; box-shadow: 0 22px 60px rgba(15, 23, 42, .2); background: #fffdf7; }
-    .certificate-element { position: absolute; display: flex; align-items: center; justify-content: center; padding: 6px 10px; overflow: hidden; white-space: pre-wrap; line-height: 1.25; user-select: none; cursor: grab; word-break: break-word; transition: outline-color .15s ease, background .15s ease; }
-    .certificate-element:active { cursor: grabbing; }
-    .certificate-element.selected { outline: 2px dashed #0d6efd; outline-offset: 3px; background: rgba(13, 110, 253, .07); }
-    .certificate-element[data-element-type="divider"] { padding: 0; min-height: 2px; border-top: 2px solid currentColor; }
-    .field-chip { cursor: pointer; border: 1px solid #dce5ef; background: #f8fafc; border-radius: 999px; padding: .4rem .65rem; font-size: .8rem; color: #334155; transition: .15s ease; }
-    .field-chip:hover { background: #eaf2ff; border-color: #93c5fd; color: #1d4ed8; }
-    .field-chip-list { max-height: 190px; overflow-y: auto; padding: .25rem; border: 1px solid #eef2f7; border-radius: 12px; background: #fbfdff; }
-    .field-group-title { font-size: .72rem; font-weight: 800; color: #64748b; margin: .35rem 0 .25rem; }
-    .mini-label { font-size: .74rem; color: #64748b; font-weight: 700; margin-bottom: .3rem; display: block; }
-    .property-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .65rem; }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: #94a3b8; }
-    .status-dot.live { background: #22c55e; box-shadow: 0 0 0 4px rgba(34,197,94,.12); }
-    .template-list .list-group-item { border: 0; border-bottom: 1px solid #eef2f7; padding: .7rem .85rem; }
-    .template-list .list-group-item.active { background: #edf5ff; color: #0b5ed7; border-radius: 12px; margin: 3px; }
-    .mobile-hint { color: #64748b; font-size: .78rem; }
-    @@media (max-width: 991.98px) { .toolbar-card { position: static; } .certificate-canvas { width: 920px; } .canvas-wrap { overflow-x: auto; } }
-    @@media (max-width: 575.98px) { .template-hero { border-radius: 16px; } .template-hero h1 { font-size: 1.25rem; } .editor-card { border-radius: 14px; } .certificate-canvas { width: 760px; } .property-grid { grid-template-columns: 1fr; } }
+    :root {
+        --ped-accent: #4f6ef7;
+        --ped-accent-2: #6d8bff;
+        --ped-ink: #0f172a;
+        --ped-muted: #64748b;
+        --ped-line: #e2e8f0;
+        --ped-panel: #ffffff;
+        --ped-toolbar: #0d1b33;
+        --ped-toolbar-2: #152742;
+        --ped-danger: #ef4444;
+    }
+
+    .ped-app { color: var(--ped-ink); display: flex; flex-direction: column; height: calc(100vh - 78px); min-height: 620px; border-radius: 20px; overflow: hidden; background: #eef2f7; box-shadow: 0 24px 70px rgba(15, 23, 42, .18); border: 1px solid #dbe3ee; }
+
+    /* ---------- Toolbar ---------- */
+    .ped-toolbar { background: linear-gradient(180deg, var(--ped-toolbar) 0%, var(--ped-toolbar-2) 100%); color: #e6edf7; display: flex; align-items: center; gap: .5rem; padding: .55rem .8rem; flex-wrap: wrap; border-bottom: 1px solid rgba(255,255,255,.06); }
+    .ped-toolbar .tb-group { display: flex; align-items: center; gap: 3px; padding-inline: .45rem; border-inline-start: 1px solid rgba(255,255,255,.12); }
+    .ped-toolbar .tb-group:first-child { border-inline-start: 0; }
+    .ped-tbtn { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 9px; border: 0; background: transparent; color: #cdd9ea; font-size: 1rem; cursor: pointer; transition: .14s ease; }
+    .ped-tbtn:hover:not(:disabled) { background: rgba(255,255,255,.12); color: #fff; }
+    .ped-tbtn:disabled { opacity: .35; cursor: not-allowed; }
+    .ped-tbtn.on { background: var(--ped-accent); color: #fff; }
+    .ped-tbtn.danger:hover { background: rgba(239,68,68,.22); color: #ffb4b4; }
+    .ped-tbtn-label { display: inline-flex; align-items: center; gap: .4rem; }
+    .ped-name-input { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); color: #fff; border-radius: 9px; padding: .34rem .7rem; font-size: .9rem; width: 240px; }
+    .ped-name-input:focus { outline: 2px solid var(--ped-accent); border-color: transparent; }
+    .ped-zoom-label { min-width: 44px; text-align: center; font-size: .78rem; color: #b9c7da; font-variant-numeric: tabular-nums; }
+    .ped-btn-primary, .ped-btn-success, .ped-btn-ghost { border: 0; border-radius: 10px; padding: .45rem .95rem; font-weight: 700; font-size: .85rem; display: inline-flex; align-items: center; gap: .45rem; cursor: pointer; transition: .14s ease; }
+    .ped-btn-primary { background: var(--ped-accent); color: #fff; }
+    .ped-btn-primary:hover { background: #3d5ae0; }
+    .ped-btn-success { background: #16a34a; color: #fff; }
+    .ped-btn-success:hover { background: #15803d; }
+    .ped-btn-ghost { background: rgba(255,255,255,.08); color: #dbe5f2; }
+    .ped-btn-ghost:hover { background: rgba(255,255,255,.16); }
+
+    /* designs dropdown */
+    .ped-designs { position: relative; }
+    .ped-designs-menu { position: absolute; top: calc(100% + 8px); inset-inline-start: 0; z-index: 60; min-width: 290px; max-height: 380px; overflow-y: auto; background: #fff; color: var(--ped-ink); border-radius: 14px; box-shadow: 0 22px 55px rgba(2, 10, 25, .35); padding: .4rem; display: none; }
+    .ped-designs-menu.open { display: block; }
+    .ped-designs-menu .ds-item { display: flex; align-items: center; gap: .6rem; padding: .55rem .7rem; border-radius: 10px; cursor: pointer; text-decoration: none; color: inherit; }
+    .ped-designs-menu .ds-item:hover { background: #eef3ff; }
+    .ped-designs-menu .ds-item.active { background: #e7edff; box-shadow: inset 0 0 0 1px #c7d4ff; }
+    .ped-designs-menu .ds-divider { height: 1px; background: var(--ped-line); margin: .3rem .4rem; }
+    .ped-badge { font-size: .68rem; font-weight: 800; padding: .13rem .5rem; border-radius: 999px; }
+    .ped-badge.live { background: #dcfce7; color: #15803d; }
+    .ped-badge.draft { background: #e5e9f0; color: #64748b; }
+
+    /* ---------- Body ---------- */
+    .ped-body { flex: 1; display: flex; min-height: 0; }
+    .ped-panel { background: var(--ped-panel); width: 292px; flex-shrink: 0; overflow-y: auto; display: flex; flex-direction: column; }
+    .ped-panel.right { border-inline-start: 1px solid var(--ped-line); }
+    .ped-panel.left { border-inline-end: 1px solid var(--ped-line); }
+    .ped-panel-head { font-size: .76rem; font-weight: 800; color: var(--ped-muted); letter-spacing: .02em; padding: .8rem .9rem .45rem; }
+    .ped-panel-section { padding: .15rem .9rem .85rem; border-bottom: 1px solid #f1f5f9; }
+    .ped-panel-section:last-child { border-bottom: 0; }
+
+    .ped-canvas-area { flex: 1; overflow: auto; position: relative; background: #e7ecf3; background-image: radial-gradient(#c3cede 1px, transparent 1px); background-size: 22px 22px; }
+    .ped-canvas-area.ped-preview { background: #f4f6fa; }
+    .ped-stage { position: relative; margin: 46px auto 70px; width: 1px; height: 1px; }
+    .ped-canvas { position: absolute; top: 0; left: 0; transform-origin: top left; direction: rtl; overflow: hidden; background: #fffdf7; box-shadow: 0 28px 80px rgba(15, 23, 42, .32); border-radius: 6px; }
+
+    /* grid overlay */
+    .ped-grid { position: absolute; inset: 0; pointer-events: none; background-image: linear-gradient(rgba(79,110,247,.10) 1px, transparent 1px), linear-gradient(90deg, rgba(79,110,247,.10) 1px, transparent 1px); background-size: 28px 28px; display: none; }
+    .ped-app.grid-on .ped-grid { display: block; }
+
+    /* elements */
+    .ped-el { position: absolute; display: flex; align-items: center; justify-content: center; padding: 6px 10px; overflow: hidden; white-space: pre-wrap; line-height: 1.3; user-select: none; cursor: grab; word-break: break-word; box-sizing: border-box; }
+    .ped-el:active { cursor: grabbing; }
+    .ped-el.el-divider { cursor: grab; padding: 0; border-top: 2px solid currentColor; height: 0 !important; background: transparent !important; }
+    .ped-el.el-divider .ped-el-inner { display: none; }
+
+    /* selection overlay */
+    .ped-overlay { position: absolute; pointer-events: none; z-index: 9999; }
+    .ped-overlay .ped-box { position: absolute; inset: 0; border: 1.5px solid var(--ped-accent); border-radius: 2px; background: rgba(79,110,247,.06); }
+    .ped-overlay .ped-handle { position: absolute; width: 13px; height: 13px; background: #fff; border: 2px solid var(--ped-accent); border-radius: 4px; pointer-events: all; }
+    .ped-overlay .ped-handle.h-nw { top: -7px; left: -7px; cursor: nwse-resize; }
+    .ped-overlay .ped-handle.h-n { top: -7px; left: calc(50% - 6px); cursor: ns-resize; }
+    .ped-overlay .ped-handle.h-ne { top: -7px; right: -7px; cursor: nesw-resize; }
+    .ped-overlay .ped-handle.h-e { top: calc(50% - 6px); right: -7px; cursor: ew-resize; }
+    .ped-overlay .ped-handle.h-se { bottom: -7px; right: -7px; cursor: nwse-resize; }
+    .ped-overlay .ped-handle.h-s { bottom: -7px; left: calc(50% - 6px); cursor: ns-resize; }
+    .ped-overlay .ped-handle.h-sw { bottom: -7px; left: -7px; cursor: nesw-resize; }
+    .ped-overlay .ped-handle.h-w { top: calc(50% - 6px); left: -7px; cursor: ew-resize; }
+    .ped-overlay .ped-rotate { position: absolute; top: -34px; left: calc(50% - 9px); width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 2px solid var(--ped-accent); display: flex; align-items: center; justify-content: center; font-size: 9px; color: var(--ped-accent); pointer-events: all; cursor: grab; }
+    .ped-overlay .ped-rotate-line { position: absolute; top: -27px; left: 50%; width: 1.5px; height: 20px; background: var(--ped-accent); opacity: .55; }
+    .ped-overlay .ped-dim { position: absolute; bottom: -26px; left: 50%; transform: translateX(-50%); background: var(--ped-toolbar); color: #fff; font-size: .7rem; font-weight: 800; padding: .12rem .5rem; border-radius: 7px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+    /* snap guides */
+    .ped-guide { position: absolute; pointer-events: none; z-index: 9998; display: none; }
+    .ped-guide.g-x { top: 0; bottom: 0; width: 1px; background: #ef4444; box-shadow: 0 0 0 1px rgba(255,255,255,.7); }
+    .ped-guide.g-y { left: 0; right: 0; height: 1px; background: #ef4444; box-shadow: 0 0 0 1px rgba(255,255,255,.7); }
+
+    /* library */
+    .ped-field-chip { display: flex; align-items: center; gap: .5rem; width: 100%; text-align: start; border: 1px solid var(--ped-line); background: #f8fafc; border-radius: 10px; padding: .45rem .6rem; font-size: .8rem; color: #334155; cursor: pointer; margin-bottom: .4rem; transition: .13s ease; }
+    .ped-field-chip:hover { background: #eef3ff; border-color: #bcd0ff; color: var(--ped-accent); }
+    .ped-field-chip i { color: var(--ped-accent-2); }
+    .ped-group-title { font-size: .7rem; font-weight: 800; color: var(--ped-muted); margin: .5rem 0 .35rem; }
+    .ped-add-row { display: grid; grid-template-columns: 1fr 1fr; gap: .45rem; margin-bottom: .5rem; }
+    .ped-add-btn { border: 1.5px dashed #b9c8e8; background: #fbfdff; color: #3b5bd6; border-radius: 10px; padding: .55rem .3rem; font-size: .8rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: .35rem; transition: .13s ease; }
+    .ped-add-btn:hover { background: #eef3ff; border-color: var(--ped-accent); }
+
+    /* layers */
+    .ped-layer { display: flex; align-items: center; gap: .5rem; border: 1px solid transparent; border-radius: 9px; padding: .4rem .5rem; cursor: pointer; margin-bottom: 2px; }
+    .ped-layer:hover { background: #f1f5f9; }
+    .ped-layer.active { background: #e7edff; border-color: #c7d4ff; }
+    .ped-layer .ly-icon { width: 26px; height: 26px; border-radius: 8px; background: #eef2f7; display: flex; align-items: center; justify-content: center; color: #4b6bd6; font-size: .85rem; flex-shrink: 0; }
+    .ped-layer .ly-name { flex: 1; font-size: .8rem; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ped-layer .ly-btn { border: 0; background: transparent; color: #94a3b8; font-size: .9rem; padding: .15rem .2rem; border-radius: 6px; cursor: pointer; }
+    .ped-layer .ly-btn:hover { color: var(--ped-accent); background: #dbe6ff; }
+    .ped-layer .ly-btn.danger:hover { color: var(--ped-danger); background: #fee2e2; }
+    .ped-layer .ly-eye.off { color: #cbd5e1; }
+    .ped-empty { text-align: center; color: #94a3b8; font-size: .78rem; padding: 1rem .4rem; }
+
+    /* properties */
+    .ped-prop { margin-bottom: .65rem; }
+    .ped-prop label { font-size: .72rem; font-weight: 800; color: var(--ped-muted); display: flex; justify-content: space-between; align-items: center; margin-bottom: .25rem; }
+    .ped-prop .pv { font-size: .7rem; color: #94a3b8; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .ped-input, .ped-select, .ped-textarea { width: 100%; border: 1px solid var(--ped-line); border-radius: 9px; padding: .42rem .55rem; font-size: .82rem; color: #1e293b; background: #fff; }
+    .ped-input:focus, .ped-select:focus, .ped-textarea:focus { outline: 2px solid #cdd9ff; border-color: var(--ped-accent); }
+    .ped-color-row { display: flex; align-items: center; gap: .45rem; }
+    .ped-color-input { width: 44px; height: 34px; padding: 2px; border: 1px solid var(--ped-line); border-radius: 9px; background: #fff; cursor: pointer; }
+    .ped-color-hex { flex: 1; font-size: .78rem; font-variant-numeric: tabular-nums; color: #475569; text-transform: lowercase; }
+    .ped-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+    .ped-size-presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: .35rem; margin-top: .4rem; }
+    .ped-size-presets button { border: 1px solid var(--ped-line); background: #f8fafc; font-size: .68rem; font-weight: 700; color: #475569; border-radius: 8px; padding: .35rem .2rem; cursor: pointer; }
+    .ped-size-presets button:hover, .ped-size-presets button.on { background: #e7edff; border-color: var(--ped-accent); color: var(--ped-accent); }
+    .ped-switch { display: flex; align-items: center; gap: .5rem; cursor: pointer; font-size: .8rem; color: #334155; }
+    .ped-switch input { width: 17px; height: 17px; accent-color: var(--ped-accent); cursor: pointer; }
+    .ped-seg { display: flex; background: #eef2f7; border-radius: 9px; padding: 3px; gap: 3px; }
+    .ped-seg button { flex: 1; border: 0; background: transparent; border-radius: 7px; padding: .32rem 0; font-size: .82rem; color: #64748b; cursor: pointer; }
+    .ped-seg button.on { background: #fff; color: var(--ped-accent); font-weight: 800; box-shadow: 0 1px 4px rgba(15,23,42,.12); }
+    .ped-help { font-size: .7rem; color: #94a3b8; line-height: 1.7; }
+    .ped-kbd { display: inline-block; background: #eef2f7; border: 1px solid #dce3ee; border-bottom-width: 2px; border-radius: 5px; padding: 0 .3rem; font-size: .68rem; font-weight: 800; color: #475569; }
+
+    /* preview mode */
+    .ped-app.preview-mode .ped-panel { display: none; }
+    .ped-app.preview-mode .ped-canvas-area { background: #273449; background-image: none; }
+    .ped-app.preview-mode .ped-el { cursor: default; }
+    .ped-app.preview-mode .ped-overlay, .ped-app.preview-mode .ped-guide, .ped-app.preview-mode .ped-grid { display: none; }
+
+    /* toolbar responsive */
+    @@media (max-width: 1199.98px) {
+        .ped-panel { width: 258px; }
+        .ped-name-input { width: 170px; }
+    }
+    @@media (max-width: 991.98px) {
+        .ped-app { height: auto; min-height: 0; border-radius: 14px; }
+        .ped-body { flex-direction: column; }
+        .ped-panel { width: 100%; max-height: 260px; order: 3; border: 0 !important; border-top: 1px solid var(--ped-line) !important; }
+        .ped-canvas-area { order: 1; min-height: 480px; }
+        .ped-name-input { width: 150px; }
+    }
+    @@media (max-width: 575.98px) {
+        .ped-toolbar { padding: .45rem; }
+        .ped-tbtn-label span.txt { display: none; }
+        .ped-canvas-area { min-height: 400px; }
+    }
 </style>
 
-<div class="container-fluid py-3 template-shell">
-    <div class="template-hero p-4 p-lg-5 mb-4">
-        <div class="position-relative" style="z-index:1;">
-            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                <span class="badge rounded-pill text-bg-light text-primary">نظام الهوية والشهادات</span>
-                @if (Model.Design.IsPublished) { <span class="badge rounded-pill bg-success-subtle text-success-emphasis"><span class="status-dot live"></span> منشور للمتدربين</span> }
-                else { <span class="badge rounded-pill bg-light text-secondary"><span class="status-dot"></span> مسودة خاصة</span> }
+<div class="ped-app" id="pedApp">
+    <!-- ============ Toolbar ============ -->
+    <div class="ped-toolbar">
+        <div class="tb-group">
+            <div class="ped-designs">
+                <button type="button" class="ped-btn-ghost" id="designsToggle" title="قائمة التصاميم"><i class="bi bi-collection"></i><span class="txt">@Model.Design.Name</span> <i class="bi bi-chevron-down" style="font-size:.7rem;"></i></button>
+                <div class="ped-designs-menu" id="designsMenu">
+                    <div class="ped-panel-head" style="padding:.35rem .6rem;">تصاميم القوالب</div>
+                    @foreach (var item in Model.Designs)
+                    {
+                        <a class="ds-item @(item.CertificateDesignId == Model.Design.CertificateDesignId ? "active" : "")" asp-action="Index" asp-route-id="@item.CertificateDesignId">
+                            <i class="bi @(item.IsPublished ? "bi-broadcast text-success" : "bi-file-earmark")" style="font-size:.95rem;"></i>
+                            <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@item.Name</span>
+                            <span class="ped-badge @(item.IsPublished ? "live" : "draft")">@(item.IsPublished ? "منشور" : "مسودة")</span>
+                        </a>
+                    }
+                    <div class="ds-divider"></div>
+                    <a class="ds-item" asp-action="New"><i class="bi bi-plus-circle text-primary"></i><span style="font-weight:700;">تصميم جديد</span></a>
+                </div>
             </div>
-            <h1 class="fw-bold mb-2">مصمم الشهادة</h1>
-            <p class="mb-0 opacity-75" style="max-width:720px;">صمّم واجهة الشهادة مرة واحدة، وسيظهر القالب المنشور في نتائج التحقق العامة مع بيانات كل متدرب بشكل تلقائي. البيانات الأصلية لا يمكن تعديلها من هذا المحرر.</p>
+        </div>
+
+        <div class="tb-group">
+            <button type="button" class="ped-tbtn" id="undoBtn" title="تراجع (Ctrl+Z)" disabled><i class="bi bi-arrow-counterclockwise"></i></button>
+            <button type="button" class="ped-tbtn" id="redoBtn" title="إعادة (Ctrl+Y)" disabled><i class="bi bi-arrow-clockwise"></i></button>
+            <button type="button" class="ped-tbtn" id="duplicateBtn" title="تكرار العنصر (Ctrl+D)" disabled><i class="bi bi-files"></i></button>
+            <button type="button" class="ped-tbtn danger" id="deleteBtn" title="حذف (Del)" disabled><i class="bi bi-trash3"></i></button>
+        </div>
+
+        <div class="tb-group">
+            <button type="button" class="ped-tbtn" id="alignLeft" title="محاذاة لليمين"><i class="bi bi-arrow-bar-right"></i></button>
+            <button type="button" class="ped-tbtn" id="alignHCenter" title="توسيط أفقي"><i class="bi bi-hr"></i></button>
+            <button type="button" class="ped-tbtn" id="alignRight" title="محاذاة لليسار"><i class="bi bi-arrow-bar-left"></i></button>
+            <button type="button" class="ped-tbtn" id="alignTop" title="محاذاة للأعلى"><i class="bi bi-arrow-bar-up"></i></button>
+            <button type="button" class="ped-tbtn" id="alignVCenter" title="توسيط عمودي"><i class="bi bi-vr"></i></button>
+            <button type="button" class="ped-tbtn" id="alignBottom" title="محاذاة للأسفل"><i class="bi bi-arrow-bar-down"></i></button>
+        </div>
+
+        <div class="tb-group">
+            <button type="button" class="ped-tbtn" id="toFront" title="إلى المقدمة"><i class="bi bi-layers"></i></button>
+            <button type="button" class="ped-tbtn" id="forward" title="تقديم للأمام"><i class="bi bi-arrow-up-short"></i></button>
+            <button type="button" class="ped-tbtn" id="backward" title="إرجاع للخلف"><i class="bi bi-arrow-down-short"></i></button>
+            <button type="button" class="ped-tbtn" id="toBack" title="إلى الخلف"><i class="bi bi-layers-half"></i></button>
+        </div>
+
+        <div class="tb-group">
+            <button type="button" class="ped-tbtn" id="gridToggle" title="إظهار الشبكة"><i class="bi bi-grid-3x3-gap"></i></button>
+            <button type="button" class="ped-tbtn on" id="snapToggle" title="الالتقاط الذكي"><i class="bi bi-magnet"></i></button>
+        </div>
+
+        <div class="tb-group">
+            <button type="button" class="ped-tbtn" id="zoomOut" title="تصغير"><i class="bi bi-dash-lg"></i></button>
+            <span class="ped-zoom-label" id="zoomLabel">70%</span>
+            <button type="button" class="ped-tbtn" id="zoomIn" title="تكبير"><i class="bi bi-plus-lg"></i></button>
+            <button type="button" class="ped-tbtn" id="zoomFit" title="ملاءمة العرض"><i class="bi bi-arrows-fullscreen"></i></button>
+        </div>
+
+        <div class="tb-group" style="margin-inline-start:auto;">
+            <button type="button" class="ped-btn-ghost" id="previewToggle" title="معاينة الشهادة النهائية"><i class="bi bi-eye"></i><span class="txt">معاينة</span></button>
+            <button type="button" class="ped-btn-primary" id="saveDraftBtn"><i class="bi bi-save2"></i><span class="txt">حفظ كمسودة</span></button>
+            <button type="button" class="ped-btn-success" id="publishBtn"><i class="bi bi-broadcast"></i><span class="txt">حفظ ونشر</span></button>
         </div>
     </div>
 
-    @if (TempData["Success"] is string success) { <div class="alert alert-success border-0 shadow-sm">@success</div> }
-    @if (TempData["Error"] is string error) { <div class="alert alert-danger border-0 shadow-sm">@error</div> }
+    <!-- ============ Body ============ -->
+    <div class="ped-body">
+        <!-- Library & Layers -->
+        <aside class="ped-panel left" id="leftPanel">
+            <div class="ped-panel-head"><i class="bi bi-collection-play"></i> لوحة العناصر</div>
+            <div class="ped-panel-section">
+                <div class="ped-add-row">
+                    <button type="button" class="ped-add-btn" id="addTextBtn"><i class="bi bi-type"></i> نص</button>
+                    <button type="button" class="ped-add-btn" id="addDividerBtn"><i class="bi bi-dash-lg"></i> فاصل</button>
+                </div>
+                <div class="ped-group-title">حقول ديناميكية (تتعبأ تلقائياً عند التحقق)</div>
+                @foreach (var group in fieldGroups)
+                {
+                    <div class="ped-group-title">@group.Label</div>
+                    @foreach (var key in group.Keys.Where(key => Model.FieldLabels.ContainsKey(key)))
+                    {
+                        <button type="button" class="ped-field-chip quick-field" data-field="@key"><i class="bi bi-link-45deg"></i> @Model.FieldLabels[key]</button>
+                    }
+                }
+            </div>
+            <div class="ped-panel-head"><i class="bi bi-stack"></i> الطبقات <span class="float-start small text-muted fw-normal" id="layerCount"></span></div>
+            <div class="ped-panel-section" style="flex:1;">
+                <div id="layersList"></div>
+            </div>
+        </aside>
 
-    <form id="templateForm" asp-action="Save" method="post" class="row g-3">
+        <!-- Canvas -->
+        <main class="ped-canvas-area" id="canvasArea">
+            <div class="ped-stage" id="canvasStage">
+                <div class="ped-canvas" id="certificateCanvas">
+                    <div class="ped-grid" id="gridOverlay"></div>
+                    <div class="ped-guide g-x" id="guideX"></div>
+                    <div class="ped-guide g-y" id="guideY"></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Properties -->
+        <aside class="ped-panel right" id="rightPanel">
+            <div class="ped-panel-head" id="propsTitle"><i class="bi bi-sliders2"></i> إعدادات القالب</div>
+
+            <div class="ped-panel-section" id="canvasProps">
+                <div class="ped-prop">
+                    <label for="templateName">اسم القالب</label>
+                    <input class="ped-input" id="templateName" name="Name" maxlength="120" value="@Model.Design.Name" required />
+                </div>
+                <div class="ped-prop">
+                    <label>مقاس اللوحة <span class="pv" id="sizeLabel"></span></label>
+                    <div class="ped-grid-2">
+                        <div><label class="small text-muted" style="font-size:.68rem;">العرض (px)</label><input class="ped-input" type="number" id="canvasWidthInput" min="800" max="1600" /></div>
+                        <div><label class="small text-muted" style="font-size:.68rem;">الارتفاع (px)</label><input class="ped-input" type="number" id="canvasHeightInput" min="500" max="1200" /></div>
+                    </div>
+                    <div class="ped-size-presets" id="sizePresets">
+                        <button type="button" data-w="1120" data-h="792">أفقي A4</button>
+                        <button type="button" data-w="792" data-h="1120">عمودي</button>
+                        <button type="button" data-w="1200" data-h="800">عريض</button>
+                        <button type="button" data-w="900" data-h="900">مربع</button>
+                    </div>
+                </div>
+                <div class="ped-prop">
+                    <label for="backgroundColor">لون الخلفية</label>
+                    <div class="ped-color-row">
+                        <input type="color" class="ped-color-input" id="backgroundColor" value="@Model.Design.BackgroundColor" />
+                        <span class="ped-color-hex" id="backgroundColorHex">@Model.Design.BackgroundColor</span>
+                    </div>
+                </div>
+                <div class="ped-prop">
+                    <label for="borderColor">لون الإطار</label>
+                    <div class="ped-color-row">
+                        <input type="color" class="ped-color-input" id="borderColor" value="@Model.Design.BorderColor" />
+                        <span class="ped-color-hex" id="borderColorHex">@Model.Design.BorderColor</span>
+                    </div>
+                </div>
+                <div class="ped-grid-2">
+                    <div class="ped-prop"><label for="borderWidth">سماكة الإطار</label><input class="ped-input" type="number" id="borderWidth" min="0" max="24" value="@Model.Design.BorderWidth" /></div>
+                    <div class="ped-prop"><label for="borderRadius">انحناء الزوايا</label><input class="ped-input" type="number" id="borderRadius" min="0" max="80" value="@Model.Design.BorderRadius" /></div>
+                </div>
+                <div class="ped-prop">
+                    <label class="small text-muted">خيارات المساعدة</label>
+                    <div style="display:flex;gap:1rem;">
+                        <label class="ped-switch"><input type="checkbox" id="optGrid" checked /> الشبكة</label>
+                        <label class="ped-switch"><input type="checkbox" id="optSnap" checked /> الالتقاط</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ped-panel-section d-none" id="elementProps">
+                <div style="display:flex;align-items:center;gap:.45rem;margin-bottom:.6rem;">
+                    <span class="ped-badge" style="background:#e7edff;color:var(--ped-accent);" id="elTypeBadge">نص</span>
+                    <span class="small text-muted" id="elIndexLabel"></span>
+                </div>
+                <div class="ped-prop d-none" id="contentWrap">
+                    <label for="selectedContent">النص الثابت</label>
+                    <textarea class="ped-textarea" id="selectedContent" rows="2" maxlength="1000"></textarea>
+                </div>
+                <div class="ped-prop d-none" id="fieldWrap">
+                    <label for="selectedFieldKey">الحقل الديناميكي</label>
+                    <select class="ped-select" id="selectedFieldKey">
+                        @foreach (var group in fieldGroups)
+                        {
+                            <optgroup label="@group.Label">
+                                @foreach (var key in group.Keys.Where(key => Model.FieldLabels.ContainsKey(key)))
+                                {
+                                    <option value="@key">@Model.FieldLabels[key]</option>
+                                }
+                            </optgroup>
+                        }
+                    </select>
+                </div>
+                <div class="ped-prop">
+                    <label>الخط <span class="pv" id="fontFamilyLabel">Tajawal</span></label>
+                    <select class="ped-select" id="selectedFontFamily">
+                        <option value="Tajawal">Tajawal</option>
+                        <option value="Arial">Arial</option>
+                        <option value="Tahoma">Tahoma</option>
+                        <option value="Georgia">Georgia</option>
+                        <option value="Courier New">Courier New</option>
+                    </select>
+                </div>
+                <div class="ped-grid-2">
+                    <div class="ped-prop"><label>الحجم</label><input class="ped-input" type="number" id="selectedFontSize" min="8" max="96" /></div>
+                    <div class="ped-prop"><label>الوزن</label><select class="ped-select" id="selectedWeight"><option value="400">عادي</option><option value="500">متوسط</option><option value="600">نصف عريض</option><option value="700">عريض</option><option value="800">ثقيل</option></select></div>
+                </div>
+                <div class="ped-prop">
+                    <label for="selectedColor">لون النص</label>
+                    <div class="ped-color-row">
+                        <input type="color" class="ped-color-input" id="selectedColor" />
+                        <span class="ped-color-hex" id="selectedColorHex">#172033</span>
+                    </div>
+                </div>
+                <div class="ped-prop">
+                    <label>المحاذاة</label>
+                    <div class="ped-seg" id="alignSeg">
+                        <button type="button" data-align="right"><i class="bi bi-text-right"></i></button>
+                        <button type="button" data-align="center"><i class="bi bi-text-center"></i></button>
+                        <button type="button" data-align="left"><i class="bi bi-text-left"></i></button>
+                    </div>
+                </div>
+                <div class="ped-prop">
+                    <label>التدوير <span class="pv" id="rotationLabel">0°</span></label>
+                    <input class="ped-input" type="range" id="selectedRotation" min="-180" max="180" step="1" style="padding:0;" />
+                </div>
+                <div class="ped-grid-2">
+                    <div class="ped-prop"><label>س X</label><input class="ped-input" type="number" id="selectedX" /></div>
+                    <div class="ped-prop"><label>ص Y</label><input class="ped-input" type="number" id="selectedY" /></div>
+                    <div class="ped-prop"><label>العرض</label><input class="ped-input" type="number" id="selectedWidth" min="20" /></div>
+                    <div class="ped-prop"><label>الارتفاع</label><input class="ped-input" type="number" id="selectedHeight" min="20" /></div>
+                </div>
+                <div class="ped-prop" style="display:flex;align-items:center;justify-content:space-between;">
+                    <label class="ped-switch" style="margin:0;"><input type="checkbox" id="selectedVisible" checked /> إظهار العنصر</label>
+                </div>
+                <div class="ped-help mt-2 pt-2" style="border-top:1px dashed var(--ped-line);">
+                    <i class="bi bi-keyboard"></i> اختصارات: <span class="ped-kbd">Del</span> حذف · <span class="ped-kbd">Ctrl+Z</span> تراجع · <span class="ped-kbd">Ctrl+D</span> تكرار · <span class="ped-kbd">أسهم</span> تحريك دقيق
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- form -->
+    <form id="templateForm" asp-action="Save" method="post" class="d-none">
         @Html.AntiForgeryToken()
         <input type="hidden" name="CertificateDesignId" value="@Model.Design.CertificateDesignId" />
-        <input type="hidden" name="CanvasWidth" value="@Model.Design.CanvasWidth" />
-        <input type="hidden" name="CanvasHeight" value="@Model.Design.CanvasHeight" />
+        <input type="hidden" name="CanvasWidth" id="hfCanvasWidth" value="@Model.Design.CanvasWidth" />
+        <input type="hidden" name="CanvasHeight" id="hfCanvasHeight" value="@Model.Design.CanvasHeight" />
+        <input type="hidden" name="BackgroundColor" id="hfBackgroundColor" value="@Model.Design.BackgroundColor" />
+        <input type="hidden" name="BorderColor" id="hfBorderColor" value="@Model.Design.BorderColor" />
+        <input type="hidden" name="BorderWidth" id="hfBorderWidth" value="@Model.Design.BorderWidth" />
+        <input type="hidden" name="BorderRadius" id="hfBorderRadius" value="@Model.Design.BorderRadius" />
         <input type="hidden" name="Publish" id="publishInput" value="false" />
         <input type="hidden" name="ElementsJson" id="elementsJson" />
-
-        <div class="col-12 col-xl-2">
-            <div class="editor-card p-3 template-list h-100">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <h6 class="fw-bold mb-0">التصاميم</h6>
-                    <a asp-action="New" class="btn btn-sm btn-outline-primary rounded-circle" title="تصميم جديد" aria-label="تصميم جديد"><i class="bi bi-plus-lg"></i></a>
-                </div>
-                <div class="list-group list-group-flush">
-                    @foreach (var item in Model.Designs)
-                    {
-                        <a asp-action="Index" asp-route-id="@item.CertificateDesignId" class="list-group-item list-group-item-action @(item.CertificateDesignId == Model.Design.CertificateDesignId ? "active" : "")">
-                            <div class="d-flex justify-content-between gap-2">
-                                <span class="text-truncate">@item.Name</span>
-                                @if (item.IsPublished) { <i class="bi bi-broadcast text-success" title="منشور"></i> }
-                            </div>
-                            <small class="opacity-75">@(item.IsPublished ? "يظهر للزوار" : "مسودة")</small>
-                        </a>
-                    }
-                </div>
-                <div class="small text-muted mt-3 pt-3 border-top">يمكن حفظ تعديلات القالب المنشور كمسودة لحماية تجربة التحقق الحالية.</div>
-            </div>
-        </div>
-
-        <div class="col-12 col-xl-7 order-xl-2">
-            <div class="editor-card p-2 p-md-3">
-                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 px-2 mb-3">
-                    <div>
-                        <h5 class="fw-bold mb-1">المعاينة التفاعلية</h5>
-                        <div class="mobile-hint"><i class="bi bi-hand-index-thumb"></i> اسحب العناصر داخل مساحة الشهادة، ثم عدّل خصائص العنصر المحدد.</div>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button type="button" id="zoomOut" class="btn btn-sm btn-light" title="تصغير"><i class="bi bi-dash-lg"></i></button>
-                        <span id="zoomLabel" class="small align-self-center text-muted">70%</span>
-                        <button type="button" id="zoomIn" class="btn btn-sm btn-light" title="تكبير"><i class="bi bi-plus-lg"></i></button>
-                    </div>
-                </div>
-                <div class="canvas-wrap" id="canvasWrap">
-                    <div id="canvasStage" class="canvas-stage">
-                        <div id="certificateCanvas" class="certificate-canvas" aria-label="مساحة تصميم الشهادة"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-xl-3 order-xl-3">
-            <div class="editor-card p-3 toolbar-card">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <h5 class="fw-bold mb-0">خصائص القالب</h5>
-                    <i class="bi bi-sliders2 text-primary"></i>
-                </div>
-                <div class="mb-3">
-                    <label class="mini-label" for="templateName">اسم القالب</label>
-                    <input class="form-control" id="templateName" name="Name" maxlength="120" value="@Model.Design.Name" required />
-                </div>
-                <div class="property-grid mb-3">
-                    <div><label class="mini-label" for="backgroundColor">الخلفية</label><input class="form-control form-control-color w-100" type="color" id="backgroundColor" name="BackgroundColor" value="@Model.Design.BackgroundColor" title="لون الخلفية" /></div>
-                    <div><label class="mini-label" for="borderColor">الإطار</label><input class="form-control form-control-color w-100" type="color" id="borderColor" name="BorderColor" value="@Model.Design.BorderColor" title="لون الإطار" /></div>
-                    <div><label class="mini-label" for="borderWidth">سماكة الإطار</label><input class="form-control" type="number" id="borderWidth" name="BorderWidth" min="0" max="24" value="@Model.Design.BorderWidth" /></div>
-                    <div><label class="mini-label" for="borderRadius">انحناء الزوايا</label><input class="form-control" type="number" id="borderRadius" name="BorderRadius" min="0" max="80" value="@Model.Design.BorderRadius" /></div>
-                </div>
-                <hr />
-                <h6 class="fw-bold mb-2">إضافة عنصر</h6>
-                <div class="d-flex gap-2 mb-2">
-                    <select id="elementType" class="form-select form-select-sm">
-                        <option value="field">بيان ديناميكي</option>
-                        <option value="text">نص ثابت</option>
-                        <option value="divider">فاصل بصري</option>
-                    </select>
-                    <button type="button" id="addElement" class="btn btn-primary btn-sm px-3"><i class="bi bi-plus-lg"></i></button>
-                </div>
-                <select id="fieldKey" class="form-select form-select-sm mb-2" aria-label="الحقل الديناميكي">
-                    @foreach (var group in fieldGroups)
-                    {
-                        <optgroup label="@group.Label">
-                            @foreach (var key in group.Keys.Where(key => Model.FieldLabels.ContainsKey(key)))
-                            {
-                                <option value="@key">@Model.FieldLabels[key]</option>
-                            }
-                        </optgroup>
-                    }
-                </select>
-                <input id="staticContent" class="form-control form-control-sm mb-2 d-none" maxlength="1000" placeholder="اكتب النص الثابت هنا" />
-                <div class="small text-muted mb-2">اختر أي متغير لوضع بياناته الفعلية تلقائياً في الشهادة عند التحقق.</div>
-                <div class="field-chip-list mb-3">
-                    @foreach (var group in fieldGroups)
-                    {
-                        <div class="field-group-title">@group.Label</div>
-                        <div class="d-flex flex-wrap gap-1">
-                            @foreach (var key in group.Keys.Where(key => Model.FieldLabels.ContainsKey(key)))
-                            {
-                                <button type="button" class="field-chip quick-field" data-field="@key">@Model.FieldLabels[key]</button>
-                            }
-                        </div>
-                    }
-                </div>
-                <div id="selectedPanel" class="d-none">
-                    <hr />
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="fw-bold mb-0">العنصر المحدد</h6>
-                        <button type="button" id="deleteElement" class="btn btn-sm btn-outline-danger" title="حذف العنصر"><i class="bi bi-trash3"></i></button>
-                    </div>
-                        <div class="mb-2"><label class="mini-label" for="selectedContent">النص أو المحتوى</label><textarea id="selectedContent" class="form-control form-control-sm" rows="2" maxlength="1000"></textarea></div>
-                        <div class="mb-2" id="selectedFieldWrap">
-                            <label class="mini-label" for="selectedFieldKey">المتغير الديناميكي</label>
-                            <select id="selectedFieldKey" class="form-select form-select-sm">
-                                @foreach (var group in fieldGroups)
-                                {
-                                    <optgroup label="@group.Label">
-                                        @foreach (var key in group.Keys.Where(key => Model.FieldLabels.ContainsKey(key)))
-                                        {
-                                            <option value="@key">@Model.FieldLabels[key]</option>
-                                        }
-                                    </optgroup>
-                                }
-                            </select>
-                        </div>
-                        <div class="property-grid">
-                        <div><label class="mini-label" for="selectedFontSize">حجم الخط</label><input id="selectedFontSize" type="number" min="8" max="96" class="form-control form-control-sm" /></div>
-                        <div><label class="mini-label" for="selectedColor">لون النص</label><input id="selectedColor" type="color" class="form-control form-control-color w-100" /></div>
-                        <div><label class="mini-label" for="selectedAlign">المحاذاة</label><select id="selectedAlign" class="form-select form-select-sm"><option value="right">يمين</option><option value="center">وسط</option><option value="left">يسار</option></select></div>
-                        <div><label class="mini-label" for="selectedWeight">السماكة</label><select id="selectedWeight" class="form-select form-select-sm"><option value="400">عادي</option><option value="500">متوسط</option><option value="600">نصف عريض</option><option value="700">عريض</option><option value="800">ثقيل</option></select></div>
-                        <div><label class="mini-label" for="selectedFontFamily">الخط</label><select id="selectedFontFamily" class="form-select form-select-sm"><option value="Tajawal">Tajawal</option><option value="Arial">Arial</option><option value="Tahoma">Tahoma</option><option value="Georgia">Georgia</option><option value="Courier New">Courier New</option></select></div>
-                        <div><label class="mini-label" for="selectedX">الموضع الأفقي</label><input id="selectedX" type="number" min="0" class="form-control form-control-sm" /></div>
-                        <div><label class="mini-label" for="selectedY">الموضع الرأسي</label><input id="selectedY" type="number" min="0" class="form-control form-control-sm" /></div>
-                        <div><label class="mini-label" for="selectedWidth">العرض</label><input id="selectedWidth" type="number" min="20" class="form-control form-control-sm" /></div>
-                        <div><label class="mini-label" for="selectedHeight">الارتفاع</label><input id="selectedHeight" type="number" min="20" class="form-control form-control-sm" /></div>
-                    </div>
-                    <div class="form-check form-switch mt-3"><input id="selectedVisible" class="form-check-input" type="checkbox" checked /><label class="form-check-label small" for="selectedVisible">إظهار العنصر</label></div>
-                </div>
-                <hr />
-                <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-outline-primary" data-publish="false"><i class="bi bi-save2"></i> حفظ كمسودة</button>
-                    <button type="submit" class="btn btn-success" data-publish="true"><i class="bi bi-broadcast"></i> حفظ ونشر للمتدربين</button>
-                </div>
-                <p class="small text-muted mt-3 mb-0"><i class="bi bi-shield-check"></i> لا يسمح المحرر بتعديل مصدر بيانات الشهادة أو إدخال HTML أو CSS حر.</p>
-            </div>
-        </div>
     </form>
 </div>
 
+@if (TempData["Success"] is string success) { <div class="alert alert-success mt-3 mb-0 border-0 shadow-sm">@success</div> }
+@if (TempData["Error"] is string error) { <div class="alert alert-danger mt-3 mb-0 border-0 shadow-sm">@error</div> }
+
 <script>
 (() => {
-    const canvas = document.getElementById('certificateCanvas');
-    const stage = document.getElementById('canvasStage');
+    'use strict';
+    // ---------- State ----------
+    const canvasEl = document.getElementById('certificateCanvas');
+    const stageEl = document.getElementById('canvasStage');
+    const areaEl = document.getElementById('canvasArea');
     const form = document.getElementById('templateForm');
     const elementsInput = document.getElementById('elementsJson');
     const publishInput = document.getElementById('publishInput');
-    const canvasWidth = @Model.Design.CanvasWidth;
-    const canvasHeight = @Model.Design.CanvasHeight;
-    let zoom = 0.70;
-    let selectedIndex = -1;
-    let elements = @Html.Raw(templateJson);
-    const sampleValues = {
-        certificate_number: 'EC-2026-0042',
-        trainee_name: 'أحمد محمد العتيبي',
-        course_name: 'القيادة الاستراتيجية وإدارة فرق العمل',
-        issue_date: '2026/08/14',
-        status: 'سارية ومعتمدة',
-        verification_code: 'EXAMPLE-VERIFY-CODE',
-        verification_url: 'ecert.example/v/sample',
-        trainee_name_arabic: 'أحمد محمد العتيبي',
-        trainee_name_english: 'Ahmed Mohammed Alotaibi',
-        trainee_gender: 'ذكر',
-        trainee_university: 'جامعة التدريب',
-        trainee_college: 'كلية الإدارة',
-        trainee_specialization: 'إدارة الأعمال',
-        trainee_academic_level: 'المستوى السادس',
-        course_name_arabic: 'القيادة الاستراتيجية وإدارة فرق العمل',
-        course_name_english: 'Strategic Leadership and Team Management',
-        course_short_description: 'برنامج تدريبي احترافي معتمد',
-        course_location: 'قاعة التدريب الرئيسية',
-        course_category: 'الإدارة والقيادة',
-        course_start_date: '2026/08/01',
-        course_end_date: '2026/08/14',
-        instructor_name: 'د. سارة أحمد',
-        instructor_specialization: 'القيادة وتطوير الأداء',
-        instructor_bio: 'مدربة ومستشارة في التطوير المؤسسي'
+    const guideX = document.getElementById('guideX');
+    const guideY = document.getElementById('guideY');
+
+    let canvasW = @Model.Design.CanvasWidth;
+    let canvasH = @Model.Design.CanvasHeight;
+    let cProps = {
+        backgroundColor: '@Model.Design.BackgroundColor',
+        borderColor: '@Model.Design.BorderColor',
+        borderWidth: @Model.Design.BorderWidth,
+        borderRadius: @Model.Design.BorderRadius
     };
-    const nodes = new Map();
+    let zoom = 0.7;
+    let selected = -1;
+    let gridOn = true;
+    let snapOn = true;
+    let previewMode = false;
+    let elements = @Html.Raw(templateJson);
+    if (!Array.isArray(elements)) elements = [];
+
+    const sampleValues = {
+        certificate_number: 'EC-2026-0042', trainee_name: 'أحمد محمد العتيبي', course_name: 'القيادة الاستراتيجية وإدارة فرق العمل',
+        issue_date: '2026/08/14', status: 'سارية ومعتمدة', verification_code: 'EXAMPLE-VERIFY-CODE', verification_url: 'ecert.example/v/sample',
+        issued_by: 'مركز التدريب المهني', trainee_name_arabic: 'أحمد محمد العتيبي', trainee_name_english: 'Ahmed Mohammed Alotaibi',
+        course_name_arabic: 'القيادة الاستراتيجية وإدارة فرق العمل', course_name_english: 'Strategic Leadership and Team Management'
+    };
+
+    const FIELD_LABELS = {};
+    @foreach (var group in fieldGroups)
+    {
+        @foreach (var key in group.Keys.Where(key => Model.FieldLabels.ContainsKey(key)))
+        {
+            <text>FIELD_LABELS['@key'] = '@Model.FieldLabels[key]';</text>
+        }
+    }
+
+    // ---------- History ----------
+    let history = [];
+    let historyIndex = -1;
+    const MAX_HISTORY = 60;
+    function snapshot() { return JSON.stringify({ canvasW, canvasH, cProps, elements }); }
+    function pushHistory() {
+        const snap = snapshot();
+        history = history.slice(0, historyIndex + 1);
+        history.push(snap);
+        if (history.length > MAX_HISTORY) history.shift();
+        historyIndex = history.length - 1;
+        updateToolbarState();
+    }
+    function undo() { if (historyIndex <= 0) return; historyIndex--; restore(history[historyIndex]); }
+    function redo() { if (historyIndex >= history.length - 1) return; historyIndex++; restore(history[historyIndex]); }
+    function restore(snap) {
+        const s = JSON.parse(snap);
+        canvasW = s.canvasW; canvasH = s.canvasH; cProps = s.cProps; elements = s.elements;
+        selected = -1;
+        syncCanvasInputs();
+        render();
+        refreshLayers();
+        updateToolbarState();
+    }
+    function updateToolbarState() {
+        document.getElementById('undoBtn').disabled = historyIndex <= 0;
+        document.getElementById('redoBtn').disabled = historyIndex >= history.length - 1;
+        const hasSel = selected >= 0 && elements[selected];
+        ['duplicateBtn', 'deleteBtn', 'alignLeft', 'alignHCenter', 'alignRight', 'alignTop', 'alignVCenter', 'alignBottom', 'toFront', 'forward', 'backward', 'toBack'].forEach(id => {
+            document.getElementById(id).disabled = !hasSel;
+        });
+    }
+
+    // ---------- Helpers ----------
     const $ = id => document.getElementById(id);
     const clamp = (n, min, max) => Math.max(min, Math.min(max, Number(n) || 0));
-
-    function contentFor(element) {
-        if (element.elementType === 'field') return sampleValues[element.fieldKey] || 'بيان ديناميكي';
-        return element.elementType === 'divider' ? '' : (element.content || 'نص جديد');
+    function scale() { const r = canvasEl.getBoundingClientRect(); return r.width / canvasW; }
+    function contentFor(el) {
+        if (el.elementType === 'field') return sampleValues[el.fieldKey] || 'بيان ديناميكي';
+        if (el.elementType === 'divider') return '';
+        return el.content || 'نص جديد';
     }
-
-    function styleFor(element) {
-        return {
-            left: `${element.x}px`, top: `${element.y}px`, width: `${element.width}px`, height: `${element.height}px`,
-            fontSize: `${element.fontSize}px`, color: element.fontColor || '#172033', fontFamily: `"${element.fontFamily || 'Tajawal'}", Arial, sans-serif`,
-            fontWeight: element.fontWeight || '600', textAlign: element.textAlign || 'center', zIndex: element.zIndex || 1,
-            borderTopColor: element.fontColor || '#172033'
+    function labelFor(el) {
+        if (el.elementType === 'field') return FIELD_LABELS[el.fieldKey] || el.fieldKey || 'بيان';
+        if (el.elementType === 'divider') return 'فاصل بصري';
+        return (el.content || 'نص').replace(/\s+/g, ' ').slice(0, 22);
+    }
+    function styleFor(el) {
+        const s = {
+            left: el.x + 'px', top: el.y + 'px', width: el.width + 'px', height: el.height + 'px',
+            fontSize: el.fontSize + 'px', color: el.fontColor || '#172033',
+            fontFamily: '"' + (el.fontFamily || 'Tajawal') + '", Arial, sans-serif',
+            fontWeight: el.fontWeight || '600', zIndex: el.zIndex || 1,
+            transform: 'rotate(' + (el.rotation || 0) + 'deg)'
         };
+        if (el.elementType === 'divider') {
+            s.borderTop = '2px solid ' + (el.fontColor || '#172033');
+            s.height = '0px';
+            s.display = 'block';
+        } else {
+            s.textAlign = el.textAlign || 'center';
+            s.justifyContent = (el.textAlign === 'right') ? 'flex-start' : (el.textAlign === 'left') ? 'flex-end' : 'center';
+        }
+        return s;
     }
 
-    function applyStyle(node, element) {
-        Object.assign(node.style, styleFor(element));
-        node.textContent = contentFor(element);
-        node.classList.toggle('selected', elements[selectedIndex] === element);
-        node.dataset.elementType = element.elementType;
+    // ---------- Snapping ----------
+    const SNAP = 6;
+    function computeSnap(x, y, w, h) {
+        const xs = [0, canvasW / 2, canvasW];
+        const ys = [0, canvasH / 2, canvasH];
+        elements.forEach((el, i) => {
+            if (i === selected || !el.isVisible) return;
+            xs.push(el.x, el.x + el.width / 2, el.x + el.width);
+            ys.push(el.y, el.y + el.height / 2, el.y + el.height);
+        });
+        const edges = [[x, x + w / 2, x + w], [y, y + h / 2, y + h]];
+        const targets = [xs, ys];
+        const out = { x, y, w, h, gx: null, gy: null };
+        for (let a = 0; a < 2; a++) {
+            let best = null;
+            for (const t of targets[a]) {
+                for (const e of edges[a]) {
+                    const d = t - e;
+                    if (Math.abs(d) < SNAP && (!best || Math.abs(d) < Math.abs(best.d))) best = { d, t };
+                }
+            }
+            if (best) {
+                if (a === 0) { out.x += best.d; out.gx = best.t; } else { out.y += best.d; out.gy = best.t; }
+            }
+        }
+        return out;
     }
+    function renderGuides(gx, gy) {
+        const s = scale();
+        guideX.style.display = gx !== null ? 'block' : 'none';
+        guideY.style.display = gy !== null ? 'block' : 'none';
+        if (gx !== null) guideX.style.left = (gx * s) + 'px';
+        if (gy !== null) guideY.style.top = (gy * s) + 'px';
+    }
+    function clearGuides() { guideX.style.display = 'none'; guideY.style.display = 'none'; }
 
+    // ---------- Render ----------
     function render() {
-        canvas.innerHTML = '';
-        nodes.clear();
-        canvas.style.width = `${canvasWidth}px`;
-        canvas.style.height = `${canvasHeight}px`;
-        canvas.style.transform = `scale(${zoom})`;
-        stage.style.width = `${canvasWidth * zoom}px`;
-        stage.style.height = `${canvasHeight * zoom}px`;
-        canvas.style.backgroundColor = $('backgroundColor').value;
-        canvas.style.border = `${$('borderWidth').value}px solid ${$('borderColor').value}`;
-        canvas.style.borderRadius = `${$('borderRadius').value}px`;
-        elements.forEach((element, index) => {
-            if (!element.isVisible) return;
+        canvasEl.innerHTML = '';
+        canvasEl.style.width = canvasW + 'px';
+        canvasEl.style.height = canvasH + 'px';
+        canvasEl.style.transform = 'scale(' + zoom + ')';
+        canvasEl.style.backgroundColor = cProps.backgroundColor;
+        canvasEl.style.border = cProps.borderWidth + 'px solid ' + cProps.borderColor;
+        canvasEl.style.borderRadius = cProps.borderRadius + 'px';
+        stageEl.style.width = (canvasW * zoom) + 'px';
+        stageEl.style.height = (canvasH * zoom) + 'px';
+        const grid = document.createElement('div');
+        grid.className = 'ped-grid';
+        grid.style.backgroundSize = (28 * zoom) + 'px ' + (28 * zoom) + 'px';
+        canvasEl.appendChild(grid);
+        guideX.style.display = 'none';
+        guideY.style.display = 'none';
+        canvasEl.appendChild(guideX);
+        canvasEl.appendChild(guideY);
+
+        // order by array position (zIndex normalized)
+        const ordered = elements.map((el, i) => ({ el, i })).filter(o => o.el.isVisible);
+        for (const o of ordered) {
             const node = document.createElement('div');
-            node.className = 'certificate-element';
-            node.dataset.index = index;
-            applyStyle(node, element);
-            node.addEventListener('pointerdown', event => beginDrag(event, index, node));
-            node.addEventListener('click', event => { event.stopPropagation(); selectElement(index); });
-            canvas.appendChild(node);
-            nodes.set(index, node);
-        });
-        refreshSelectedPanel();
-        $('zoomLabel').textContent = `${Math.round(zoom * 100)}%`;
+            node.className = 'ped-el' + (o.el.elementType === 'divider' ? ' el-divider' : '');
+            node.dataset.index = o.i;
+            Object.assign(node.style, styleFor(o.el));
+            node.textContent = contentFor(o.el);
+            node.addEventListener('pointerdown', e => startDrag(e, o.i));
+            canvasEl.appendChild(node);
+        }
+
+        if (selected >= 0 && elements[selected] && elements[selected].isVisible) drawOverlay(selected);
+        $('zoomLabel').textContent = Math.round(zoom * 100) + '%';
+        if (previewMode) document.querySelectorAll('.ped-el').forEach(n => n.style.cursor = 'default');
     }
 
-    function selectElement(index) {
-        selectedIndex = index;
-        nodes.forEach((node, nodeIndex) => node.classList.toggle('selected', nodeIndex === index));
-        refreshSelectedPanel();
+    function drawOverlay(index) {
+        const el = elements[index];
+        const ov = document.createElement('div');
+        ov.className = 'ped-overlay';
+        ov.style.left = el.x + 'px';
+        ov.style.top = el.y + 'px';
+        ov.style.width = el.width + 'px';
+        ov.style.height = (el.elementType === 'divider' ? 4 : el.height) + 'px';
+        ov.style.transform = 'rotate(' + (el.rotation || 0) + 'deg)';
+        ov.style.transformOrigin = 'center';
+        const box = document.createElement('div');
+        box.className = 'ped-box';
+        ov.appendChild(box);
+        if (!previewMode) {
+            const handles = [['nw'], ['n'], ['ne'], ['e'], ['se'], ['s'], ['sw'], ['w']];
+            handles.forEach(([pos]) => {
+                const h = document.createElement('div');
+                h.className = 'ped-handle h-' + pos;
+                h.addEventListener('pointerdown', e => startResize(e, pos));
+                ov.appendChild(h);
+            });
+            const rl = document.createElement('div');
+            rl.className = 'ped-rotate-line';
+            ov.appendChild(rl);
+            const rt = document.createElement('div');
+            rt.className = 'ped-rotate';
+            rt.innerHTML = '<i class="bi bi-arrow-repeat"></i>';
+            rt.addEventListener('pointerdown', e => startRotate(e));
+            ov.appendChild(rt);
+            const dim = document.createElement('div');
+            dim.className = 'ped-dim';
+            dim.textContent = el.width + ' × ' + el.height;
+            ov.appendChild(dim);
+        }
+        canvasEl.appendChild(ov);
     }
 
-    function refreshSelectedPanel() {
-        const panel = $('selectedPanel');
-        const element = elements[selectedIndex];
-        if (!element) { panel.classList.add('d-none'); return; }
-        panel.classList.remove('d-none');
-        $('selectedContent').value = element.content || '';
-        $('selectedContent').disabled = element.elementType === 'field' || element.elementType === 'divider';
-        $('selectedFieldWrap').classList.toggle('d-none', element.elementType !== 'field');
-        $('selectedFieldKey').value = element.fieldKey || $('fieldKey').value;
-        $('selectedFontSize').value = element.fontSize;
-        $('selectedColor').value = element.fontColor || '#172033';
-        $('selectedAlign').value = element.textAlign || 'center';
-        $('selectedWeight').value = element.fontWeight || '600';
-        $('selectedFontFamily').value = element.fontFamily || 'Tajawal';
-        $('selectedX').value = element.x; $('selectedY').value = element.y;
-        $('selectedWidth').value = element.width; $('selectedHeight').value = element.height;
-        $('selectedVisible').checked = element.isVisible !== false;
-    }
-
-    function updateSelected(property, value) {
-        const element = elements[selectedIndex];
-        if (!element) return;
-        if (['fontSize', 'x', 'y', 'width', 'height'].includes(property)) value = Number(value) || 0;
-        element[property] = value;
-        if (property === 'x') element.x = clamp(value, 0, canvasWidth - 20);
-        if (property === 'y') element.y = clamp(value, 0, canvasHeight - 20);
-        if (property === 'width') element.width = clamp(value, 20, canvasWidth);
-        if (property === 'height') element.height = clamp(value, 20, canvasHeight);
-        if (property === 'fontSize') element.fontSize = clamp(value, 8, 96);
-        const node = nodes.get(selectedIndex);
-        if (node) applyStyle(node, element);
-        refreshSelectedPanel();
-    }
-
-    function beginDrag(event, index, node) {
-        event.preventDefault();
-        selectElement(index);
-        const element = elements[index];
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = rect.width / canvasWidth;
-        const scaleY = rect.height / canvasHeight;
-        const startX = event.clientX, startY = event.clientY, originalX = element.x, originalY = element.y;
-        node.setPointerCapture(event.pointerId);
-        const move = moveEvent => {
-            element.x = clamp(Math.round(originalX + (moveEvent.clientX - startX) / scaleX), 0, canvasWidth - 20);
-            element.y = clamp(Math.round(originalY + (moveEvent.clientY - startY) / scaleY), 0, canvasHeight - 20);
-            applyStyle(node, element);
-            refreshSelectedPanel();
+    // ---------- Interactions ----------
+    function startDrag(e, index) {
+        if (previewMode || e.button !== 0) return;
+        e.preventDefault();
+        select(index);
+        const el = elements[index];
+        pushHistory();
+        const startX = e.clientX, startY = e.clientY, origX = el.x, origY = el.y;
+        const s = () => scale();
+        const move = ev => {
+            const r = computeSnap(origX + (ev.clientX - startX) / s(), origY + (ev.clientY - startY) / s(), el.width, el.height);
+            el.x = clamp(Math.round(r.x), 0, canvasW - 10);
+            el.y = clamp(Math.round(r.y), 0, canvasH - 10);
+            updateNode(el, index);
+            renderGuides(snapOn ? r.gx : null, snapOn ? r.gy : null);
         };
-        const stop = () => { node.removeEventListener('pointermove', move); node.removeEventListener('pointerup', stop); };
-        node.addEventListener('pointermove', move);
-        node.addEventListener('pointerup', stop);
+        const up = () => {
+            window.removeEventListener('pointermove', move);
+            window.removeEventListener('pointerup', up);
+            clearGuides();
+            refreshLayers();
+            updateToolbarState();
+        };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up);
     }
 
-    function addElement() {
-        const type = $('elementType').value;
-        const index = elements.length;
-        elements.push({
-            elementType: type,
-            fieldKey: type === 'field' ? $('fieldKey').value : '',
-            content: type === 'text' ? ($('staticContent').value || 'نص جديد') : '',
-            x: 220, y: 220 + (index % 5) * 74, width: 680, height: type === 'divider' ? 4 : 58,
-            fontSize: type === 'text' ? 22 : 28, fontFamily: 'Tajawal', fontColor: '#172033', fontWeight: '600', textAlign: 'center', isVisible: true, zIndex: index, sortOrder: index
+    function startResize(e, pos) {
+        if (previewMode || e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        pushHistory();
+        const el = elements[selected];
+        const startX = e.clientX, startY = e.clientY;
+        const orig = { x: el.x, y: el.y, w: el.width, h: el.height };
+        const s = () => scale();
+        const MIN = 18;
+        const move = ev => {
+            const dx = (ev.clientX - startX) / s();
+            const dy = (ev.clientY - startY) / s();
+            let nx = orig.x, ny = orig.y, nw = orig.w, nh = orig.h;
+            if (pos.includes('e')) nw = orig.w + dx;
+            if (pos.includes('s')) nh = orig.h + dy;
+            if (pos.includes('w')) { nw = orig.w - dx; nx = orig.x + dx; }
+            if (pos.includes('n')) { nh = orig.h - dy; ny = orig.y + dy; }
+            if (nw < MIN) { if (pos.includes('w')) nx = orig.x + orig.w - MIN; nw = MIN; }
+            if (nh < MIN) { if (pos.includes('n')) ny = orig.y + orig.h - MIN; nh = MIN; }
+            let r = { x: nx, y: ny, w: nw, h: nh, gx: null, gy: null };
+            if (snapOn) {
+                const sx = computeSnap(nx, ny, nw, nh);
+                if (sx.x !== nx || sx.w !== nw) { nx = sx.x; nw = sx.w; }
+                if (sx.y !== ny || sx.h !== nh) { ny = sx.y; nh = sx.h; }
+                r = sx;
+            }
+            el.x = clamp(Math.round(nx), 0, canvasW - 10);
+            el.y = clamp(Math.round(ny), 0, canvasH - 10);
+            el.width = clamp(Math.round(nw), MIN, canvasW);
+            el.height = clamp(Math.round(nh), MIN, canvasH);
+            if (el.elementType === 'divider') el.height = 4;
+            updateNode(el, selected);
+            renderGuides(r.gx, r.gy);
+        };
+        const up = () => {
+            window.removeEventListener('pointermove', move);
+            window.removeEventListener('pointerup', up);
+            clearGuides();
+            refreshLayers();
+            updateToolbarState();
+        };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up);
+    }
+
+    function startRotate(e) {
+        if (previewMode || e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        pushHistory();
+        const el = elements[selected];
+        const cx = el.x + el.width / 2, cy = el.y + el.height / 2;
+        const s = () => scale();
+        const fromPoint = ev => {
+            const r = canvasEl.getBoundingClientRect();
+            const px = (ev.clientX - r.left) / s() + canvasEl.getBoundingClientRect().left / s() * 0;
+            const raw = Math.atan2(ev.clientY - (r.top + cy * s()), ev.clientX - (r.left + cx * s()));
+            return raw * 180 / Math.PI;
+        };
+        const startAngle = fromPoint(e);
+        const move = ev => {
+            let deg = fromPoint(ev) - startAngle + (el.rotation || 0);
+            if (e.shiftKey) deg = Math.round(deg / 15) * 15;
+            el.rotation = clamp(Math.round(deg), -180, 180);
+            updateNode(el, selected);
+            $('rotationLabel').textContent = el.rotation + '°';
+            $('selectedRotation').value = el.rotation;
+        };
+        const up = () => {
+            window.removeEventListener('pointermove', move);
+            window.removeEventListener('pointerup', up);
+        };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up);
+    }
+
+    function updateNode(el, index) {
+        const nodes = canvasEl.querySelectorAll('.ped-el[data-index="' + index + '"]');
+        nodes.forEach(n => {
+            Object.assign(n.style, styleFor(el));
+            n.textContent = contentFor(el);
         });
-        selectedIndex = index;
+        canvasEl.querySelectorAll('.ped-overlay').forEach(o => o.remove());
+        if (selected >= 0 && elements[selected]) drawOverlay(selected);
+    }
+
+    // ---------- Selection ----------
+    function select(index) {
+        selected = index;
+        canvasEl.querySelectorAll('.ped-overlay').forEach(o => o.remove());
+        if (elements[index]) drawOverlay(index);
+        refreshPropsPanel();
+        refreshLayers();
+        updateToolbarState();
+    }
+    function deselect() {
+        selected = -1;
+        canvasEl.querySelectorAll('.ped-overlay').forEach(o => o.remove());
+        refreshPropsPanel();
+        refreshLayers();
+        updateToolbarState();
+    }
+    canvasEl.addEventListener('pointerdown', e => {
+        if (e.target === canvasEl || e.target.classList.contains('ped-grid') || e.target.classList.contains('ped-guide')) deselect();
+    });
+
+    // ---------- Add / Remove / Order ----------
+    function addElement(type, fieldKey) {
+        pushHistory();
+        const count = elements.length;
+        const w = type === 'divider' ? 420 : 560;
+        const h = type === 'divider' ? 4 : 58;
+        const el = {
+            elementType: type,
+            fieldKey: type === 'field' ? (fieldKey || 'trainee_name') : '',
+            content: type === 'text' ? 'نص جديد' : '',
+            x: clamp(Math.round((canvasW - w) / 2), 0, canvasW - 20),
+            y: clamp(100 + (count % 6) * 82, 0, canvasH - 20),
+            width: w, height: h,
+            fontSize: type === 'text' ? 22 : 28,
+            fontFamily: 'Tajawal', fontColor: '#172033', fontWeight: '600',
+            textAlign: 'center', isVisible: true, zIndex: count, rotation: 0
+        };
+        elements.push(el);
+        selected = elements.length - 1;
+        render();
+        refreshLayers();
+        refreshPropsPanel();
+        updateToolbarState();
+    }
+    function deleteSelected() {
+        if (selected < 0 || !elements[selected]) return;
+        pushHistory();
+        elements.splice(selected, 1);
+        selected = -1;
+        normalizeZ();
+        render();
+        refreshLayers();
+        refreshPropsPanel();
+        updateToolbarState();
+    }
+    function duplicateSelected() {
+        if (selected < 0 || !elements[selected]) return;
+        pushHistory();
+        const src = elements[selected];
+        const copy = JSON.parse(JSON.stringify(src));
+        copy.x = clamp(copy.x + 28, 0, canvasW - 20);
+        copy.y = clamp(copy.y + 28, 0, canvasH - 20);
+        elements.push(copy);
+        selected = elements.length - 1;
+        normalizeZ();
+        render();
+        refreshLayers();
+        refreshPropsPanel();
+        updateToolbarState();
+    }
+    function normalizeZ() {
+        elements.forEach((el, i) => { el.zIndex = i; el.sortOrder = i; });
+    }
+    function moveOrder(dir) {
+        if (selected < 0) return;
+        pushHistory();
+        const arr = elements;
+        const i = selected, j = i + dir;
+        if (j < 0 || j >= arr.length) return;
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+        selected = j;
+        normalizeZ();
+        render();
+        refreshLayers();
+        refreshPropsPanel();
+        updateToolbarState();
+    }
+    function toExtreme(front) {
+        if (selected < 0) return;
+        pushHistory();
+        const el = elements.splice(selected, 1)[0];
+        if (front) elements.push(el); else elements.unshift(el);
+        selected = front ? elements.length - 1 : 0;
+        normalizeZ();
+        render();
+        refreshLayers();
+        refreshPropsPanel();
+        updateToolbarState();
+    }
+    function alignElement(kind) {
+        if (selected < 0) return;
+        pushHistory();
+        const el = elements[selected];
+        if (kind === 'left') el.x = 0;
+        if (kind === 'hcenter') el.x = Math.round((canvasW - el.width) / 2);
+        if (kind === 'right') el.x = canvasW - el.width;
+        if (kind === 'top') el.y = 0;
+        if (kind === 'vcenter') el.y = Math.round((canvasH - el.height) / 2);
+        if (kind === 'bottom') el.y = canvasH - el.height;
+        el.x = clamp(el.x, 0, canvasW - 20);
+        el.y = clamp(el.y, 0, canvasH - 20);
+        updateNode(el, selected);
+        refreshPropsPanel();
+        refreshLayers();
+        updateToolbarState();
+    }
+
+    // ---------- Layers Panel ----------
+    function refreshLayers() {
+        const list = $('layersList');
+        $('layerCount').textContent = elements.length + ' عنصر';
+        if (!elements.length) {
+            list.innerHTML = '<div class="ped-empty"><i class="bi bi-inbox"></i><div>لا توجد عناصر بعد<br/>أضف نصاً أو حقلاً من لوحة العناصر</div></div>';
+            return;
+        }
+        list.innerHTML = '';
+        for (let i = elements.length - 1; i >= 0; i--) {
+            const el = elements[i];
+            const row = document.createElement('div');
+            row.className = 'ped-layer' + (i === selected ? ' active' : '');
+            const icon = el.elementType === 'field' ? '<i class="bi bi-link-45deg"></i>' : el.elementType === 'divider' ? '<i class="bi bi-dash-lg"></i>' : '<i class="bi bi-type"></i>';
+            row.innerHTML =
+                '<div class="ly-icon">' + icon + '</div>' +
+                '<div class="ly-name">' + labelFor(el) + '</div>' +
+                '<button type="button" class="ly-btn ly-eye' + (el.isVisible ? '' : ' off') + '" title="إظهار/إخفاء"><i class="bi ' + (el.isVisible ? 'bi-eye' : 'bi-eye-slash') + '"></i></button>' +
+                '<button type="button" class="ly-btn" title="أعلى"><i class="bi bi-chevron-up"></i></button>' +
+                '<button type="button" class="ly-btn" title="أسفل"><i class="bi bi-chevron-down"></i></button>' +
+                '<button type="button" class="ly-btn danger" title="حذف"><i class="bi bi-x-lg"></i></button>';
+            row.addEventListener('click', e => {
+                e.stopPropagation();
+                if (e.target.closest('.ly-eye')) {
+                    pushHistory();
+                    el.isVisible = !el.isVisible;
+                    render(); refreshLayers(); updateToolbarState();
+                } else if (e.target.closest('.ly-btn:nth-of-type(2)')) { select(i); moveOrder(1); }
+                else if (e.target.closest('.ly-btn:nth-of-type(3)')) { select(i); moveOrder(-1); }
+                else if (e.target.closest('.ly-btn.danger')) { select(i); deleteSelected(); }
+                else select(i);
+            });
+            list.appendChild(row);
+        }
+    }
+
+    // ---------- Properties Panel ----------
+    function refreshPropsPanel() {
+        const el = elements[selected];
+        $('canvasProps').classList.toggle('d-none', !!el);
+        $('elementProps').classList.toggle('d-none', !el);
+        $('propsTitle').innerHTML = el
+            ? '<i class="bi bi-bounding-box"></i> خصائص العنصر'
+            : '<i class="bi bi-sliders2"></i> إعدادات القالب';
+        syncCanvasInputs();
+        if (!el) return;
+        $('elTypeBadge').textContent = el.elementType === 'field' ? 'بيان ديناميكي' : el.elementType === 'divider' ? 'فاصل بصري' : 'نص ثابت';
+        $('elIndexLabel').textContent = 'العنصر #' + (selected + 1) + ' من ' + elements.length;
+        $('contentWrap').classList.toggle('d-none', el.elementType !== 'text');
+        $('fieldWrap').classList.toggle('d-none', el.elementType !== 'field');
+        if (el.elementType === 'text') $('selectedContent').value = el.content || '';
+        if (el.elementType === 'field') $('selectedFieldKey').value = el.fieldKey || 'trainee_name';
+        $('selectedFontFamily').value = el.fontFamily || 'Tajawal';
+        $('fontFamilyLabel').textContent = el.fontFamily || 'Tajawal';
+        $('selectedFontSize').value = el.fontSize;
+        $('selectedWeight').value = el.fontWeight || '600';
+        $('selectedColor').value = el.fontColor || '#172033';
+        $('selectedColorHex').textContent = (el.fontColor || '#172033').toLowerCase();
+        document.querySelectorAll('#alignSeg button').forEach(b => b.classList.toggle('on', b.dataset.align === (el.textAlign || 'center')));
+        $('selectedRotation').value = el.rotation || 0;
+        $('rotationLabel').textContent = (el.rotation || 0) + '°';
+        $('selectedX').value = el.x; $('selectedY').value = el.y;
+        $('selectedWidth').value = el.width; $('selectedHeight').value = el.height;
+        $('selectedVisible').checked = el.isVisible !== false;
+    }
+
+    function syncCanvasInputs() {
+        $('canvasWidthInput').value = canvasW;
+        $('canvasHeightInput').value = canvasH;
+        $('sizeLabel').textContent = canvasW + ' × ' + canvasH;
+        document.querySelectorAll('#sizePresets button').forEach(b => b.classList.toggle('on', Number(b.dataset.w) === canvasW && Number(b.dataset.h) === canvasH));
+        $('backgroundColor').value = cProps.backgroundColor;
+        $('backgroundColorHex').textContent = cProps.backgroundColor.toLowerCase();
+        $('borderColor').value = cProps.borderColor;
+        $('borderColorHex').textContent = cProps.borderColor.toLowerCase();
+        $('borderWidth').value = cProps.borderWidth;
+        $('borderRadius').value = cProps.borderRadius;
+    }
+
+    function updateSelected(prop, value, commit) {
+        const el = elements[selected];
+        if (!el) return;
+        if (['fontSize', 'x', 'y', 'width', 'height'].includes(prop)) value = Number(value) || 0;
+        el[prop] = value;
+        if (prop === 'x') el.x = clamp(el.x, 0, canvasW - 20);
+        if (prop === 'y') el.y = clamp(el.y, 0, canvasH - 20);
+        if (prop === 'width') el.width = clamp(el.width, 20, canvasW);
+        if (prop === 'height') el.height = clamp(el.height, 20, canvasH);
+        if (prop === 'fontSize') el.fontSize = clamp(el.fontSize, 8, 96);
+        if (prop === 'rotation') el.rotation = clamp(el.rotation, -180, 180);
+        if (el.elementType === 'divider') el.height = 4;
+        updateNode(el, selected);
+        refreshLayers();
+        if (commit) pushHistory();
+    }
+
+    // ---------- Canvas props ----------
+    function updateCanvasProp(prop, value, commit) {
+        cProps[prop] = value;
+        render();
+        syncCanvasInputs();
+        if (commit) pushHistory();
+    }
+
+    // ---------- Preview / Zoom ----------
+    function setPreview(on) {
+        previewMode = on;
+        document.getElementById('pedApp').classList.toggle('preview-mode', on);
+        document.getElementById('previewToggle').innerHTML = on
+            ? '<i class="bi bi-pencil-square"></i><span class="txt">تعديل</span>'
+            : '<i class="bi bi-eye"></i><span class="txt">معاينة</span>';
+        render();
+    }
+    function applyZoom(z) {
+        zoom = clamp(z, 0.25, 2);
         render();
     }
 
-    $('elementType').addEventListener('change', event => {
-        const fieldMode = event.target.value === 'field';
-        $('fieldKey').classList.toggle('d-none', !fieldMode);
-        $('staticContent').classList.toggle('d-none', fieldMode || event.target.value === 'divider');
+    // ---------- Save ----------
+    function submitForm(publish) {
+        ['hfCanvasWidth', 'hfCanvasHeight', 'hfBackgroundColor', 'hfBorderColor', 'hfBorderWidth', 'hfBorderRadius'].forEach(id => {
+            const el = $(id);
+            if (id === 'hfCanvasWidth') el.value = canvasW;
+            if (id === 'hfCanvasHeight') el.value = canvasH;
+            if (id === 'hfBackgroundColor') el.value = cProps.backgroundColor;
+            if (id === 'hfBorderColor') el.value = cProps.borderColor;
+            if (id === 'hfBorderWidth') el.value = cProps.borderWidth;
+            if (id === 'hfBorderRadius') el.value = cProps.borderRadius;
+        });
+        publishInput.value = publish ? 'true' : 'false';
+        elementsInput.value = JSON.stringify(elements.map((el, i) => ({ ...el, sortOrder: i })));
+        form.submit();
+    }
+
+    // ---------- Bindings ----------
+    $('designsToggle').addEventListener('click', e => {
+        e.stopPropagation();
+        $('designsMenu').classList.toggle('open');
     });
-    $('addElement').addEventListener('click', addElement);
-    document.querySelectorAll('.quick-field').forEach(button => button.addEventListener('click', () => { $('elementType').value = 'field'; $('fieldKey').value = button.dataset.field; $('elementType').dispatchEvent(new Event('change')); addElement(); }));
-    $('deleteElement').addEventListener('click', () => { if (selectedIndex < 0) return; elements.splice(selectedIndex, 1); selectedIndex = -1; render(); });
-    $('selectedFieldKey').addEventListener('change', event => updateSelected('fieldKey', event.target.value));
-    [['selectedContent','content'],['selectedFontSize','fontSize'],['selectedColor','fontColor'],['selectedAlign','textAlign'],['selectedWeight','fontWeight'],['selectedFontFamily','fontFamily'],['selectedX','x'],['selectedY','y'],['selectedWidth','width'],['selectedHeight','height'],['selectedVisible','isVisible']].forEach(([id, property]) => {
-        $(id).addEventListener('input', event => updateSelected(property, property === 'isVisible' ? event.target.checked : event.target.value));
-        $(id).addEventListener('change', event => updateSelected(property, property === 'isVisible' ? event.target.checked : event.target.value));
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.ped-designs')) $('designsMenu').classList.remove('open');
     });
-    ['backgroundColor','borderColor','borderWidth','borderRadius'].forEach(id => $(id).addEventListener('input', render));
-    $('zoomIn').addEventListener('click', () => { zoom = Math.min(1.2, zoom + .1); render(); });
-    $('zoomOut').addEventListener('click', () => { zoom = Math.max(.35, zoom - .1); render(); });
-    canvas.addEventListener('click', () => { selectedIndex = -1; render(); });
-    form.querySelectorAll('button[type="submit"]').forEach(button => button.addEventListener('click', () => { publishInput.value = button.dataset.publish; }));
-    form.addEventListener('submit', event => {
-        elementsInput.value = JSON.stringify(elements.map((element, index) => ({ ...element, sortOrder: index })));
+
+    $('undoBtn').addEventListener('click', undo);
+    $('redoBtn').addEventListener('click', redo);
+    $('duplicateBtn').addEventListener('click', duplicateSelected);
+    $('deleteBtn').addEventListener('click', deleteSelected);
+    [['alignLeft', 'left'], ['alignHCenter', 'hcenter'], ['alignRight', 'right'], ['alignTop', 'top'], ['alignVCenter', 'vcenter'], ['alignBottom', 'bottom']]
+        .forEach(([id, kind]) => $(id).addEventListener('click', () => alignElement(kind)));
+    $('toFront').addEventListener('click', () => toExtreme(true));
+    $('toBack').addEventListener('click', () => toExtreme(false));
+    $('forward').addEventListener('click', () => moveOrder(1));
+    $('backward').addEventListener('click', () => moveOrder(-1));
+    $('gridToggle').addEventListener('click', () => { gridOn = !gridOn; document.getElementById('pedApp').classList.toggle('grid-on', gridOn); $('gridToggle').classList.toggle('on', gridOn); $('optGrid').checked = gridOn; });
+    $('snapToggle').addEventListener('click', () => { snapOn = !snapOn; $('snapToggle').classList.toggle('on', snapOn); $('optSnap').checked = snapOn; });
+    $('zoomIn').addEventListener('click', () => applyZoom(zoom + 0.1));
+    $('zoomOut').addEventListener('click', () => applyZoom(zoom - 0.1));
+    $('zoomFit').addEventListener('click', () => {
+        const avail = areaEl.clientWidth - 80;
+        applyZoom(Math.min(Math.max(avail / canvasW, 0.25), 1));
     });
-    $('elementType').dispatchEvent(new Event('change'));
+    $('previewToggle').addEventListener('click', () => setPreview(!previewMode));
+
+    $('addTextBtn').addEventListener('click', () => addElement('text'));
+    $('addDividerBtn').addEventListener('click', () => addElement('divider'));
+    document.querySelectorAll('.quick-field').forEach(b => b.addEventListener('click', () => addElement('field', b.dataset.field)));
+
+    $('saveDraftBtn').addEventListener('click', () => submitForm(false));
+    $('publishBtn').addEventListener('click', () => submitForm(true));
+
+    // element property inputs
+    $('selectedContent').addEventListener('change', e => updateSelected('content', e.target.value, true));
+    $('selectedFieldKey').addEventListener('change', e => { updateSelected('fieldKey', e.target.value, true); refreshPropsPanel(); });
+    $('selectedFontFamily').addEventListener('change', e => { updateSelected('fontFamily', e.target.value, true); refreshPropsPanel(); });
+    $('selectedFontSize').addEventListener('change', e => updateSelected('fontSize', e.target.value, true));
+    $('selectedWeight').addEventListener('change', e => updateSelected('fontWeight', e.target.value, true));
+    $('selectedColor').addEventListener('input', e => { updateSelected('fontColor', e.target.value, false); $('selectedColorHex').textContent = e.target.value.toLowerCase(); });
+    $('selectedColor').addEventListener('change', e => updateSelected('fontColor', e.target.value, true));
+    document.querySelectorAll('#alignSeg button').forEach(b => b.addEventListener('click', () => {
+        if (selected < 0) return;
+        pushHistory();
+        updateSelected('textAlign', b.dataset.align, false);
+        document.querySelectorAll('#alignSeg button').forEach(x => x.classList.toggle('on', x === b));
+        setTimeout(() => pushHistory(), 0);
+    }));
+    $('selectedRotation').addEventListener('input', e => { updateSelected('rotation', e.target.value, false); $('rotationLabel').textContent = (Number(e.target.value) || 0) + '°'; });
+    $('selectedRotation').addEventListener('change', e => updateSelected('rotation', e.target.value, true));
+    $('selectedX').addEventListener('change', e => updateSelected('x', e.target.value, true));
+    $('selectedY').addEventListener('change', e => updateSelected('y', e.target.value, true));
+    $('selectedWidth').addEventListener('change', e => updateSelected('width', e.target.value, true));
+    $('selectedHeight').addEventListener('change', e => updateSelected('height', e.target.value, true));
+    $('selectedVisible').addEventListener('change', e => updateSelected('isVisible', e.target.checked, true));
+
+    // canvas property inputs
+    $('canvasWidthInput').addEventListener('change', e => { canvasW = clamp(e.target.value, 800, 1600); pushHistory(); render(); syncCanvasInputs(); });
+    $('canvasHeightInput').addEventListener('change', e => { canvasH = clamp(e.target.value, 500, 1200); pushHistory(); render(); syncCanvasInputs(); });
+    document.querySelectorAll('#sizePresets button').forEach(b => b.addEventListener('click', () => {
+        pushHistory();
+        canvasW = Number(b.dataset.w); canvasH = Number(b.dataset.h);
+        render(); syncCanvasInputs(); refreshPropsPanel();
+    }));
+    $('backgroundColor').addEventListener('input', e => { updateCanvasProp('backgroundColor', e.target.value, false); $('backgroundColorHex').textContent = e.target.value.toLowerCase(); });
+    $('backgroundColor').addEventListener('change', e => updateCanvasProp('backgroundColor', e.target.value, true));
+    $('borderColor').addEventListener('input', e => { updateCanvasProp('borderColor', e.target.value, false); $('borderColorHex').textContent = e.target.value.toLowerCase(); });
+    $('borderColor').addEventListener('change', e => updateCanvasProp('borderColor', e.target.value, true));
+    $('borderWidth').addEventListener('change', e => updateCanvasProp('borderWidth', clamp(e.target.value, 0, 24), true));
+    $('borderRadius').addEventListener('change', e => updateCanvasProp('borderRadius', clamp(e.target.value, 0, 80), true));
+    $('optGrid').addEventListener('change', e => { gridOn = e.target.checked; document.getElementById('pedApp').classList.toggle('grid-on', gridOn); $('gridToggle').classList.toggle('on', gridOn); });
+    $('optSnap').addEventListener('change', e => { snapOn = e.target.checked; $('snapToggle').classList.toggle('on', snapOn); });
+
+    // keyboard shortcuts
+    document.addEventListener('keydown', e => {
+        const tag = (document.activeElement && document.activeElement.tagName) || '';
+        const typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
+        if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) { e.preventDefault(); redo(); return; }
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') { e.preventDefault(); duplicateSelected(); return; }
+        if (typing) return;
+        if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteSelected(); return; }
+        if (e.key === 'Escape') { deselect(); return; }
+        if (selected >= 0 && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+            e.preventDefault();
+            pushHistory();
+            const el = elements[selected];
+            const step = e.shiftKey ? 10 : 1;
+            if (e.key === 'ArrowLeft') el.x = clamp(el.x - step, 0, canvasW - 20);
+            if (e.key === 'ArrowRight') el.x = clamp(el.x + step, 0, canvasW - 20);
+            if (e.key === 'ArrowUp') el.y = clamp(el.y - step, 0, canvasH - 20);
+            if (e.key === 'ArrowDown') el.y = clamp(el.y + step, 0, canvasH - 20);
+            updateNode(el, selected);
+            refreshPropsPanel();
+            updateToolbarState();
+        }
+    });
+
+    // ---------- Init ----------
+    elements.forEach((el, i) => { el.rotation = el.rotation || 0; el.zIndex = (el.zIndex === undefined || el.zIndex === null) ? i : el.zIndex; });
+    normalizeZ();
+    pushHistory();
+    syncCanvasInputs();
     render();
+    refreshLayers();
+    refreshPropsPanel();
+    updateToolbarState();
+    document.getElementById('pedApp').classList.toggle('grid-on', gridOn);
 })();
 </script>

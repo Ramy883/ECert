@@ -15,8 +15,13 @@ public sealed class CertificateDesignService
         {
             ["certificate_number"] = "رقم الشهادة",
             ["trainee_name"] = "اسم المتدرب",
+            ["trainee_name_arabic"] = "اسم المتدرب بالعربية",
+            ["trainee_name_english"] = "اسم المتدرب بالإنجليزية",
             ["course_name"] = "اسم الدورة",
+            ["course_name_arabic"] = "اسم الدورة بالعربية",
+            ["course_name_english"] = "اسم الدورة بالإنجليزية",
             ["issue_date"] = "تاريخ الإصدار",
+            ["issued_by"] = "الجهة المصدرة",
             ["status"] = "الحالة",
             ["verification_code"] = "رمز التحقق",
             ["verification_url"] = "رابط التحقق"
@@ -110,8 +115,13 @@ public sealed class CertificateDesignService
         {
             "certificate_number" => certificate.CertificateNumber ?? string.Empty,
             "trainee_name" => certificate.TraineeName ?? string.Empty,
-            "course_name" => certificate.CourseName ?? string.Empty,
+            "trainee_name_arabic" => certificate.TraineeNameArabic ?? certificate.TraineeName,
+            "trainee_name_english" => certificate.TraineeNameEnglish ?? certificate.TraineeName,
+            "course_name" => certificate.CourseNameArabic ?? certificate.CourseName,
+            "course_name_arabic" => certificate.CourseNameArabic ?? certificate.CourseName,
+            "course_name_english" => certificate.CourseNameEnglish ?? certificate.CourseName,
             "issue_date" => certificate.IssueDate.ToString("yyyy/MM/dd"),
+            "issued_by" => certificate.IssuedBy ?? string.Empty,
             "status" => MapStatus(certificate.Status),
             "verification_code" => certificate.VerificationCode ?? string.Empty,
             "verification_url" => verificationUrl,

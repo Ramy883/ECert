@@ -68,5 +68,7 @@ public class CertificateDesignElement
     public bool IsVisible { get; set; } = true;
     [Range(-100, 100)]
     public int ZIndex { get; set; } = 1;
+    [Range(-180, 180)]
+    public int Rotation { get; set; }
     public int SortOrder { get; set; }
 }
