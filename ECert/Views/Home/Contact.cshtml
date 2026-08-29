@@ -1,0 +1,74 @@
+@{
+    ViewData["Title"] = "اتصل بنا";
+    var contactInfo = ViewBag.ContactInfo as ECert.Models.ContactInfo;
+    var socialLinks = (ViewBag.SocialLinks as List<ECert.Models.SocialLink> ?? new()).Where(x => x.IsActive && !string.IsNullOrWhiteSpace(x.Url)).ToList();
+}
+
+<section class="py-5 bg-light border-bottom">
+    <div class="container">
+        <div class="text-center">
+            <span class="badge rounded-pill text-bg-primary px-3 py-2 mb-3">تواصل معنا</span>
+            <h1 class="fw-bold mb-3">يسرنا خدمتك</h1>
+            <p class="lead text-muted mb-0">يمكنك التواصل معنا عبر القنوات التالية، وسنكون سعداء بالرد على استفساراتك.</p>
+        </div>
+    </div>
+</section>
+
+<section class="py-5">
+    <div class="container">
+        <div class="row g-4 justify-content-center">
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-body p-4 p-lg-5">
+                        @if (contactInfo == null)
+                        {
+                            <div class="alert alert-warning mb-0">لم يتم إضافة بيانات التواصل بعد من لوحة التحكم.</div>
+                        }
+                        else
+                        {
+                            <div class="row g-4">
+                                @if (contactInfo.ShowPhone && !string.IsNullOrWhiteSpace(contactInfo.Phone))
+                                {
+                                    <div class="col-md-6"><div class="p-3 rounded-4 bg-light h-100"><div class="fw-bold mb-2"><i class="bi bi-telephone text-primary me-2"></i>الهاتف</div><div dir="ltr">@contactInfo.Phone</div></div></div>
+                                }
+                                @if (contactInfo.ShowMobile && !string.IsNullOrWhiteSpace(contactInfo.Mobile))
+                                {
+                                    <div class="col-md-6"><div class="p-3 rounded-4 bg-light h-100"><div class="fw-bold mb-2"><i class="bi bi-phone text-primary me-2"></i>الجوال</div><div dir="ltr">@contactInfo.Mobile</div></div></div>
+                                }
+                                @if (contactInfo.ShowEmail && !string.IsNullOrWhiteSpace(contactInfo.Email))
+                                {
+                                    <div class="col-md-6"><div class="p-3 rounded-4 bg-light h-100"><div class="fw-bold mb-2"><i class="bi bi-envelope text-primary me-2"></i>البريد الإلكتروني</div><div>@contactInfo.Email</div></div></div>
+                                }
+                                @if (contactInfo.ShowAddress && !string.IsNullOrWhiteSpace(contactInfo.Address))
+                                {
+                                    <div class="col-md-6"><div class="p-3 rounded-4 bg-light h-100"><div class="fw-bold mb-2"><i class="bi bi-geo-alt text-primary me-2"></i>العنوان</div><div>@contactInfo.Address</div></div></div>
+                                }
+                                @if (contactInfo.ShowWorkingHours && !string.IsNullOrWhiteSpace(contactInfo.WorkingHours))
+                                {
+                                    <div class="col-12"><div class="p-3 rounded-4 bg-light h-100"><div class="fw-bold mb-2"><i class="bi bi-clock text-primary me-2"></i>ساعات العمل</div><div>@contactInfo.WorkingHours</div></div></div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                @if (socialLinks.Any())
+                {
+                    <div class="card border-0 shadow-sm rounded-4 mt-4">
+                        <div class="card-body p-4 text-center">
+                            <h5 class="fw-bold mb-3">تابعنا على منصات التواصل</h5>
+                            <div class="d-flex justify-content-center gap-3 flex-wrap">
+                                @foreach (var link in socialLinks)
+                                {
+                                    <a href="@link.Url" class="btn btn-outline-primary rounded-pill px-3" target="_blank" rel="noopener noreferrer">
+                                        <i class="bi @link.IconClass me-1"></i>@link.PlatformName
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</section>

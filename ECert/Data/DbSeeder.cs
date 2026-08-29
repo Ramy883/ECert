@@ -9,6 +9,7 @@ public static class DbSeeder
         if (db.Roles.Any())
         {
             EnsureCertificateDesignPermission(db);
+            SeedHomepageCms(db);
             return;
         }
 
@@ -216,82 +217,107 @@ public static class DbSeeder
 
     public static void SeedHomepageCms(ECertDbContext db)
     {
-        if (db.SiteSettings.Any()) return;
+        EnsureSiteSetting(db, "SiteName", "مركز التدريب", "General");
+        EnsureSiteSetting(db, "LogoUrl", string.Empty, "General");
+        EnsureSiteSetting(db, "FaviconUrl", string.Empty, "General");
+        EnsureSiteSetting(db, "CopyrightText", string.Empty, "General");
+        EnsureSiteSetting(db, "MetaDescription", "مركز تدريبي معتمد يقدم دورات احترافية في مختلف المجالات", "SEO");
+        EnsureSiteSetting(db, "SeoKeywords", "تدريب,دورات,شهادات,تعليم", "SEO");
+        EnsureSiteSetting(db, "AboutTitle", "من نحن", "Content");
+        EnsureSiteSetting(db, "AboutSummary", "نقدم برامج تدريبية احترافية وشهادات موثقة تساعد المتدربين على بناء مستقبل مهني أقوى.", "Content");
+        EnsureSiteSetting(db, "AboutContent", "نحن جهة تدريبية تهتم بتقديم برامج عملية ومعتمدة في مجالات متنوعة، مع تجربة رقمية متكاملة تشمل التسجيل وإصدار الشهادات والتحقق منها إلكترونياً.", "Content");
+        EnsureSiteSetting(db, "FooterEnabled", "true", "Layout");
+        EnsureSiteSetting(db, "FooterShowQuickLinks", "true", "Layout");
+        EnsureSiteSetting(db, "FooterShowContact", "true", "Layout");
+        EnsureSiteSetting(db, "FooterShowAboutLinks", "true", "Layout");
+        EnsureSiteSetting(db, "FooterShowSocial", "true", "Layout");
 
-        // Site Settings
-        db.SiteSettings.AddRange(
-            new SiteSetting { Key = "SiteName", Value = "مركز التدريب", Category = "General" },
-            new SiteSetting { Key = "LogoUrl", Value = "", Category = "General" },
-            new SiteSetting { Key = "FaviconUrl", Value = "", Category = "General" },
-            new SiteSetting { Key = "CopyrightText", Value = "", Category = "General" },
-            new SiteSetting { Key = "MetaDescription", Value = "مركز تدريبي معتمد يقدم دورات احترافية في مختلف المجالات", Category = "SEO" },
-            new SiteSetting { Key = "SeoKeywords", Value = "تدريب,دورات,شهادات,تعليم", Category = "SEO" }
-        );
-
-        // Hero Slides
-        db.HeroSlides.AddRange(
-            new HeroSlide { Title = "طور مهاراتك مع أفضل المدربين", Description = "نقدم دورات تدريبية معتمدة في مختلف المجالات مع شهادات معتمدة", ImageUrl = "", Button1Text = "استكشف الدورات", Button1Url = "/Courses", Button2Text = "تحقق من شهادة", Button2Url = "/Certificates/Verify", SortOrder = 1, IsActive = true }
-        );
-
-        // Animated Texts
-        db.HeroAnimatedTexts.AddRange(
-            new HeroAnimatedText { Text = "طور مهاراتك", SortOrder = 1, IsActive = true },
-            new HeroAnimatedText { Text = "احصل على شهادة معتمدة", SortOrder = 2, IsActive = true },
-            new HeroAnimatedText { Text = "ابدأ مستقبلك المهني", SortOrder = 3, IsActive = true }
-        );
-
-        // Social Links
-        db.SocialLinks.AddRange(
-            new SocialLink { PlatformName = "Facebook", IconClass = "bi-facebook", Url = "#", SortOrder = 1, IsActive = true },
-            new SocialLink { PlatformName = "X", IconClass = "bi-twitter-x", Url = "#", SortOrder = 2, IsActive = true },
-            new SocialLink { PlatformName = "Instagram", IconClass = "bi-instagram", Url = "#", SortOrder = 3, IsActive = true },
-            new SocialLink { PlatformName = "LinkedIn", IconClass = "bi-linkedin", Url = "#", SortOrder = 4, IsActive = true },
-            new SocialLink { PlatformName = "YouTube", IconClass = "bi-youtube", Url = "#", SortOrder = 5, IsActive = true }
-        );
-
-        // Contact Info
-        db.ContactInfos.Add(new ContactInfo
+        if (!db.HeroSlides.Any())
         {
-            Phone = "01-234567",
-            Mobile = "771234567",
-            Email = "info@training.com",
-            Website = "www.training.com",
-            Address = "صنعاء - اليمن",
-            WorkingHours = "السبت - الخميس: 8 صباحاً - 4 عصراً",
-            ShowPhone = true, ShowMobile = true, ShowEmail = true,
-            ShowWebsite = false, ShowAddress = true, ShowWorkingHours = true
-        });
+            db.HeroSlides.Add(new HeroSlide { Title = "طور مهاراتك مع أفضل المدربين", Description = "نقدم دورات تدريبية معتمدة في مختلف المجالات مع شهادات معتمدة", ImageUrl = "", Button1Text = "استكشف الدورات", Button1Url = "/Courses", Button2Text = "تحقق من شهادة", Button2Url = "/Certificates/Verify", SortOrder = 1, IsActive = true });
+        }
 
-        // Stat Cards
-        db.StatCards.AddRange(
-            new StatCard { Label = "دورة تدريبية", IconClass = "bi-journal-bookmark", Color = "#2563eb", SortOrder = 1, IsActive = true, IsDynamic = true, DynamicSource = "Courses" },
-            new StatCard { Label = "مدرب معتمد", IconClass = "bi-person-badge", Color = "#7c3aed", SortOrder = 2, IsActive = true, IsDynamic = true, DynamicSource = "Instructors" },
-            new StatCard { Label = "متدرب", IconClass = "bi-people", Color = "#059669", SortOrder = 3, IsActive = true, IsDynamic = true, DynamicSource = "Trainees" },
-            new StatCard { Label = "شهادة صادرة", IconClass = "bi-award", Color = "#d97706", SortOrder = 4, IsActive = true, IsDynamic = true, DynamicSource = "Certificates" }
-        );
-
-        // Homepage Sections
-        db.HomepageSections.AddRange(
-            new HomepageSection { SectionKey = "Categories", SectionName = "التصنيفات", IsVisible = true, SortOrder = 1 },
-            new HomepageSection { SectionKey = "Courses", SectionName = "الدورات", IsVisible = true, SortOrder = 2 },
-            new HomepageSection { SectionKey = "Stats", SectionName = "الإحصائيات", IsVisible = true, SortOrder = 3 },
-            new HomepageSection { SectionKey = "News", SectionName = "الأخبار", IsVisible = true, SortOrder = 4 },
-            new HomepageSection { SectionKey = "Instructors", SectionName = "المدربون", IsVisible = true, SortOrder = 5 },
-            new HomepageSection { SectionKey = "Testimonials", SectionName = "آراء المتدربين", IsVisible = false, SortOrder = 6 },
-            new HomepageSection { SectionKey = "Partners", SectionName = "الشركاء", IsVisible = false, SortOrder = 7 },
-            new HomepageSection { SectionKey = "CTA", SectionName = "دعوة للتسجيل", IsVisible = true, SortOrder = 8 }
-        );
-
-        // Theme
-        db.ThemeSettings.Add(new ThemeSetting
+        if (!db.HeroAnimatedTexts.Any())
         {
-            PrimaryColor = "#2563eb",
-            SecondaryColor = "#f59e0b",
-            ButtonColor = "#2563eb",
-            NavbarColor = "#0f172a",
-            FooterColor = "#111827"
-        });
+            db.HeroAnimatedTexts.AddRange(
+                new HeroAnimatedText { Text = "طور مهاراتك", SortOrder = 1, IsActive = true },
+                new HeroAnimatedText { Text = "احصل على شهادة معتمدة", SortOrder = 2, IsActive = true },
+                new HeroAnimatedText { Text = "ابدأ مستقبلك المهني", SortOrder = 3, IsActive = true }
+            );
+        }
+
+        if (!db.SocialLinks.Any())
+        {
+            db.SocialLinks.AddRange(
+                new SocialLink { PlatformName = "Facebook", IconClass = "bi-facebook", Url = "#", SortOrder = 1, IsActive = true },
+                new SocialLink { PlatformName = "X", IconClass = "bi-twitter-x", Url = "#", SortOrder = 2, IsActive = true },
+                new SocialLink { PlatformName = "Instagram", IconClass = "bi-instagram", Url = "#", SortOrder = 3, IsActive = true },
+                new SocialLink { PlatformName = "LinkedIn", IconClass = "bi-linkedin", Url = "#", SortOrder = 4, IsActive = true },
+                new SocialLink { PlatformName = "YouTube", IconClass = "bi-youtube", Url = "#", SortOrder = 5, IsActive = true }
+            );
+        }
+
+        if (!db.ContactInfos.Any())
+        {
+            db.ContactInfos.Add(new ContactInfo
+            {
+                Phone = "01-234567",
+                Mobile = "771234567",
+                Email = "info@training.com",
+                Website = "www.training.com",
+                Address = "صنعاء - اليمن",
+                WorkingHours = "السبت - الخميس: 8 صباحاً - 4 عصراً",
+                ShowPhone = true,
+                ShowMobile = true,
+                ShowEmail = true,
+                ShowWebsite = false,
+                ShowAddress = true,
+                ShowWorkingHours = true
+            });
+        }
+
+        if (!db.StatCards.Any())
+        {
+            db.StatCards.AddRange(
+                new StatCard { Label = "دورة تدريبية", IconClass = "bi-journal-bookmark", Color = "#2563eb", SortOrder = 1, IsActive = true, IsDynamic = true, DynamicSource = "Courses" },
+                new StatCard { Label = "مدرب معتمد", IconClass = "bi-person-badge", Color = "#7c3aed", SortOrder = 2, IsActive = true, IsDynamic = true, DynamicSource = "Instructors" },
+                new StatCard { Label = "متدرب", IconClass = "bi-people", Color = "#059669", SortOrder = 3, IsActive = true, IsDynamic = true, DynamicSource = "Trainees" },
+                new StatCard { Label = "شهادة صادرة", IconClass = "bi-award", Color = "#d97706", SortOrder = 4, IsActive = true, IsDynamic = true, DynamicSource = "Certificates" }
+            );
+        }
+
+        if (!db.HomepageSections.Any())
+        {
+            db.HomepageSections.AddRange(
+                new HomepageSection { SectionKey = "Categories", SectionName = "التصنيفات", IsVisible = true, SortOrder = 1 },
+                new HomepageSection { SectionKey = "Courses", SectionName = "الدورات", IsVisible = true, SortOrder = 2 },
+                new HomepageSection { SectionKey = "Stats", SectionName = "الإحصائيات", IsVisible = true, SortOrder = 3 },
+                new HomepageSection { SectionKey = "News", SectionName = "الأخبار", IsVisible = true, SortOrder = 4 },
+                new HomepageSection { SectionKey = "Instructors", SectionName = "المدربون", IsVisible = true, SortOrder = 5 },
+                new HomepageSection { SectionKey = "Testimonials", SectionName = "آراء المتدربين", IsVisible = false, SortOrder = 6 },
+                new HomepageSection { SectionKey = "Partners", SectionName = "الشركاء", IsVisible = false, SortOrder = 7 },
+                new HomepageSection { SectionKey = "CTA", SectionName = "دعوة للتسجيل", IsVisible = true, SortOrder = 8 }
+            );
+        }
+
+        if (!db.ThemeSettings.Any())
+        {
+            db.ThemeSettings.Add(new ThemeSetting
+            {
+                PrimaryColor = "#2563eb",
+                SecondaryColor = "#f59e0b",
+                ButtonColor = "#2563eb",
+                NavbarColor = "#0f172a",
+                FooterColor = "#111827"
+            });
+        }
 
         db.SaveChanges();
+    }
+
+    private static void EnsureSiteSetting(ECertDbContext db, string key, string value, string category)
+    {
+        if (db.SiteSettings.Any(s => s.Key == key)) return;
+        db.SiteSettings.Add(new SiteSetting { Key = key, Value = value, Category = category });
     }
 }

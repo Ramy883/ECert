@@ -1,0 +1,75 @@
+@{
+    ViewData["Title"] = "من نحن";
+    var siteSettings = ViewBag.SiteSettings as List<ECert.Models.SiteSetting> ?? new();
+    var contactInfo = ViewBag.ContactInfo as ECert.Models.ContactInfo;
+    string GetSetting(string key) => siteSettings.FirstOrDefault(s => s.Key == key)?.Value ?? string.Empty;
+    var aboutTitle = string.IsNullOrWhiteSpace(GetSetting("AboutTitle")) ? "من نحن" : GetSetting("AboutTitle");
+    var aboutSummary = string.IsNullOrWhiteSpace(GetSetting("AboutSummary")) ? GetSetting("MetaDescription") : GetSetting("AboutSummary");
+    var aboutContent = string.IsNullOrWhiteSpace(GetSetting("AboutContent"))
+        ? "نقدّم برامج تدريبية مهنية معتمدة تساعد المتدربين على بناء مهارات عملية قابلة للتطبيق، بإشراف مدربين ذوي خبرة وبمحتوى تدريبي منظم يركز على الجودة والأثر."
+        : GetSetting("AboutContent");
+    var bullets = aboutContent.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+}
+
+<section class="py-5 bg-light border-bottom">
+    <div class="container">
+        <div class="row align-items-center g-4">
+            <div class="col-lg-8">
+                <span class="badge rounded-pill text-bg-primary px-3 py-2 mb-3">تعرف علينا</span>
+                <h1 class="fw-bold mb-3">@aboutTitle</h1>
+                <p class="lead text-muted mb-0" style="line-height:1.9;">@aboutSummary</p>
+            </div>
+            <div class="col-lg-4 text-center">
+                <div class="bg-white rounded-4 shadow-sm p-4 h-100 d-flex align-items-center justify-content-center">
+                    <i class="bi bi-buildings display-2 text-primary"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="py-5">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-body p-4 p-lg-5">
+                        <h3 class="fw-bold mb-3">نبذة عن المركز</h3>
+                        <div class="text-muted" style="line-height:2; white-space:pre-line;">@aboutContent</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm rounded-4 mb-4">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-3">لماذا نحن</h5>
+                        <ul class="list-unstyled mb-0" style="line-height:2;">
+                            <li><i class="bi bi-check-circle-fill text-success me-2"></i> برامج تدريبية عملية ومحدثة</li>
+                            <li><i class="bi bi-check-circle-fill text-success me-2"></i> مدربون متخصصون</li>
+                            <li><i class="bi bi-check-circle-fill text-success me-2"></i> شهادات موثقة وقابلة للتحقق</li>
+                            <li><i class="bi bi-check-circle-fill text-success me-2"></i> تجربة تسجيل ومتابعة سهلة</li>
+                        </ul>
+                    </div>
+                </div>
+                @if (contactInfo != null)
+                {
+                    <div class="card border-0 shadow-sm rounded-4">
+                        <div class="card-body p-4">
+                            <h5 class="fw-bold mb-3">بيانات التواصل</h5>
+                            <ul class="list-unstyled mb-0 text-muted" style="line-height:2;">
+                                @if (contactInfo.ShowPhone && !string.IsNullOrWhiteSpace(contactInfo.Phone))
+                                { <li><i class="bi bi-telephone me-2"></i>@contactInfo.Phone</li> }
+                                @if (contactInfo.ShowMobile && !string.IsNullOrWhiteSpace(contactInfo.Mobile))
+                                { <li><i class="bi bi-phone me-2"></i>@contactInfo.Mobile</li> }
+                                @if (contactInfo.ShowEmail && !string.IsNullOrWhiteSpace(contactInfo.Email))
+                                { <li><i class="bi bi-envelope me-2"></i>@contactInfo.Email</li> }
+                                @if (contactInfo.ShowAddress && !string.IsNullOrWhiteSpace(contactInfo.Address))
+                                { <li><i class="bi bi-geo-alt me-2"></i>@contactInfo.Address</li> }
+                            </ul>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</section>

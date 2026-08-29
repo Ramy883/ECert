@@ -13,7 +13,10 @@ using Microsoft.Net.Http.Headers;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllersWithViews()
+builder.Services.AddControllersWithViews(options =>
+    {
+        options.Filters.AddService<SiteLayoutDataFilter>();
+    })
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
@@ -41,6 +44,7 @@ builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<AuditLogService>();
 builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<SiteLayoutDataFilter>();
 builder.Services.AddSingleton<CertificateSecurityService>();
 builder.Services.AddSingleton<VerifyRequestGuardService>();
 builder.Services.AddSingleton<LoginAttemptGuard>();

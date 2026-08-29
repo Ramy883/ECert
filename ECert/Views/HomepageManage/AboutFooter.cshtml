@@ -1,0 +1,89 @@
+@model ECert.ViewModels.HomepageContentSettingsViewModel
+@{
+    ViewData["Title"] = "من نحن والفوتر";
+    ViewData["PageIcon"] = "bi-layout-text-sidebar-reverse";
+    ViewData["PageDesc"] = "إدارة نبذة المركز وصفحة من نحن وإظهار/إخفاء أقسام الفوتر";
+    Layout = "_AdminLayout";
+}
+
+<a asp-action="Index" class="btn btn-outline-secondary btn-sm mb-3"><i class="bi bi-arrow-right me-1"></i>الرجوع إلى إدارة الصفحة الرئيسية</a>
+
+<div class="page-header">
+    <partial name="_PageHeader" />
+    <div class="page-actions d-flex gap-2 flex-wrap">
+        <a asp-controller="Home" asp-action="About" target="_blank" class="btn btn-outline-primary"><i class="bi bi-eye"></i> معاينة صفحة من نحن</a>
+        <a asp-action="Social" class="btn btn-outline-secondary"><i class="bi bi-share"></i> إدارة روابط التواصل</a>
+        <a asp-action="Contact" class="btn btn-outline-secondary"><i class="bi bi-telephone"></i> إدارة بيانات التواصل</a>
+    </div>
+</div>
+
+<form method="post" asp-action="SaveAboutFooter">
+    @Html.AntiForgeryToken()
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white"><strong>محتوى صفحة من نحن</strong></div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="AboutTitle" class="form-label"></label>
+                        <input asp-for="AboutTitle" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="AboutSummary" class="form-label"></label>
+                        <textarea asp-for="AboutSummary" class="form-control" rows="3" placeholder="نبذة قصيرة تظهر في الفوتر وأعلى صفحة من نحن"></textarea>
+                        <div class="form-text">هذه النبذة تُستخدم أيضاً بدل الوصف العام داخل الفوتر.</div>
+                    </div>
+                    <div class="mb-0">
+                        <label asp-for="AboutContent" class="form-label"></label>
+                        <textarea asp-for="AboutContent" class="form-control" rows="11" placeholder="اكتب تفاصيل التعريف بالمركز، الرؤية، الرسالة، التخصصات، ونقاط القوة..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white"><strong>التحكم في الفوتر</strong></div>
+                <div class="card-body">
+                    <div class="form-check form-switch mb-3">
+                        <input asp-for="FooterEnabled" class="form-check-input" />
+                        <label asp-for="FooterEnabled" class="form-check-label"></label>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input asp-for="FooterShowQuickLinks" class="form-check-input" />
+                        <label asp-for="FooterShowQuickLinks" class="form-check-label"></label>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input asp-for="FooterShowContact" class="form-check-input" />
+                        <label asp-for="FooterShowContact" class="form-check-label"></label>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input asp-for="FooterShowAboutLinks" class="form-check-input" />
+                        <label asp-for="FooterShowAboutLinks" class="form-check-label"></label>
+                    </div>
+                    <div class="form-check form-switch mb-0">
+                        <input asp-for="FooterShowSocial" class="form-check-input" />
+                        <label asp-for="FooterShowSocial" class="form-check-label"></label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white"><strong>أين يدير الأدمن هذه الأجزاء؟</strong></div>
+                <div class="card-body">
+                    <ul class="mb-0 ps-3" style="line-height:2;">
+                        <li><strong>من نحن والنبذة:</strong> من هذه الصفحة نفسها.</li>
+                        <li><strong>الفوتر وإظهار/إخفاء أعمدته:</strong> من هذه الصفحة نفسها.</li>
+                        <li><strong>بيانات الهاتف والبريد والعنوان:</strong> من صفحة <strong>معلومات التواصل</strong>.</li>
+                        <li><strong>أيقونات وروابط السوشيال:</strong> من صفحة <strong>التواصل الاجتماعي</strong>.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4 d-flex gap-2 flex-wrap">
+        <button class="btn btn-primary"><i class="bi bi-check-circle"></i> حفظ التعديلات</button>
+        <a asp-controller="Home" asp-action="About" target="_blank" class="btn btn-outline-primary"><i class="bi bi-eye"></i> معاينة عامة</a>
+    </div>
+</form>

@@ -1,5 +1,6 @@
 using ECert.Data;
 using ECert.Models;
+using ECert.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -228,6 +229,47 @@ public class HomepageManageController : Controller
         return RedirectToAction("Stats");
     }
 
+    // ===== ABOUT & FOOTER =====
+    public async Task<IActionResult> AboutFooter()
+    {
+        if (!IsSuperAdmin()) return Forbid();
+        ViewData["Title"] = "من نحن والفوتر";
+
+        var model = new HomepageContentSettingsViewModel
+        {
+            AboutTitle = await GetSiteSettingAsync("AboutTitle", "من نحن"),
+            AboutSummary = await GetSiteSettingAsync("AboutSummary", await GetSiteSettingAsync("MetaDescription", string.Empty)),
+            AboutContent = await GetSiteSettingAsync("AboutContent", string.Empty),
+            FooterEnabled = await GetSiteSettingBoolAsync("FooterEnabled", true),
+            FooterShowQuickLinks = await GetSiteSettingBoolAsync("FooterShowQuickLinks", true),
+            FooterShowContact = await GetSiteSettingBoolAsync("FooterShowContact", true),
+            FooterShowAboutLinks = await GetSiteSettingBoolAsync("FooterShowAboutLinks", true),
+            FooterShowSocial = await GetSiteSettingBoolAsync("FooterShowSocial", true)
+        };
+
+        return View(model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SaveAboutFooter(HomepageContentSettingsViewModel model)
+    {
+        if (!IsSuperAdmin()) return Forbid();
+
+        await UpsertSiteSettingAsync("AboutTitle", model.AboutTitle?.Trim(), "Content");
+        await UpsertSiteSettingAsync("AboutSummary", model.AboutSummary?.Trim(), "Content");
+        await UpsertSiteSettingAsync("AboutContent", model.AboutContent?.Trim(), "Content");
+        await UpsertSiteSettingAsync("FooterEnabled", model.FooterEnabled.ToString().ToLowerInvariant(), "Layout");
+        await UpsertSiteSettingAsync("FooterShowQuickLinks", model.FooterShowQuickLinks.ToString().ToLowerInvariant(), "Layout");
+        await UpsertSiteSettingAsync("FooterShowContact", model.FooterShowContact.ToString().ToLowerInvariant(), "Layout");
+        await UpsertSiteSettingAsync("FooterShowAboutLinks", model.FooterShowAboutLinks.ToString().ToLowerInvariant(), "Layout");
+        await UpsertSiteSettingAsync("FooterShowSocial", model.FooterShowSocial.ToString().ToLowerInvariant(), "Layout");
+        await _db.SaveChangesAsync();
+
+        TempData["Success"] = "تم حفظ إعدادات من نحن والفوتر بنجاح";
+        return RedirectToAction(nameof(AboutFooter));
+    }
+
     // ===== CONTACT =====
     public async Task<IActionResult> Contact()
     {
@@ -397,6 +439,39 @@ public class HomepageManageController : Controller
             _db.SiteSettings.Add(new SiteSetting { Key = key, Value = value });
         else
             setting.Value = value;
+    }
+
+    private async Task<string> GetSiteSettingAsync(string key, string defaultValue = "")
+    {
+        var value = await _db.SiteSettings
+            .Where(s => s.Key == key)
+            .Select(s => s.Value)
+            .FirstOrDefaultAsync();
+
+        return string.IsNullOrWhiteSpace(value) ? defaultValue : value;
+    }
+
+    private async Task<bool> GetSiteSettingBoolAsync(string key, bool defaultValue)
+    {
+        var value = await _db.SiteSettings
+            .Where(s => s.Key == key)
+            .Select(s => s.Value)
+            .FirstOrDefaultAsync();
+
+        return bool.TryParse(value, out var parsed) ? parsed : defaultValue;
+    }
+
+    private async Task UpsertSiteSettingAsync(string key, string? value, string category)
+    {
+        var setting = await _db.SiteSettings.FirstOrDefaultAsync(s => s.Key == key);
+        if (setting == null)
+        {
+            _db.SiteSettings.Add(new SiteSetting { Key = key, Value = value, Category = category });
+            return;
+        }
+
+        setting.Value = value;
+        setting.Category = category;
     }
 
     private async Task<string> UploadSiteFile(IFormFile file, string prefix)
