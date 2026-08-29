@@ -300,6 +300,7 @@ public class RegistrationsController : Controller
         if (!HasPermission("manage-registrations")) return Forbid();
 
         var selectedIds = (ids ?? Array.Empty<int>()).Where(id => id > 0).Distinct().ToArray();
+        var selectedIdList = selectedIds.ToList();
         if (selectedIds.Length == 0)
         {
             TempData["Error"] = "اختر طلباً معلقاً واحداً على الأقل قبل تنفيذ الإجراء.";
@@ -316,7 +317,7 @@ public class RegistrationsController : Controller
         var selectedRegistrations = await _db.Registrations
             .Include(r => r.Course)
             .Include(r => r.Invoice)
-            .Where(r => selectedIds.Contains(r.RegistrationId))
+            .Where(r => selectedIdList.Contains(r.RegistrationId))
             .ToListAsync();
 
         // A bulk decision is intentionally limited to pending registrations. This prevents
