@@ -497,7 +497,8 @@ public class CertificatesController : Controller
                     FontColor = e.FontColor,
                     FontWeight = e.FontWeight,
                     TextAlign = e.TextAlign,
-                    ZIndex = e.ZIndex
+                    ZIndex = e.ZIndex,
+                    Rotation = e.Rotation
                 })
                 .ToList();
         }

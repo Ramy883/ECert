@@ -261,4 +261,5 @@ public class PublicCertificateDesignElementViewModel
     public string FontWeight { get; set; } = "600";
     public string TextAlign { get; set; } = "center";
     public int ZIndex { get; set; }
+    public int Rotation { get; set; }
 }
