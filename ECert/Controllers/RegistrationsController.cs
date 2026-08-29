@@ -314,6 +314,8 @@ public class RegistrationsController : Controller
         }
 
         var selectedRegistrations = await _db.Registrations
+            .Include(r => r.Course)
+            .Include(r => r.Invoice)
             .Where(r => selectedIds.Contains(r.RegistrationId))
             .ToListAsync();
 
@@ -354,8 +356,14 @@ public class RegistrationsController : Controller
         }
 
         await _db.SaveChangesAsync();
+
+        // Keep the audit payload short and deterministic. A long list of invoice numbers
+        // can exceed legacy column limits and turn a successful batch into an error page.
+        var invoiceSummary = createdInvoiceNumbers.Count == 0
+            ? "none"
+            : $"{createdInvoiceNumbers.Count} invoice(s) created";
         await _audit.LogAsync(User.Identity?.Name ?? "", "BulkAction", "Registration", null, null,
-            $"Action: {actionKey}; Changed: {eligible.Count}; Skipped: {skipped}; Invoices: {string.Join(",", createdInvoiceNumbers)}");
+            $"Action: {actionKey}; Changed: {eligible.Count}; Skipped: {skipped}; Invoices: {invoiceSummary}");
 
         var actionLabel = actionKey == "approve" ? "قبول وإنشاء الفواتير" : "رفض";
         TempData["Success"] = skipped > 0
