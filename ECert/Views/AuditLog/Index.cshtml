@@ -6,10 +6,33 @@
     var logs = ViewBag.Logs as List<AuditLog> ?? new();
     var entityType = ViewBag.EntityType as string;
     var action = ViewBag.Action as string;
+    int totalCount = ViewBag.TotalCount is int t ? t : 0;
+    string? errorMsg = ViewBag.Error as string;
+    string? actorRole = ViewBag.ActorRole as string;
 }
 <div class="page-header">
     <partial name="_PageHeader" />
 </div>
+
+@if (!string.IsNullOrEmpty(errorMsg))
+{
+    <div class="alert alert-warning shadow-sm" role="alert">
+        <h6 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> تعذّر جلب السجلات من قاعدة البيانات</h6>
+        <p class="mb-1 small">@errorMsg</p>
+        <hr />
+        <p class="mb-0 small text-muted">
+            إجمالي السجلات في الجدول: <strong>@totalCount</strong> — دورك: <strong>@actorRole</strong>.
+            تأكد من سلسلة الاتصال في Render (MySqlConnection) وأن خدمة MySQL متاحة.
+        </p>
+    </div>
+}
+else
+{
+    <div class="alert alert-info py-2 px-3 shadow-sm small d-flex align-items-center gap-2" role="status">
+        <i class="bi bi-database-check"></i>
+        <span>عدد السجلات الظاهرة: <strong>@logs.Count</strong> من إجمالي <strong>@totalCount</strong> سجل في قاعدة البيانات.</span>
+    </div>
+}
 
 <div class="card shadow-sm border-0 mb-4">
     <div class="card-body">
