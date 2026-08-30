@@ -507,9 +507,66 @@ main { flex: 1; }
 /* ===== NAVBAR ===== */
 .navbar { backdrop-filter: blur(12px); transition: box-shadow 0.3s ease; }
 .navbar.navbar-scrolled { box-shadow: 0 4px 20px rgba(0,0,0,0.25); }
-.navbar-brand { font-size: 1.3rem; letter-spacing: -0.3px; }
+.navbar-brand {
+    max-width: 78vw;
+    min-width: 0;
+    letter-spacing: -0.3px;
+    gap: 0.6rem !important;
+}
+.navbar-brand .brand-icon {
+    width: 38px; height: 38px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 10px;
+    display: none; /* hidden when a working logo is present */
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+.navbar-brand.brand-text-only .brand-icon { display: inline-flex; }
+.navbar-brand .brand-logo {
+    height: 38px;
+    width: auto;
+    max-width: 60vw;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+.navbar-brand .brand-name {
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.15;
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    /* Dynamic font-size based on title length (attribute set by Razor) */
+    font-size: var(--brand-size, 1.3rem);
+    transition: font-size 0.2s ease;
+}
 .navbar .nav-link { font-weight: 500; padding: 8px 14px !important; border-radius: 8px; transition: var(--transition); margin: 0 2px; }
 .navbar .nav-link:hover { background: rgba(255,255,255,0.1); }
+
+/* Per-title-length size variants chosen server-side */
+.navbar-brand.brand-xs  .brand-name { --brand-size: clamp(0.85rem, 4.2vw, 1.1rem); }
+.navbar-brand.brand-sm  .brand-name { --brand-size: clamp(0.95rem, 4.2vw, 1.2rem); }
+.navbar-brand.brand-md  .brand-name { --brand-size: clamp(1rem, 4.4vw, 1.3rem); }
+.navbar-brand.brand-lg  .brand-name { --brand-size: clamp(0.95rem, 3.6vw, 1.2rem); }
+.navbar-brand.brand-xl  .brand-name { --brand-size: clamp(0.8rem, 2.8vw, 1rem); }
+
+/* Tighten on very small screens */
+@@media (max-width: 575.98px) {
+    .navbar-brand { max-width: 70vw; gap: 0.5rem !important; }
+    .navbar-brand .brand-icon { width: 32px; height: 32px; font-size: 1rem; border-radius: 8px; }
+    .navbar-brand .brand-logo { height: 32px; max-width: 36vw; }
+    .navbar-brand.brand-xs  .brand-name { font-size: 0.95rem; }
+    .navbar-brand.brand-sm  .brand-name { font-size: 1rem; }
+    .navbar-brand.brand-md  .brand-name { font-size: 0.95rem !important; }
+    .navbar-brand.brand-lg  .brand-name { font-size: 0.85rem !important; }
+    .navbar-brand.brand-xl  .brand-name { font-size: 0.75rem !important; }
+}
 
 /* ===== BUTTONS ===== */
 .btn { font-weight: 600; transition: var(--transition); }
