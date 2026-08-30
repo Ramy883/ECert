@@ -39,6 +39,8 @@ public class ECertDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<College> Colleges => Set<College>();
     public DbSet<AcademicSpecialization> AcademicSpecializations => Set<AcademicSpecialization>();
     public DbSet<AcademicLevelOption> AcademicLevelOptions => Set<AcademicLevelOption>();
+    public DbSet<CashboxTransfer> CashboxTransfers => Set<CashboxTransfer>();
+    public DbSet<CashboxWithdrawal> CashboxWithdrawals => Set<CashboxWithdrawal>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

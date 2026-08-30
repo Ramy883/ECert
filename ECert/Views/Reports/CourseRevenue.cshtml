@@ -5,13 +5,32 @@
     Layout = "_AdminLayout";
     var data = ViewBag.Data as dynamic;
     var courses = ViewBag.Courses as dynamic;
+    bool canTransfer = ViewBag.CanTransfer is bool b && b;
 }
 <div class="page-header">
     <partial name="_PageHeader" />
     <div class="page-actions">
-        <a asp-action="ExportCourseRevenueXlsx" class="btn btn-success"><i class="bi bi-file-earmark-excel"></i> تصدير XLSX</a>
+        <a asp-controller="Cashbox" asp-action="Index" class="btn btn-outline-primary">
+            <i class="bi bi-safe"></i> الصندوق
+        </a>
+        <a asp-action="ExportCourseRevenueXlsx" class="btn btn-success">
+            <i class="bi bi-file-earmark-excel"></i> تصدير XLSX
+        </a>
     </div>
 </div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success py-2 px-3 small d-flex align-items-center gap-2">
+        <i class="bi bi-check-circle"></i> @TempData["Success"]
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger py-2 px-3 small d-flex align-items-center gap-2">
+        <i class="bi bi-exclamation-triangle"></i> @TempData["Error"]
+    </div>
+}
 
 <div class="card shadow-sm mb-3">
     <div class="card-body py-2">
@@ -42,21 +61,22 @@
         @if (data != null && data.Count > 0)
         {
             <div class="table-responsive">
-                <table class="table table-hover table-striped">
+                <table class="table table-hover table-striped align-middle">
                     <thead class="table-dark">
                         <tr>
                             <th>الدورة</th>
                             <th>المسجلين</th>
-                            <th>الأصلي</th>
-                            <th>الإعفاءات</th>
                             <th>المتوقع</th>
                             <th>المدفوع</th>
                             <th>المتبقي</th>
-                            <th>كامل</th>
-                            <th>جزئي</th>
-                            <th>غير مسدد</th>
                             <th>نقدي</th>
-                            <th>محافظ إلكترونية</th>
+                            <th>محافظ</th>
+                            <th class="text-center">رصيد مرحَّل</th>
+                            <th class="text-center">رصيد دون ترحيل</th>
+                            @if (canTransfer)
+                            {
+                                <th class="text-center" style="min-width:160px">ترحيل إلى الصندوق</th>
+                            }
                         </tr>
                     </thead>
                     <tbody>
@@ -65,21 +85,57 @@
                             <tr>
                                 <td class="fw-bold">@item.CourseName</td>
                                 <td>@item.Registrations</td>
-                                <td>@(((decimal)item.Original).ToString("N0")) ريال</td>
-                                <td class="text-success">@(((decimal)item.Exemptions).ToString("N0")) ريال</td>
                                 <td>@(((decimal)item.Expected).ToString("N0")) ريال</td>
-                                <td class="text-success">@(((decimal)item.Paid).ToString("N0")) ريال</td>
+                                <td class="text-success fw-bold">@(((decimal)item.Paid).ToString("N0")) ريال</td>
                                 <td class="text-danger">@(((decimal)item.Remaining).ToString("N0")) ريال</td>
-                                <td><span class="badge bg-success">@item.FullPaid</span></td>
-                                <td><span class="badge bg-warning text-dark">@item.Partial</span></td>
-                                <td><span class="badge bg-danger">@item.Unpaid</span></td>
                                 <td>@(((decimal)item.Cash).ToString("N0")) ريال</td>
                                 <td>@(((decimal)item.Bank).ToString("N0")) ريال</td>
+                                <td class="text-center">
+                                    <span class="badge bg-success">@(((decimal)item.Transferred).ToString("N0")) ريال</span>
+                                </td>
+                                <td class="text-center">
+                                    @{
+                                        var avail = (decimal)item.AvailableToTransfer;
+                                        var badgeClass = avail > 0 ? "bg-warning text-dark" : "bg-light text-muted";
+                                    }
+                                    <span class="badge @badgeClass">@avail.ToString("N0") ريال</span>
+                                </td>
+                                @if (canTransfer)
+                                {
+                                    <td class="text-center">
+                                        @if (((decimal)item.AvailableToTransfer) > 0)
+                                        {
+                                            <form asp-controller="Cashbox" asp-action="Transfer" method="post" class="d-inline-flex gap-1 align-items-center">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="courseId" value="@item.CourseId" />
+                                                <input type="number" name="amount" min="0.01" step="0.01"
+                                                       max="@(((decimal)item.AvailableToTransfer).ToString(System.Globalization.CultureInfo.InvariantCulture))"
+                                                       value="@(((decimal)item.AvailableToTransfer).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture))"
+                                                       class="form-control form-control-sm" style="width:130px" required />
+                                                <button type="submit" class="btn btn-sm btn-primary"
+                                                        onclick="return confirm('ترحيل @(((decimal)item.AvailableToTransfer).ToString("N0")) ريال من هذه الدورة إلى الصندوق؟');">
+                                                    <i class="bi bi-arrow-left-circle"></i> ترحيل
+                                                </button>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">—</span>
+                                        }
+                                    </td>
+                                }
                             </tr>
                         }
                     </tbody>
                 </table>
             </div>
+            @if (canTransfer)
+            {
+                <p class="text-muted small mb-0 mt-2">
+                    <i class="bi bi-info-circle"></i>
+                    زر "ترحيل" يظهر فقط عندما يكون هناك رصيد "بدون ترحيل" أكبر من صفر. المبلغ المُدخل لا يجتاز الرصيد المتاح.
+                </p>
+            }
         }
         else
         {

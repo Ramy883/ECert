@@ -292,6 +292,14 @@
                         </a>
                     </li>
                 }
+                @if (IsSuperAdmin || HasPerm("manage-cashbox"))
+                {
+                    <li class="nav-item">
+                        <a class="nav-link @IsActive("Cashbox")" asp-controller="Cashbox" asp-action="Index">
+                            <i class="bi bi-safe"></i> الصندوق
+                        </a>
+                    </li>
+                }
 
                 @* === الشهادات === *@
                 @if (IsSuperAdmin || HasPerm("issue-certificates") || HasPerm("manage-certificate-designs"))

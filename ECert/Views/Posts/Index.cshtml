@@ -28,10 +28,7 @@
                     <div class="card-body p-3">
                         <div class="d-flex align-items-center gap-2 mb-2">
                             <span class="badge bg-primary bg-opacity-10 text-primary"><i class="bi bi-calendar3"></i> @post.PublishedAt?.ToString("yyyy/MM/dd")</span>
-                            @if (!string.IsNullOrEmpty(post.Author))
-                            {
-                                <span class="badge bg-secondary bg-opacity-10 text-secondary"><i class="bi bi-person"></i> @post.Author</span>
-                            }
+                            @* اسم الناشر يظهر للإدارة فقط — لا نعرضه للزائر العام *@
                         </div>
                         <h6 class="card-title fw-bold mb-2">@post.Title</h6>
                         <p class="card-text small text-muted">@(post.Content.Length > 100 ? post.Content[..100] + "..." : post.Content)</p>

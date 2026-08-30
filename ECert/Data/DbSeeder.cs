@@ -6,6 +6,7 @@ public static class DbSeeder
 {
     public static void Seed(ECertDbContext db)
     {
+        EnsureCashboxPermissions(db);
         if (db.Roles.Any())
         {
             EnsureCertificateDesignPermission(db);
@@ -60,7 +61,7 @@ public static class DbSeeder
             db.RolePermissions.Add(new RolePermission { RoleId = mediaRole.RoleId, PermissionId = p.PermissionId });
 
         // Finance permissions
-        var financePerms = new[] { "manage-finance", "view-invoices", "manage-payments", "view-reports" };
+        var financePerms = new[] { "manage-finance", "view-invoices", "manage-payments", "view-reports", "manage-cashbox" };
         foreach (var p in permissions.Where(p => financePerms.Contains(p.PermissionName)))
             db.RolePermissions.Add(new RolePermission { RoleId = financeRole.RoleId, PermissionId = p.PermissionId });
 
@@ -182,6 +183,41 @@ public static class DbSeeder
 
         // Seed Homepage CMS
         SeedHomepageCms(db);
+    }
+
+    private static void EnsureCashboxPermissions(ECertDbContext db)
+    {
+        // الصلاحيتان: ترحيل الرصيد (manage-cashbox) وسحب من الصندوق (withdraw-cashbox)
+        EnsurePermission(db, "manage-cashbox", "ترحيل أرصدة الدورات إلى الصندوق");
+        EnsurePermission(db, "withdraw-cashbox", "سحب من الصندوق العام");
+
+        // مدير المركز (Admin) يرى الصندوق ويحق له ترحيل الأرصدة.
+        GrantPermissionIfMissing(db, "Admin", "manage-cashbox");
+        // السوبر أدمن لديه الصلاحيتان دائماً (يُمنح في التمهيد الأول).
+        GrantPermissionIfMissing(db, "SuperAdmin", "manage-cashbox");
+        GrantPermissionIfMissing(db, "SuperAdmin", "withdraw-cashbox");
+        // المالي يحرّك الترحيلات لكنه لا يسحب من الصندوق.
+        GrantPermissionIfMissing(db, "Finance", "manage-cashbox");
+
+        // إذا كانت قاعدة البيانات قديمة بدون صلاحية "withdraw-cashbox" أصلاً:
+        // نضمن وجودها ومنحها للسوبر أدمن فقط حتى لا تسحب الأدوار الأخرى.
+    }
+
+    private static void EnsurePermission(ECertDbContext db, string name, string description)
+    {
+        if (db.Permissions.Any(p => p.PermissionName == name)) return;
+        db.Permissions.Add(new Permission { PermissionName = name, Description = description });
+        db.SaveChanges();
+    }
+
+    private static void GrantPermissionIfMissing(ECertDbContext db, string roleName, string permissionName)
+    {
+        var role = db.Roles.FirstOrDefault(r => r.RoleName == roleName);
+        var perm = db.Permissions.FirstOrDefault(p => p.PermissionName == permissionName);
+        if (role == null || perm == null) return;
+        if (db.RolePermissions.Any(rp => rp.RoleId == role.RoleId && rp.PermissionId == perm.PermissionId)) return;
+        db.RolePermissions.Add(new RolePermission { RoleId = role.RoleId, PermissionId = perm.PermissionId });
+        db.SaveChanges();
     }
 
     private static void EnsureCertificateDesignPermission(ECertDbContext db)

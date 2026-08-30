@@ -58,6 +58,7 @@ builder.Services.AddScoped<InvoiceSchemaMigrationService>();
 builder.Services.AddScoped<FeeExemptionSchemaMigrationService>();
 builder.Services.AddScoped<CertificateDesignService>();
 builder.Services.AddScoped<CertificateDesignSchemaMigrationService>();
+builder.Services.AddScoped<CashboxSchemaMigrationService>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -183,6 +184,8 @@ using (var scope = app.Services.CreateScope())
         await certificateMigration.EnsureAsync();
         var academicMigration = scope.ServiceProvider.GetRequiredService<AcademicSchemaMigrationService>();
         await academicMigration.EnsureAsync();
+        var cashboxMigration = scope.ServiceProvider.GetRequiredService<CashboxSchemaMigrationService>();
+        await cashboxMigration.EnsureAsync();
         DbSeeder.Seed(db);
         DbSeeder.SeedHomepageCms(db);
     }
