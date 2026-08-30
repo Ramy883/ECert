@@ -15,7 +15,8 @@ public class AuditLogController : Controller
 
     public async Task<IActionResult> Index(string? entityType, string? action)
     {
-        if (!HasPermission("view-audit-log")) return Forbid();
+        var roleName = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value;
+        if (!HasPermission("view-audit-log") && roleName != "SuperAdmin") return Forbid();
         var query = _db.AuditLogs.AsQueryable();
         if (!string.IsNullOrEmpty(entityType)) query = query.Where(a => a.EntityType == entityType);
         if (!string.IsNullOrEmpty(action)) query = query.Where(a => a.Action == action);
