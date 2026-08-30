@@ -6,6 +6,12 @@
     string GetSetting(string key) => siteSettings.FirstOrDefault(s => s.Key == key)?.Value ?? "";
     string siteName = GetSetting("SiteName");
     if (string.IsNullOrEmpty(siteName)) siteName = "مركز التدريب المهني";
+    // حجم خط ديناميكي حسب طول اسم الموقع: كلما طال الاسم صغر الخط ليتلاءم مع الشاشات الصغيرة
+    int nameLen = siteName.Trim().Length;
+    string brandSizeClass = nameLen <= 12 ? "brand-xs"
+                          : nameLen <= 20 ? "brand-sm"
+                          : nameLen <= 32 ? "brand-md"
+                          : nameLen <= 45 ? "brand-lg" : "brand-xl";
     string logoUrl = GetSetting("LogoUrl");
     string faviconUrl = GetSetting("FaviconUrl");
     if (string.IsNullOrEmpty(faviconUrl)) faviconUrl = logoUrl; // الشعار كأيقونة افتراضية
@@ -67,13 +73,13 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark shadow-sm sticky-top" style="background: var(--navbar-color, #0f172a);">
         <div class="container">
-            <a class="navbar-brand fw-bold d-flex align-items-center gap-2" asp-controller="Home" asp-action="Index">
+            <a class="navbar-brand fw-bold d-flex align-items-center gap-2 @brandSizeClass" asp-controller="Home" asp-action="Index">
                 <span class="brand-icon" aria-hidden="true"><i class="bi bi-mortarboard-fill"></i></span>
                 @if (!string.IsNullOrEmpty(logoUrl))
                 {
                     <img src="@logoUrl" alt="@siteName" class="brand-logo" onerror="this.style.display='none'; this.nextElementSibling&&this.parentElement.classList.add('brand-text-only');" />
                 }
-                <span class="brand-name @(string.IsNullOrEmpty(logoUrl) ? "brand-text-only" : "")">@siteName</span>
+                <span class="brand-name @(string.IsNullOrEmpty(logoUrl) ? "brand-text-only" : "")" title="@siteName">@siteName</span>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-label="فتح قائمة التنقل">
                 <span class="navbar-toggler-icon"></span>

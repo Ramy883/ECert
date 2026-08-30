@@ -557,7 +557,7 @@ main { flex: 1; }
 .navbar-brand.brand-xl  .brand-name { --brand-size: clamp(0.8rem, 2.8vw, 1rem); }
 
 /* Tighten on very small screens */
-@@media (max-width: 575.98px) {
+@media (max-width: 575.98px) {
     .navbar-brand { max-width: 70vw; gap: 0.5rem !important; }
     .navbar-brand .brand-icon { width: 32px; height: 32px; font-size: 1rem; border-radius: 8px; }
     .navbar-brand .brand-logo { height: 32px; max-width: 36vw; }
