@@ -9,6 +9,49 @@
     int totalCount = ViewBag.TotalCount is int t ? t : 0;
     string? errorMsg = ViewBag.Error as string;
     string? actorRole = ViewBag.ActorRole as string;
+    var availableActions = ViewBag.AvailableActions as List<string> ?? new();
+    var availableEntities = ViewBag.AvailableEntities as List<string> ?? new();
+
+    var entityLabel = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Registration"] = "تسجيل",
+        ["Invoice"] = "فاتورة",
+        ["Payment"] = "دفعة",
+        ["Certificate"] = "شهادة",
+        ["CertificateTemplate"] = "قالب شهادة",
+        ["CertificateDesign"] = "تصميم شهادة",
+        ["Course"] = "دورة",
+        ["User"] = "مستخدم",
+        ["Post"] = "منشور",
+        ["News"] = "خبر",
+        ["Category"] = "فئة",
+        ["Role"] = "دور",
+        ["University"] = "جامعة",
+        ["College"] = "كلية",
+        ["AcademicSpecialization"] = "تخصص",
+        ["AcademicLevelOption"] = "مستوى دراسي",
+        ["Instructor"] = "مدرب"
+    };
+    var actionLabel = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Create"] = "إنشاء",
+        ["Update"] = "تعديل",
+        ["Edit"] = "تعديل",
+        ["Delete"] = "حذف",
+        ["Accept"] = "قبول",
+        ["Reject"] = "رفض",
+        ["Issue"] = "إصدار",
+        ["IssueBulk"] = "إصدار جماعي",
+        ["Cancel"] = "إلغاء",
+        ["Login"] = "تسجيل دخول",
+        ["Restore"] = "استعادة",
+        ["Reopen"] = "إعادة فتح",
+        ["Publish"] = "نشر",
+        ["Archive"] = "أرشفة",
+        ["ApplyExemption"] = "إعفاء",
+        ["BulkCreate"] = "إنشاء جماعي",
+        ["BulkAction"] = "إجراء جماعي"
+    };
 }
 <div class="page-header">
     <partial name="_PageHeader" />
@@ -22,7 +65,6 @@
         <hr />
         <p class="mb-0 small text-muted">
             إجمالي السجلات في الجدول: <strong>@totalCount</strong> — دورك: <strong>@actorRole</strong>.
-            تأكد من سلسلة الاتصال في Render (MySqlConnection) وأن خدمة MySQL متاحة.
         </p>
     </div>
 }
@@ -30,7 +72,7 @@ else
 {
     <div class="alert alert-info py-2 px-3 shadow-sm small d-flex align-items-center gap-2" role="status">
         <i class="bi bi-database-check"></i>
-        <span>عدد السجلات الظاهرة: <strong>@logs.Count</strong> من إجمالي <strong>@totalCount</strong> سجل في قاعدة البيانات.</span>
+        <span>عدد السجلات الظاهرة في الصفحة: <strong>@logs.Count</strong> من إجمالي <strong>@totalCount</strong> سجل في قاعدة البيانات.</span>
     </div>
 }
 
@@ -41,32 +83,33 @@ else
                 <label class="form-label">نوع العنصر</label>
                 <select name="entityType" class="form-select">
                     <option value="">الكل</option>
-                    <option value="Registration" selected="@(entityType == "Registration")">تسجيل</option>
-                    <option value="Invoice" selected="@(entityType == "Invoice")">فاتورة</option>
-                    <option value="Payment" selected="@(entityType == "Payment")">دفعة</option>
-                    <option value="Certificate" selected="@(entityType == "Certificate")">شهادة</option>
-                    <option value="Course" selected="@(entityType == "Course")">دورة</option>
-                    <option value="User" selected="@(entityType == "User")">مستخدم</option>
-                    <option value="Post" selected="@(entityType == "Post")">منشور</option>
+                    @foreach (var et in availableEntities)
+                    {
+                        var label = entityLabel.TryGetValue(et, out var l) ? l : et;
+                        <option value="@et" selected="@(string.Equals(entityType, et, StringComparison.OrdinalIgnoreCase))">@label</option>
+                    }
                 </select>
             </div>
             <div class="col-md-3">
                 <label class="form-label">العملية</label>
                 <select name="action" class="form-select">
                     <option value="">الكل</option>
-                    <option value="Create" selected="@(action == "Create")">إنشاء</option>
-                    <option value="Update" selected="@(action == "Update")">تعديل</option>
-                    <option value="Delete" selected="@(action == "Delete")">حذف</option>
-                    <option value="Accept" selected="@(action == "Accept")">قبول</option>
-                    <option value="Reject" selected="@(action == "Reject")">رفض</option>
-                    <option value="Issue" selected="@(action == "Issue")">إصدار</option>
-                    <option value="Cancel" selected="@(action == "Cancel")">إلغاء</option>
-                    <option value="Login" selected="@(action == "Login")">تسجيل دخول</option>
+                    @foreach (var a in availableActions)
+                    {
+                        var label = actionLabel.TryGetValue(a, out var l) ? l : a;
+                        <option value="@a" selected="@(string.Equals(action, a, StringComparison.OrdinalIgnoreCase))">@label</option>
+                    }
                 </select>
             </div>
             <div class="col-md-2">
                 <button type="submit" class="btn btn-primary w-100"><i class="bi bi-filter"></i> تصفية</button>
             </div>
+            @if (!string.IsNullOrEmpty(entityType) || !string.IsNullOrEmpty(action))
+            {
+                <div class="col-md-2">
+                    <a asp-action="Index" class="btn btn-outline-secondary w-100"><i class="bi bi-x-circle"></i> إعادة تعيين</a>
+                </div>
+            }
         </form>
     </div>
 </div>
@@ -94,43 +137,56 @@ else
                                 <td class="small">@log.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</td>
                                 <td><strong>@log.UserName</strong></td>
                                 <td>
-                                    @switch (log.Action)
+                                    @if (actionLabel.TryGetValue(log.Action, out var albl))
                                     {
-                                        case "Create": <span class="badge bg-success">إنشاء</span> break;
-                                        case "Update": <span class="badge bg-primary">تعديل</span> break;
-                                        case "Delete": <span class="badge bg-danger">حذف</span> break;
-                                        case "Accept": <span class="badge bg-info">قبول</span> break;
-                                        case "Reject": <span class="badge bg-warning text-dark">رفض</span> break;
-                                        case "Issue": <span class="badge bg-dark">إصدار</span> break;
-                                        case "Cancel": <span class="badge bg-secondary">إلغاء</span> break;
-                                        case "Login": <span class="badge bg-light text-dark">دخول</span> break;
-                                        default: <span class="badge bg-light text-dark">@log.Action</span> break;
+                                        var badgeClass = log.Action switch {
+                                            "Create" => "bg-success",
+                                            "Update" or "Edit" => "bg-primary",
+                                            "Delete" => "bg-danger",
+                                            "Accept" => "bg-info",
+                                            "Reject" => "bg-warning text-dark",
+                                            "Issue" or "IssueBulk" => "bg-dark",
+                                            "Cancel" => "bg-secondary",
+                                            "Login" => "bg-light text-dark",
+                                            _ => "bg-light text-dark"
+                                        };
+                                        <span class="badge @badgeClass">@albl</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-light text-dark">@log.Action</span>
                                     }
                                 </td>
                                 <td>
-                                    @switch (log.EntityType)
-                                    {
-                                        case "Registration": <span>تسجيل</span> break;
-                                        case "Invoice": <span>فاتورة</span> break;
-                                        case "Payment": <span>دفعة</span> break;
-                                        case "Certificate": <span>شهادة</span> break;
-                                        case "Course": <span>دورة</span> break;
-                                        case "User": <span>مستخدم</span> break;
-                                        case "Post": <span>منشور</span> break;
-                                        default: <span>@log.EntityType</span> break;
+                                    @{
+                                        var etLabel = entityLabel.TryGetValue(log.EntityType, out var el) ? el : log.EntityType;
                                     }
+                                    <span>@etLabel</span>
                                 </td>
                                 <td>@(log.EntityId?.ToString() ?? "-")</td>
                                 <td class="small text-muted">@(log.NewValues ?? log.OldValues ?? "-")</td>
                             </tr>
                         }
                     }
+                    else if (totalCount > 0)
+                    {
+                        <tr><td colspan="6" class="text-center text-muted py-4">
+                            لا توجد سجلات مطابقة للفلتر الحالي (الإجمالي في الجدول: @totalCount).
+                            <a asp-action="Index" class="btn btn-sm btn-link">إعادة تعيين الفلتر</a>
+                        </td></tr>
+                    }
                     else
                     {
-                        <tr><td colspan="6" class="text-center text-muted py-4">لا توجد سجلات</td></tr>
+                        <tr><td colspan="6" class="text-center text-muted py-4">لا توجد سجلات حتى الآن</td></tr>
                     }
                 </tbody>
             </table>
         </div>
+        @if (logs.Count >= 200)
+        {
+            <div class="alert alert-secondary small mt-3 mb-0">
+                <i class="bi bi-info-circle"></i> تم عرض أحدث 200 سجل. استخدم الفلاتر لتقريب البحث.
+            </div>
+        }
     </div>
 </div>
