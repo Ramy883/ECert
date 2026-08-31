@@ -23,9 +23,11 @@ public class HomeController : Controller
         ViewBag.SiteSettings = await _db.SiteSettings.ToListAsync();
 
         // Categories with course counts
+        // Keep this as a public model type. Razor enumerates ViewBag values dynamically;
+        // anonymous projections make their properties inaccessible at runtime.
         ViewBag.Categories = await _db.Categories
             .Where(c => c.IsActive)
-            .Select(c => new { c.CategoryId, c.CategoryName, c.IconUrl, c.Description, CourseCount = c.Courses.Count(x => x.Status == "OpenForRegistration" || x.Status == "Published") })
+            .Include(c => c.Courses.Where(x => x.Status == "OpenForRegistration" || x.Status == "Published"))
             .ToListAsync();
 
         // Latest courses
