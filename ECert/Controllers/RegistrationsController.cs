@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ClosedXML.Excel;
+using ECert.ViewModels;
+using System.Globalization;
+using System.Text.Json;
 
 namespace ECert.Controllers;
 
@@ -371,6 +374,490 @@ public class RegistrationsController : Controller
             ? $"تم {actionLabel} {eligible.Count} طلب/طلبات معلقة، وتجاوز {skipped} طلب/طلبات تمت معالجتها مسبقاً."
             : $"تم {actionLabel} {eligible.Count} طلب/طلبات معلقة بنجاح.";
         return ReturnToList(returnUrl);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Import()
+    {
+        if (!HasPermission("manage-registrations")) return Forbid();
+        var model = await BuildRegistrationImportPageViewModelAsync(new RegistrationImportPageViewModel());
+        return View(model);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> DownloadImportTemplate(int? courseId)
+    {
+        if (!HasPermission("manage-registrations")) return Forbid();
+
+        var course = courseId.HasValue
+            ? await _db.Courses.AsNoTracking().FirstOrDefaultAsync(c => c.CourseId == courseId.Value)
+            : null;
+        var requiresAcademic = course?.RequiresAcademicDetails == true;
+
+        using var workbook = new XLWorkbook();
+        var sheet = workbook.Worksheets.Add("Registrations");
+        var headers = new List<string>
+        {
+            "FullNameArabic", "FullNameEnglish", "Gender", "Phone", "Country", "Email", "HeardFrom"
+        };
+        if (requiresAcademic)
+            headers.AddRange(new[] { "University", "College", "Specialization", "AcademicLevel" });
+
+        for (var i = 0; i < headers.Count; i++)
+            sheet.Cell(1, i + 1).Value = headers[i];
+
+        sheet.Row(1).Style.Font.Bold = true;
+        sheet.Row(1).Style.Fill.BackgroundColor = XLColor.FromHtml("#2563eb");
+        sheet.Row(1).Style.Font.FontColor = XLColor.White;
+        sheet.Cell(2, 1).Value = "محمد أحمد";
+        sheet.Cell(2, 2).Value = "Mohammed Ahmed";
+        sheet.Cell(2, 3).Value = "Male";
+        sheet.Cell(2, 4).Value = "0551234567";
+        sheet.Cell(2, 5).Value = "السعودية";
+        sheet.Cell(2, 6).Value = "m.ahmed@example.com";
+        sheet.Cell(2, 7).Value = "تسجيل حضوري";
+        if (requiresAcademic)
+        {
+            sheet.Cell(2, 8).Value = "اسم الجامعة كما هو في النظام";
+            sheet.Cell(2, 9).Value = "اسم الكلية كما هو في النظام";
+            sheet.Cell(2, 10).Value = "اسم التخصص كما هو في النظام";
+            sheet.Cell(2, 11).Value = "المستوى الدراسي كما هو في النظام";
+        }
+        sheet.Row(2).Style.Font.FontColor = XLColor.Gray;
+        sheet.SheetView.FreezeRows(1);
+        sheet.Columns().AdjustToContents();
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        var fileName = course == null
+            ? "registrations-import-template.xlsx"
+            : $"registrations-import-template-course-{course.CourseId}.xlsx";
+        return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequestSizeLimit(10_000_000)]
+    public async Task<IActionResult> Import(RegistrationImportPageViewModel model)
+    {
+        if (!HasPermission("manage-registrations")) return Forbid();
+        model = await BuildRegistrationImportPageViewModelAsync(model);
+
+        if (!model.CourseId.HasValue)
+        {
+            ModelState.AddModelError(nameof(model.CourseId), "اختر الدورة أولاً.");
+            return View(model);
+        }
+
+        var course = await _db.Courses.AsNoTracking().FirstOrDefaultAsync(c => c.CourseId == model.CourseId.Value);
+        if (course == null)
+        {
+            ModelState.AddModelError(nameof(model.CourseId), "الدورة المحددة غير موجودة.");
+            return View(model);
+        }
+
+        if (model.ImportStatus is not ("Pending" or "Accepted"))
+        {
+            ModelState.AddModelError(nameof(model.ImportStatus), "اختر حالة صالحة بعد الاستيراد.");
+            return View(model);
+        }
+
+        if (model.File == null || model.File.Length == 0)
+        {
+            ModelState.AddModelError(nameof(model.File), "اختر ملف XLSX صالحاً.");
+            return View(model);
+        }
+
+        if (!string.Equals(Path.GetExtension(model.File.FileName), ".xlsx", StringComparison.OrdinalIgnoreCase) || model.File.Length > 10_000_000)
+        {
+            ModelState.AddModelError(nameof(model.File), "يسمح فقط بملفات XLSX بحجم لا يتجاوز 10 ميجابايت.");
+            return View(model);
+        }
+
+        try
+        {
+            await using var stream = model.File.OpenReadStream();
+            var preview = await BuildRegistrationImportPreviewAsync(stream, course, model.ImportStatus);
+            var token = Guid.NewGuid().ToString("N");
+            preview.Token = token;
+            preview.CreatedAtUtc = DateTime.UtcNow;
+            var previewDir = Path.Combine(Path.GetTempPath(), "ecert-registration-imports");
+            Directory.CreateDirectory(previewDir);
+            await System.IO.File.WriteAllTextAsync(Path.Combine(previewDir, token + ".json"), JsonSerializer.Serialize(preview));
+            model.PreviewToken = token;
+            model.Preview = preview;
+            return View(model);
+        }
+        catch (Exception)
+        {
+            ModelState.AddModelError(nameof(model.File), "تعذر قراءة الملف. تأكد أنه ملف XLSX سليم وغير محمي بكلمة مرور.");
+            return View(model);
+        }
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ConfirmImport(string token)
+    {
+        if (!HasPermission("manage-registrations")) return Forbid();
+        if (string.IsNullOrWhiteSpace(token) || token.Length != 32) return BadRequest("رمز المعاينة غير صالح.");
+
+        var previewPath = Path.Combine(Path.GetTempPath(), "ecert-registration-imports", token + ".json");
+        if (!System.IO.File.Exists(previewPath))
+        {
+            TempData["Error"] = "انتهت صلاحية المعاينة. ارفع الملف مرة أخرى.";
+            return RedirectToAction(nameof(Import));
+        }
+
+        RegistrationImportPreview? preview;
+        try
+        {
+            preview = JsonSerializer.Deserialize<RegistrationImportPreview>(await System.IO.File.ReadAllTextAsync(previewPath));
+        }
+        finally
+        {
+            try { System.IO.File.Delete(previewPath); } catch { }
+        }
+
+        if (preview == null || preview.CreatedAtUtc < DateTime.UtcNow.AddHours(-1) || preview.InvalidRows > 0 || preview.ValidRows == 0)
+        {
+            TempData["Error"] = "لا يمكن اعتماد الملف. يجب معالجة جميع الأخطاء أولاً.";
+            return RedirectToAction(nameof(Import));
+        }
+
+        var course = await _db.Courses.FirstOrDefaultAsync(c => c.CourseId == preview.CourseId);
+        if (course == null)
+        {
+            TempData["Error"] = "الدورة المحددة لم تعد موجودة.";
+            return RedirectToAction(nameof(Import));
+        }
+
+        var duplicatePhones = preview.Rows
+            .Select(r => r.NormalizedPhone)
+            .Where(v => !string.IsNullOrWhiteSpace(v))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var existingDuplicates = duplicatePhones.Count == 0
+            ? new List<string>()
+            : await _db.Registrations
+                .Where(r => r.CourseId == preview.CourseId
+                    && duplicatePhones.Contains(r.Phone)
+                    && r.Status != "Rejected"
+                    && r.Status != "Archived")
+                .Select(r => r.Phone)
+                .Distinct()
+                .ToListAsync();
+
+        if (existingDuplicates.Count > 0)
+        {
+            TempData["Error"] = "يوجد متدربون مسجلون مسبقاً بنفس أرقام الجوال داخل الدورة. لم يتم حفظ أي صف.";
+            return RedirectToAction(nameof(Import));
+        }
+
+        await using var transaction = await _db.Database.BeginTransactionAsync();
+        try
+        {
+            var now = DateTime.Now;
+            var processedBy = User.Identity?.Name ?? "System";
+            var imported = new List<Registration>();
+
+            foreach (var row in preview.Rows)
+            {
+                var registration = new Registration
+                {
+                    RequestNumber = await GenerateRequestNumberAsync(),
+                    FullName = row.FullNameArabic,
+                    FullNameArabic = row.FullNameArabic,
+                    FullNameEnglish = row.FullNameEnglish,
+                    Gender = row.Gender,
+                    Phone = row.NormalizedPhone!,
+                    Email = string.IsNullOrWhiteSpace(row.Email) ? null : row.Email.Trim(),
+                    HeardFrom = string.IsNullOrWhiteSpace(row.HeardFrom) ? "استيراد Excel" : row.HeardFrom.Trim(),
+                    CourseId = preview.CourseId,
+                    Status = preview.ImportStatus,
+                    RegistrationDate = now,
+                    AcceptedDate = preview.ImportStatus == "Accepted" ? now : null,
+                    ProcessedBy = preview.ImportStatus == "Accepted" ? processedBy : null,
+                    UniversityId = row.UniversityId,
+                    CollegeId = row.CollegeId,
+                    AcademicSpecializationId = row.AcademicSpecializationId,
+                    AcademicLevel = string.IsNullOrWhiteSpace(row.AcademicLevel) ? null : row.AcademicLevel.Trim(),
+                    UniversityNameSnapshot = string.IsNullOrWhiteSpace(row.University) ? null : row.University.Trim(),
+                    CollegeNameSnapshot = string.IsNullOrWhiteSpace(row.College) ? null : row.College.Trim(),
+                    SpecializationNameSnapshot = string.IsNullOrWhiteSpace(row.Specialization) ? null : row.Specialization.Trim()
+                };
+                _db.Registrations.Add(registration);
+                imported.Add(registration);
+            }
+
+            await _db.SaveChangesAsync();
+
+            if (preview.ImportStatus == "Accepted")
+            {
+                foreach (var registration in imported)
+                {
+                    registration.Course = course;
+                    await _invoiceService.EnsureForAcceptedAsync(registration, processedBy);
+                }
+                await _db.SaveChangesAsync();
+            }
+
+            await transaction.CommitAsync();
+            await _audit.LogAsync(User.Identity?.Name ?? "", "BulkCreate", "Registration", null, null,
+                $"Imported {preview.ValidRows} registrations into course {preview.CourseId} with status {preview.ImportStatus}");
+            TempData["Success"] = preview.ImportStatus == "Accepted"
+                ? $"تم استيراد {preview.ValidRows} متدرباً واعتمادهم مباشرة وإنشاء الفواتير اللازمة."
+                : $"تم استيراد {preview.ValidRows} متدرباً كطلبات معلقة بنجاح.";
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            TempData["Error"] = "فشل حفظ الاستيراد بالكامل، ولم يتم حفظ أي متدرب.";
+        }
+
+        return RedirectToAction(nameof(Index), new { courseId = preview.CourseId });
+    }
+
+    private async Task<RegistrationImportPageViewModel> BuildRegistrationImportPageViewModelAsync(RegistrationImportPageViewModel model)
+    {
+        model.Courses = await _db.Courses
+            .Where(c => c.Status != "Archived")
+            .OrderBy(c => c.CourseNameArabic ?? c.CourseName)
+            .Select(c => new RegistrationImportCourseOption
+            {
+                CourseId = c.CourseId,
+                CourseName = (c.CourseNameArabic ?? c.CourseName) + (c.CourseNameEnglish != null ? $" / {c.CourseNameEnglish}" : string.Empty),
+                RequiresAcademicDetails = c.RequiresAcademicDetails
+            })
+            .ToListAsync();
+
+        if (model.CourseId.HasValue)
+            model.CourseRequiresAcademicDetails = model.Courses.FirstOrDefault(c => c.CourseId == model.CourseId.Value)?.RequiresAcademicDetails == true;
+
+        return model;
+    }
+
+    private async Task<RegistrationImportPreview> BuildRegistrationImportPreviewAsync(Stream stream, Course course, string importStatus)
+    {
+        var preview = new RegistrationImportPreview
+        {
+            CourseId = course.CourseId,
+            CourseName = course.CourseNameArabic ?? course.CourseName,
+            ImportStatus = importStatus,
+            CourseRequiresAcademicDetails = course.RequiresAcademicDetails
+        };
+
+        using var workbook = new XLWorkbook(stream);
+        var sheet = workbook.Worksheets.FirstOrDefault() ?? throw new InvalidDataException();
+        var used = sheet.RangeUsed() ?? throw new InvalidDataException();
+        if (used.RowCount() < 2 || used.ColumnCount() < 4) throw new InvalidDataException();
+        if (used.RowCount() > 5001) throw new InvalidDataException("The workbook exceeds the 5000-row limit.");
+
+        var headers = Enumerable.Range(1, used.ColumnCount()).ToDictionary(i => CanonicalRegistrationHeader(sheet.Cell(1, i).GetString()), i => i);
+        var required = new[] { "fullnamearabic", "fullnameenglish", "gender", "phone" };
+        var missing = required.Where(h => !headers.ContainsKey(h)).ToList();
+        if (missing.Count > 0) throw new InvalidDataException($"Missing columns: {string.Join(",", missing)}");
+
+        var countries = await _db.PhoneCountries.Where(c => c.IsActive).ToListAsync();
+        var countryByName = countries.ToDictionary(c => NormalizeLookup(c.CountryName), c => c);
+        var countryByCode = countries.ToDictionary(c => NormalizeLookup(c.CountryCode), c => c);
+
+        var universities = await _db.Universities.Where(u => u.IsActive).ToListAsync();
+        var colleges = await _db.Colleges.Where(c => c.IsActive).ToListAsync();
+        var specializations = await _db.AcademicSpecializations.Where(s => s.IsActive).ToListAsync();
+        var levelOptions = await _db.AcademicLevelOptions.Where(l => l.IsActive).ToListAsync();
+
+        var seenPhones = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (var rowNumber = 2; rowNumber <= used.LastRow().RowNumber(); rowNumber++)
+        {
+            var row = new RegistrationImportRow { RowNumber = rowNumber };
+            row.FullNameArabic = RegistrationText(sheet, headers, rowNumber, "fullnamearabic");
+            row.FullNameEnglish = RegistrationText(sheet, headers, rowNumber, "fullnameenglish");
+            row.Gender = RegistrationOptionalText(sheet, headers, rowNumber, "gender");
+            row.Phone = RegistrationText(sheet, headers, rowNumber, "phone");
+            row.Country = RegistrationOptionalText(sheet, headers, rowNumber, "country");
+            row.Email = RegistrationOptionalText(sheet, headers, rowNumber, "email");
+            row.HeardFrom = RegistrationOptionalText(sheet, headers, rowNumber, "heardfrom");
+            row.University = RegistrationOptionalText(sheet, headers, rowNumber, "university");
+            row.College = RegistrationOptionalText(sheet, headers, rowNumber, "college");
+            row.Specialization = RegistrationOptionalText(sheet, headers, rowNumber, "specialization");
+            row.AcademicLevel = RegistrationOptionalText(sheet, headers, rowNumber, "academiclevel");
+
+            if (string.IsNullOrWhiteSpace(row.FullNameArabic)) row.Errors.Add("الاسم بالعربية مطلوب");
+            if (string.IsNullOrWhiteSpace(row.FullNameEnglish)) row.Errors.Add("الاسم بالإنجليزية مطلوب");
+            if (row.FullNameArabic.Length > 100) row.Errors.Add("الاسم بالعربية يتجاوز 100 حرف");
+            if (row.FullNameEnglish.Length > 100) row.Errors.Add("الاسم بالإنجليزية يتجاوز 100 حرف");
+            if (row.Gender is not ("Male" or "Female" or "ذكر" or "أنثى")) row.Errors.Add("الجنس يجب أن يكون Male أو Female");
+
+            var phoneResult = NormalizeImportedPhone(row.Phone, row.Country, countryByName, countryByCode);
+            if (!phoneResult.IsValid)
+            {
+                row.Errors.Add(phoneResult.ErrorMessage!);
+            }
+            else
+            {
+                row.NormalizedPhone = phoneResult.NormalizedPhone;
+                if (!seenPhones.Add(row.NormalizedPhone!))
+                    row.Errors.Add("رقم الهاتف مكرر داخل الملف لنفس الدورة");
+            }
+
+            if (!string.IsNullOrWhiteSpace(row.Email) && !row.Email.Contains('@'))
+                row.Errors.Add("البريد الإلكتروني غير صحيح");
+
+            var requiresAcademic = course.RequiresAcademicDetails
+                || !string.IsNullOrWhiteSpace(row.University)
+                || !string.IsNullOrWhiteSpace(row.College)
+                || !string.IsNullOrWhiteSpace(row.Specialization)
+                || !string.IsNullOrWhiteSpace(row.AcademicLevel);
+
+            if (requiresAcademic)
+            {
+                if (string.IsNullOrWhiteSpace(row.University)) row.Errors.Add("اسم الجامعة مطلوب لهذه الدورة");
+                if (string.IsNullOrWhiteSpace(row.College)) row.Errors.Add("اسم الكلية مطلوب لهذه الدورة");
+                if (string.IsNullOrWhiteSpace(row.Specialization)) row.Errors.Add("اسم التخصص مطلوب لهذه الدورة");
+                if (string.IsNullOrWhiteSpace(row.AcademicLevel)) row.Errors.Add("المستوى الدراسي مطلوب لهذه الدورة");
+
+                var university = universities.FirstOrDefault(u => NormalizeLookup(u.UniversityName) == NormalizeLookup(row.University));
+                if (university == null)
+                {
+                    row.Errors.Add("الجامعة غير موجودة أو غير نشطة");
+                }
+                else
+                {
+                    row.UniversityId = university.UniversityId;
+                    var college = colleges.FirstOrDefault(c => c.UniversityId == university.UniversityId && NormalizeLookup(c.CollegeName) == NormalizeLookup(row.College));
+                    if (college == null)
+                    {
+                        row.Errors.Add("الكلية غير موجودة أو لا تنتمي إلى الجامعة المحددة");
+                    }
+                    else
+                    {
+                        row.CollegeId = college.CollegeId;
+                        var specialization = specializations.FirstOrDefault(s => s.CollegeId == college.CollegeId && NormalizeLookup(s.SpecializationName) == NormalizeLookup(row.Specialization));
+                        if (specialization == null)
+                        {
+                            row.Errors.Add("التخصص غير موجود أو لا ينتمي إلى الكلية المحددة");
+                        }
+                        else
+                        {
+                            row.AcademicSpecializationId = specialization.AcademicSpecializationId;
+                            var levelMatch = levelOptions.Any(l => l.AcademicSpecializationId == specialization.AcademicSpecializationId && NormalizeLookup(l.LevelName) == NormalizeLookup(row.AcademicLevel));
+                            if (!levelMatch)
+                                row.Errors.Add("المستوى الدراسي غير متاح لهذا التخصص");
+                        }
+                    }
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(row.NormalizedPhone))
+            {
+                var duplicateExists = await _db.Registrations.AsNoTracking().AnyAsync(r =>
+                    r.CourseId == course.CourseId
+                    && r.Phone == row.NormalizedPhone
+                    && r.Status != "Rejected"
+                    && r.Status != "Archived");
+                if (duplicateExists)
+                    row.Errors.Add("يوجد تسجيل قائم بهذا الرقم لهذه الدورة بالفعل");
+            }
+
+            preview.Rows.Add(row);
+        }
+
+        preview.TotalRows = preview.Rows.Count;
+        preview.ValidRows = preview.Rows.Count(r => r.IsValid);
+        preview.InvalidRows = preview.Rows.Count - preview.ValidRows;
+        return preview;
+    }
+
+    private async Task<string> GenerateRequestNumberAsync()
+    {
+        for (var attempt = 0; attempt < 20; attempt++)
+        {
+            var candidate = $"REG-{DateTime.Now:yyyy}-{Random.Shared.Next(10000, 99999)}";
+            if (!await _db.Registrations.AnyAsync(r => r.RequestNumber == candidate))
+                return candidate;
+        }
+
+        return $"REG-{DateTime.Now:yyyyMMddHHmmss}-{Guid.NewGuid():N}"[..36];
+    }
+
+    private static string CanonicalRegistrationHeader(string value)
+    {
+        var header = NormalizeLookup(value).Replace(" ", string.Empty).Replace("_", string.Empty);
+        return header switch
+        {
+            "الاسمالعربي" or "اسمالمتدرببالعربية" or "fullnamearabic" => "fullnamearabic",
+            "الاسمالانجليزي" or "اسمالمتدرببالانجليزية" or "fullnameenglish" => "fullnameenglish",
+            "الجنس" or "gender" => "gender",
+            "الهاتف" or "رقمالهاتف" or "phone" => "phone",
+            "الدولة" or "مفتاحالدولة" or "country" or "countrycode" => "country",
+            "البريدالالكتروني" or "email" => "email",
+            "كيفسمعتعنا" or "heardfrom" => "heardfrom",
+            "الجامعة" or "university" => "university",
+            "الكلية" or "college" => "college",
+            "التخصص" or "specialization" => "specialization",
+            "المستوىالدراسي" or "academiclevel" => "academiclevel",
+            _ => header
+        };
+    }
+
+    private static string RegistrationText(IXLWorksheet sheet, Dictionary<string, int> headers, int row, string key)
+        => headers.TryGetValue(key, out var col) ? sheet.Cell(row, col).GetString().Trim() : string.Empty;
+
+    private static string? RegistrationOptionalText(IXLWorksheet sheet, Dictionary<string, int> headers, int row, string key)
+    {
+        var value = RegistrationText(sheet, headers, row, key);
+        return string.IsNullOrWhiteSpace(value) ? null : value;
+    }
+
+    private static string NormalizeLookup(string? value)
+        => (value ?? string.Empty).Trim().ToUpperInvariant();
+
+    private static (bool IsValid, string? NormalizedPhone, string? ErrorMessage) NormalizeImportedPhone(
+        string rawPhone,
+        string? rawCountry,
+        IReadOnlyDictionary<string, PhoneCountry> countryByName,
+        IReadOnlyDictionary<string, PhoneCountry> countryByCode)
+    {
+        if (string.IsNullOrWhiteSpace(rawPhone))
+            return (false, null, "رقم الهاتف مطلوب");
+
+        var phone = rawPhone.Trim().Replace(" ", string.Empty).Replace("-", string.Empty);
+        PhoneCountry? country = null;
+        if (!string.IsNullOrWhiteSpace(rawCountry))
+        {
+            var key = NormalizeLookup(rawCountry);
+            if (!countryByName.TryGetValue(key, out country) && !countryByCode.TryGetValue(key, out country))
+                return (false, null, "الدولة/مفتاح الدولة غير موجود في الإعدادات");
+        }
+
+        if (phone.StartsWith('+'))
+        {
+            if (phone.Count(ch => ch == '+') > 1 || !phone[1..].All(char.IsDigit))
+                return (false, null, "رقم الهاتف الدولي غير صالح");
+            if (country != null && !phone.StartsWith(country.CountryCode, StringComparison.OrdinalIgnoreCase))
+                return (false, null, "رقم الهاتف لا يطابق مفتاح الدولة المحدد");
+            return (true, phone, null);
+        }
+
+        if (country == null)
+            return (false, null, "أدخل الدولة أو استخدم رقم هاتف يبدأ بـ +");
+
+        if (phone.StartsWith('0'))
+            phone = phone[1..];
+        if (!phone.All(char.IsDigit))
+            return (false, null, "رقم الهاتف يجب أن يحتوي على أرقام فقط");
+        if (phone.Length < country.MinPhoneLength || phone.Length > country.MaxPhoneLength)
+            return (false, null, $"رقم الهاتف يجب أن يكون بين {country.MinPhoneLength} و {country.MaxPhoneLength} أرقام");
+
+        if (!string.IsNullOrWhiteSpace(country.Prefixes))
+        {
+            var prefixes = country.Prefixes.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (prefixes.Length > 0 && !prefixes.Any(phone.StartsWith))
+                return (false, null, $"رقم الهاتف يجب أن يبدأ بأحد البادئات: {string.Join(", ", prefixes)}");
+        }
+
+        return (true, $"{country.CountryCode}{phone}", null);
     }
 
     public async Task<IActionResult> ExportXlsx(string? status, string? search, int? courseId, DateTime? dateFrom, DateTime? dateTo)

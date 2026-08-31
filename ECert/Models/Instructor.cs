@@ -32,4 +32,5 @@ public class Instructor
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 
     public ICollection<Course> Courses { get; set; } = new List<Course>();
+    public ICollection<CourseInstructor> CourseInstructors { get; set; } = new List<CourseInstructor>();
 }

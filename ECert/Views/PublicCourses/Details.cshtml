@@ -22,10 +22,18 @@
                     </h2>
                     @switch (Model.Status)
                     {
-                        case "OpenForRegistration": <span class="badge bg-success fs-6">مفتوحة للتسجيل</span> break;
-                        case "Published": <span class="badge bg-primary fs-6">منشورة</span> break;
-                        case "InProgress": <span class="badge bg-warning text-dark fs-6">جارية</span> break;
-                        case "Completed": <span class="badge bg-secondary fs-6">منتهية</span> break;
+                        case "OpenForRegistration":
+                            @:<span class="badge bg-success fs-6">مفتوحة للتسجيل</span>
+                            break;
+                        case "Published":
+                            @:<span class="badge bg-primary fs-6">منشورة</span>
+                            break;
+                        case "InProgress":
+                            @:<span class="badge bg-warning text-dark fs-6">جارية</span>
+                            break;
+                        case "Completed":
+                            @:<span class="badge bg-secondary fs-6">منتهية</span>
+                            break;
                     }
                 </div>
                 <span class="badge bg-info mb-3">@Model.Category?.CategoryName</span>
@@ -77,14 +85,28 @@
         </div>
 
         <div class="card shadow-sm">
-            <div class="card-body text-center">
-                <i class="bi bi-person-circle text-primary" style="font-size: 3rem;"></i>
-                <h5 class="mt-2">@Model.Instructor?.FullName</h5>
-                <p class="text-muted small">@Model.Instructor?.Specialization</p>
-                @if (!string.IsNullOrEmpty(Model.Instructor?.Bio))
-                {
-                    <p class="small">@Model.Instructor.Bio</p>
-                }
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h5 class="card-title mb-0">المدربون</h5>
+                    <span class="badge text-bg-primary">@Model.AssignedInstructors.Count</span>
+                </div>
+                <div class="d-grid gap-3">
+                    @foreach (var instructor in Model.AssignedInstructors)
+                    {
+                        <div class="border rounded-3 p-3 text-center">
+                            <i class="bi bi-person-circle text-primary" style="font-size: 2.4rem;"></i>
+                            <h6 class="mt-2 mb-1">@instructor.FullName</h6>
+                            @if (!string.IsNullOrWhiteSpace(instructor.Specialization))
+                            {
+                                <p class="text-muted small mb-2">@instructor.Specialization</p>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(instructor.Bio))
+                            {
+                                <p class="small mb-0">@instructor.Bio</p>
+                            }
+                        </div>
+                    }
+                </div>
             </div>
         </div>
     </div>

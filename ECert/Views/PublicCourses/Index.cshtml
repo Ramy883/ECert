@@ -88,10 +88,18 @@
                                 <span class="badge bg-info">@course.Category?.CategoryName</span>
                                 @switch (course.Status)
                                 {
-                                    case "OpenForRegistration": <span class="badge bg-success">مفتوحة</span> break;
-                                    case "Published": <span class="badge bg-warning text-dark">قريباً</span> break;
-                                    case "InProgress": <span class="badge bg-warning text-dark">جارية</span> break;
-                                    case "Completed": <span class="badge bg-secondary">منتهية</span> break;
+                                    case "OpenForRegistration":
+                                        @:<span class="badge bg-success">مفتوحة</span>
+                                        break;
+                                    case "Published":
+                                        @:<span class="badge bg-warning text-dark">قريباً</span>
+                                        break;
+                                    case "InProgress":
+                                        @:<span class="badge bg-warning text-dark">جارية</span>
+                                        break;
+                                    case "Completed":
+                                        @:<span class="badge bg-secondary">منتهية</span>
+                                        break;
                                 }
                             </div>
                             <h5 class="card-title">
@@ -100,7 +108,7 @@
                             </h5>
                             <p class="card-text text-muted small">@course.ShortDescription</p>
                             <hr />
-                            <p class="small mb-1"><i class="bi bi-person"></i> @course.Instructor?.FullName</p>
+                            <p class="small mb-1"><i class="bi bi-person"></i> @course.InstructorNamesDisplay</p>
                             <p class="small mb-1"><i class="bi bi-calendar"></i> تبدأ: @(course.StartDate?.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("ar-SA")) ?? "يحدد لاحقاً")</p>
                             <p class="small mb-1"><i class="bi bi-hourglass-split"></i> المدة: @course.DurationText</p>
                             <p class="small mb-1"><i class="bi bi-geo-alt"></i> @(string.IsNullOrWhiteSpace(course.Location) ? "عن بعد أو يحدد لاحقاً" : course.Location)</p>

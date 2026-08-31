@@ -214,10 +214,18 @@
                 <h5>مركز التدريب</h5>
                 <small>
                     @switch(roleName) {
-                        case "SuperAdmin": <span>لوحة المدير العام</span> break;
-                        case "Admin": <span>لوحة الإداري</span> break;
-                        case "Media": <span>لوحة الإعلامي</span> break;
-                        case "Finance": <span>لوحة المالي</span> break;
+                        case "SuperAdmin":
+                            @:<span>لوحة المدير العام</span>
+                            break;
+                        case "Admin":
+                            @:<span>لوحة الإداري</span>
+                            break;
+                        case "Media":
+                            @:<span>لوحة الإعلامي</span>
+                            break;
+                        case "Finance":
+                            @:<span>لوحة المالي</span>
+                            break;
                     }
                 </small>
             </div>

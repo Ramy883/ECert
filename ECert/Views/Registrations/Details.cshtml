@@ -21,9 +21,15 @@
                     <tr><th>الحالة</th><td>
                         @switch (Model.Status)
                         {
-                            case "Pending": <span class="badge bg-warning text-dark">معلق</span> break;
-                            case "Accepted": <span class="badge bg-success">مقبول</span> break;
-                            case "Rejected": <span class="badge bg-danger">مرفوض</span> break;
+                            case "Pending":
+                                @:<span class="badge bg-warning text-dark">معلق</span>
+                                break;
+                            case "Accepted":
+                                @:<span class="badge bg-success">مقبول</span>
+                                break;
+                            case "Rejected":
+                                @:<span class="badge bg-danger">مرفوض</span>
+                                break;
                         }
                     </td></tr>
                     @if (Model.Status == "Accepted")

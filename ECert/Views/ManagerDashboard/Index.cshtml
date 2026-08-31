@@ -95,9 +95,15 @@
                                 <td>
                                     @switch (r.Status)
                                     {
-                                        case "Pending": <span class="badge bg-warning text-dark">معلق</span> break;
-                                        case "Accepted": <span class="badge bg-success">مقبول</span> break;
-                                        case "Rejected": <span class="badge bg-danger">مرفوض</span> break;
+                                        case "Pending":
+                                            @:<span class="badge bg-warning text-dark">معلق</span>
+                                            break;
+                                        case "Accepted":
+                                            @:<span class="badge bg-success">مقبول</span>
+                                            break;
+                                        case "Rejected":
+                                            @:<span class="badge bg-danger">مرفوض</span>
+                                            break;
                                     }
                                 </td>
                                 <td>@r.RegistrationDate.ToString("MM-dd")</td>

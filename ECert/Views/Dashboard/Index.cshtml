@@ -106,9 +106,15 @@
                                         <td>
                                             @switch (r.Status)
                                             {
-                                                case "Pending": <span class="badge bg-warning text-dark">معلق</span> break;
-                                                case "Accepted": <span class="badge bg-success">مقبول</span> break;
-                                                case "Rejected": <span class="badge bg-danger">مرفوض</span> break;
+                                                case "Pending":
+                                                    @:<span class="badge bg-warning text-dark">معلق</span>
+                                                    break;
+                                                case "Accepted":
+                                                    @:<span class="badge bg-success">مقبول</span>
+                                                    break;
+                                                case "Rejected":
+                                                    @:<span class="badge bg-danger">مرفوض</span>
+                                                    break;
                                             }
                                         </td>
                                         <td>@r.RegistrationDate.ToString("MM-dd")</td>
@@ -141,10 +147,18 @@
                                         <td>
                                             @switch (inv.Status)
                                             {
-                                                case "Unpaid": <span class="badge bg-danger">غير مدفوعة</span> break;
-                                                case "PartiallyPaid": <span class="badge bg-warning text-dark">مدفوعة جزئياً</span> break;
-                                                case "Paid": <span class="badge bg-success">مدفوعة</span> break;
-                                                case "Cancelled": <span class="badge bg-secondary">ملغية</span> break;
+                                                case "Unpaid":
+                                                    @:<span class="badge bg-danger">غير مدفوعة</span>
+                                                    break;
+                                                case "PartiallyPaid":
+                                                    @:<span class="badge bg-warning text-dark">مدفوعة جزئياً</span>
+                                                    break;
+                                                case "Paid":
+                                                    @:<span class="badge bg-success">مدفوعة</span>
+                                                    break;
+                                                case "Cancelled":
+                                                    @:<span class="badge bg-secondary">ملغية</span>
+                                                    break;
                                             }
                                         </td>
                                     </tr>

@@ -27,10 +27,18 @@
                     <tr><th>الحالة</th><td>
                         @switch (Model.Status)
                         {
-                            case "Unpaid": <span class="badge bg-danger">غير مدفوعة</span> break;
-                            case "PartiallyPaid": <span class="badge bg-warning text-dark">مدفوعة جزئياً</span> break;
-                            case "Paid": <span class="badge bg-success">مدفوعة</span> break;
-                            case "Cancelled": <span class="badge bg-secondary">ملغية</span> break;
+                            case "Unpaid":
+                                @:<span class="badge bg-danger">غير مدفوعة</span>
+                                break;
+                            case "PartiallyPaid":
+                                @:<span class="badge bg-warning text-dark">مدفوعة جزئياً</span>
+                                break;
+                            case "Paid":
+                                @:<span class="badge bg-success">مدفوعة</span>
+                                break;
+                            case "Cancelled":
+                                @:<span class="badge bg-secondary">ملغية</span>
+                                break;
                         }
                     </td></tr>
                     <tr><th>تاريخ الإنشاء</th><td>@Model.CreatedAt.ToString("yyyy-MM-dd")</td></tr>
@@ -69,10 +77,18 @@
                                     <td>
                                         @switch (p.PaymentMethod)
                                         {
-                                            case "Cash": <span><i class="bi bi-cash"></i> نقد</span> break;
-                                            case "BankTransfer": <span><i class="bi bi-wallet2"></i> محافظ إلكترونية</span> break;
-                                            case "EWallet": <span><i class="bi bi-wallet2"></i> محفظة إلكترونية</span> break;
-                                            case "Card": <span><i class="bi bi-wallet2"></i> محافظ إلكترونية</span> break;
+                                            case "Cash":
+                                                @:<span><i class="bi bi-cash"></i> نقد</span>
+                                                break;
+                                            case "BankTransfer":
+                                                @:<span><i class="bi bi-wallet2"></i> محافظ إلكترونية</span>
+                                                break;
+                                            case "EWallet":
+                                                @:<span><i class="bi bi-wallet2"></i> محفظة إلكترونية</span>
+                                                break;
+                                            case "Card":
+                                                @:<span><i class="bi bi-wallet2"></i> محافظ إلكترونية</span>
+                                                break;
                                             default: <span>@p.PaymentMethod</span> break;
                                         }
                                     </td>

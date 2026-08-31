@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ECert.Models;
@@ -41,7 +41,7 @@ public class Course
     public int CategoryId { get; set; }
     public Category? Category { get; set; }
 
-    [Required(ErrorMessage = "المدرب مطلوب")]
+    [Required(ErrorMessage = "المدرب الرئيسي مطلوب")]
     public int InstructorId { get; set; }
     public Instructor? Instructor { get; set; }
 
@@ -67,17 +67,15 @@ public class Course
     public decimal Price { get; set; }
 
     [Display(Name = "نوع الخصم")]
-    public string? DiscountType { get; set; } // Percentage, Fixed, null
+    public string? DiscountType { get; set; }
 
     [Display(Name = "قيمة الخصم")]
     [Range(0, double.MaxValue, ErrorMessage = "قيمة الخصم يجب أن تكون موجبة")]
     public decimal DiscountValue { get; set; } = 0;
 
-    // Retained for schema compatibility: production databases created by an older schema still
-    // expose TotalSeats/BookedSeats as NOT NULL columns without defaults. Keeping them on the
-    // model guarantees every EF INSERT (including course import) supplies a value.
     [Display(Name = "المقاعد الإجمالية")]
     public int TotalSeats { get; set; }
+
     [Display(Name = "المقاعد المحجوزة")]
     public int BookedSeats { get; set; }
 
@@ -94,7 +92,6 @@ public class Course
 
     [Display(Name = "حالة الدورة")]
     public string Status { get; set; } = "Draft";
-    // Draft, Published, OpenForRegistration, InProgress, Completed, Archived
 
     public bool IsFeatured { get; set; } = false;
 
@@ -104,4 +101,35 @@ public class Course
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 
     public ICollection<Registration> Registrations { get; set; } = new List<Registration>();
+    public ICollection<CourseInstructor> CourseInstructors { get; set; } = new List<CourseInstructor>();
+
+    [NotMapped]
+    public List<int> SelectedInstructorIds { get; set; } = new();
+
+    [NotMapped]
+    public IReadOnlyList<Instructor> AssignedInstructors
+    {
+        get
+        {
+            var assigned = CourseInstructors
+                .Where(ci => ci.Instructor != null)
+                .OrderBy(ci => ci.SortOrder)
+                .ThenBy(ci => ci.CourseInstructorId)
+                .Select(ci => ci.Instructor!)
+                .GroupBy(i => i.InstructorId)
+                .Select(g => g.First())
+                .ToList();
+
+            if (assigned.Count > 0)
+                return assigned;
+
+            return Instructor == null ? Array.Empty<Instructor>() : new[] { Instructor };
+        }
+    }
+
+    [NotMapped]
+    public Instructor? PrimaryInstructor => AssignedInstructors.FirstOrDefault();
+
+    [NotMapped]
+    public string InstructorNamesDisplay => string.Join("، ", AssignedInstructors.Select(i => i.FullName));
 }

@@ -16,6 +16,7 @@ public class ECertDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Course> Courses => Set<Course>();
     public DbSet<Instructor> Instructors => Set<Instructor>();
+    public DbSet<CourseInstructor> CourseInstructors => Set<CourseInstructor>();
     public DbSet<Registration> Registrations => Set<Registration>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<Payment> Payments => Set<Payment>();
@@ -88,6 +89,22 @@ public class ECertDbContext : DbContext, IDataProtectionKeyContext
             .WithMany()
             .HasForeignKey(c => c.CertificateDesignId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<CourseInstructor>()
+            .HasOne(ci => ci.Course)
+            .WithMany(c => c.CourseInstructors)
+            .HasForeignKey(ci => ci.CourseId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<CourseInstructor>()
+            .HasOne(ci => ci.Instructor)
+            .WithMany(i => i.CourseInstructors)
+            .HasForeignKey(ci => ci.InstructorId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<CourseInstructor>()
+            .HasIndex(ci => new { ci.CourseId, ci.InstructorId })
+            .IsUnique();
 
         // Academic catalog
         modelBuilder.Entity<College>()

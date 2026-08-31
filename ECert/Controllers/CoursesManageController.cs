@@ -47,7 +47,7 @@ public class CoursesManageController : Controller
     public async Task<IActionResult> Index(string? search)
     {
         if (!HasPermission("manage-courses")) return Forbid();
-        var query = _db.Courses.Include(c => c.Category).Include(c => c.Instructor).Include(c => c.Registrations).AsQueryable();
+        var query = IncludeCourseInstructors(_db.Courses.Include(c => c.Category).Include(c => c.Registrations)).AsQueryable();
         if (!string.IsNullOrEmpty(search))
             query = query.Where(c => (c.CourseNameArabic != null && c.CourseNameArabic.Contains(search)) || (c.CourseNameEnglish != null && c.CourseNameEnglish.Contains(search)) || c.CourseName.Contains(search));
         ViewBag.Search = search;
@@ -60,7 +60,7 @@ public class CoursesManageController : Controller
     {
         if (!HasPermission("manage-courses")) return Forbid();
         await LoadCourseFormOptions();
-        return View();
+        return View(new Course());
     }
 
     [HttpGet]
@@ -78,7 +78,7 @@ public class CoursesManageController : Controller
         var sheet = workbook.Worksheets.Add("Courses");
         var headers = new[]
         {
-            "CourseName", "Category", "Instructor", "Price", "DiscountType", "DiscountValue",
+            "CourseName", "Category", "Instructors", "Price", "DiscountType", "DiscountValue",
             "StartDate", "EndDate", "Location", "Status",
             "IsFeatured", "RequiresAcademicDetails", "ShortDescription", "FullDescription", "Objectives", "Content"
         };
@@ -88,7 +88,7 @@ public class CoursesManageController : Controller
         sheet.Row(1).Style.Font.FontColor = XLColor.White;
         sheet.Cell(2, 1).Value = "مثال: القيادة الإدارية الفعالة";
         sheet.Cell(2, 2).Value = "اسم الفئة كما يظهر في النظام";
-        sheet.Cell(2, 3).Value = "اسم المدرب كما يظهر في النظام";
+        sheet.Cell(2, 3).Value = "اسم المدرب أو أسماء المدربين كما تظهر في النظام، وبين كل اسم وآخر فاصلة";
         sheet.Cell(2, 4).Value = 1200;
         sheet.Cell(2, 5).Value = "Percentage";
         sheet.Cell(2, 6).Value = 10;
@@ -118,6 +118,7 @@ public class CoursesManageController : Controller
         var courses = await _db.Courses
             .Include(c => c.Category)
             .Include(c => c.Instructor)
+            .Include(c => c.CourseInstructors).ThenInclude(ci => ci.Instructor)
             .OrderByDescending(c => c.CreatedAt)
             .ToListAsync();
 
@@ -127,7 +128,7 @@ public class CoursesManageController : Controller
 
         var headers = new[]
         {
-            "رقم الدورة", "اسم الدورة (عربي)", "اسم الدورة (إنجليزي)", "الفئة", "المدرب", "السعر", "الخصم",
+            "رقم الدورة", "اسم الدورة (عربي)", "اسم الدورة (إنجليزي)", "الفئة", "المدربون", "السعر", "الخصم",
             "تاريخ البداية", "تاريخ النهاية", "المكان", "الحالة", "مميزة", "الوصف المختصر"
         };
         for (var i = 0; i < headers.Length; i++)
@@ -148,7 +149,7 @@ public class CoursesManageController : Controller
             sheet.Cell(excelRow, 2).Value = course.CourseNameArabic ?? course.CourseName;
             sheet.Cell(excelRow, 3).Value = course.CourseNameEnglish ?? course.CourseName;
             sheet.Cell(excelRow, 4).Value = course.Category?.CategoryName;
-            sheet.Cell(excelRow, 5).Value = course.Instructor?.FullName;
+            sheet.Cell(excelRow, 5).Value = course.InstructorNamesDisplay;
             sheet.Cell(excelRow, 6).Value = course.Price;
             sheet.Cell(excelRow, 7).Value = course.DiscountType == null ? "" : $"{course.DiscountType} ({course.DiscountValue})";
             sheet.Cell(excelRow, 8).Value = course.StartDate?.ToString("yyyy-MM-dd") ?? "";
@@ -252,6 +253,7 @@ public class CoursesManageController : Controller
         try
         {
             var names = preview.Rows.Select(r => Normalize(r.CourseName)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var createdCourses = new List<(Course course, CourseImportRow row)>();
             var existingNames = (await _db.Courses.Select(c => c.CourseName).ToListAsync())
                 .Select(Normalize).ToHashSet(StringComparer.OrdinalIgnoreCase);
             if (names.Any(existingNames.Contains))
@@ -261,13 +263,13 @@ public class CoursesManageController : Controller
             }
             foreach (var row in preview.Rows)
             {
-                _db.Courses.Add(new Course
+                var course = new Course
                 {
                     CourseName = row.CourseName,
                     CourseNameEnglish = row.CourseName,
                     CourseNameArabic = row.CourseName,
                     CategoryId = row.CategoryId!.Value,
-                    InstructorId = row.InstructorId!.Value,
+                    InstructorId = row.InstructorIds.First(),
                     Price = row.Price,
                     DiscountType = row.DiscountType,
                     DiscountValue = row.DiscountValue,
@@ -284,9 +286,13 @@ public class CoursesManageController : Controller
                     TotalSeats = 0,
                     BookedSeats = 0,
                     CreatedAt = DateTime.Now
-                });
+                };
+                _db.Courses.Add(course);
+                createdCourses.Add((course, row));
             }
             await _db.SaveChangesAsync();
+            foreach (var item in createdCourses)
+                await SyncCourseInstructorsAsync(item.course.CourseId, item.row.InstructorIds);
             await transaction.CommitAsync();
             await _audit.LogAsync(User.Identity?.Name ?? "", "BulkCreate", "Course", null, null, $"Imported {preview.ValidRows} courses");
             TempData["Success"] = $"تم استيراد {preview.ValidRows} دورة بنجاح دون أخطاء جزئية.";
@@ -308,7 +314,7 @@ public class CoursesManageController : Controller
         if (used.RowCount() < 2 || used.ColumnCount() < 4) throw new InvalidDataException();
         if (used.RowCount() > 5001) throw new InvalidDataException("The workbook exceeds the 5000-row limit.");
         var headers = Enumerable.Range(1, used.ColumnCount()).ToDictionary(i => CanonicalHeader(sheet.Cell(1, i).GetString()), i => i);
-        var required = new[] { "coursename", "category", "instructor", "price" };
+        var required = new[] { "coursename", "category", "instructors", "price" };
         var missing = required.Where(h => !headers.ContainsKey(h)).ToList();
         if (missing.Count > 0) throw new InvalidDataException($"Missing columns: {string.Join(",", missing)}");
 
@@ -320,7 +326,7 @@ public class CoursesManageController : Controller
             var row = new CourseImportRow { RowNumber = rowNumber };
             row.CourseName = Text(sheet, headers, rowNumber, "coursename");
             row.Category = Text(sheet, headers, rowNumber, "category");
-            row.Instructor = Text(sheet, headers, rowNumber, "instructor");
+            row.Instructors = Text(sheet, headers, rowNumber, "instructors");
             row.ShortDescription = OptionalText(sheet, headers, rowNumber, "shortdescription");
             row.FullDescription = OptionalText(sheet, headers, rowNumber, "fulldescription");
             row.Objectives = OptionalText(sheet, headers, rowNumber, "objectives");
@@ -338,7 +344,24 @@ public class CoursesManageController : Controller
             if (row.CourseName.Length > 200) row.Errors.Add("اسم الدورة يتجاوز 200 حرف");
             if (string.IsNullOrWhiteSpace(Text(sheet, headers, rowNumber, "price"))) row.Errors.Add("السعر مطلوب");
             if (!categories.TryGetValue(Normalize(row.Category), out var categoryId)) row.Errors.Add("الفئة غير موجودة أو غير نشطة"); else row.CategoryId = categoryId;
-            if (!instructors.TryGetValue(Normalize(row.Instructor), out var instructorId)) row.Errors.Add("المدرب غير موجود أو غير نشط"); else row.InstructorId = instructorId;
+            var instructorNames = SplitInstructorNames(row.Instructors).ToList();
+            if (instructorNames.Count == 0)
+            {
+                row.Errors.Add("يجب تحديد مدرب واحد على الأقل");
+            }
+            else
+            {
+                foreach (var instructorName in instructorNames)
+                {
+                    if (!instructors.TryGetValue(Normalize(instructorName), out var instructorId))
+                    {
+                        row.Errors.Add($"المدرب غير موجود أو غير نشط: {instructorName}");
+                        continue;
+                    }
+                    if (!row.InstructorIds.Contains(instructorId))
+                        row.InstructorIds.Add(instructorId);
+                }
+            }
             if (!seen.Add(Normalize(row.CourseName))) row.Errors.Add("اسم الدورة مكرر داخل الملف");
             if (row.Price < 0) row.Errors.Add("السعر لا يمكن أن يكون سالباً");
             if (row.DiscountValue < 0) row.Errors.Add("الخصم لا يمكن أن يكون سالباً");
@@ -364,7 +387,7 @@ public class CoursesManageController : Controller
         {
             "اسم الدورة" or "اسم الدوره" or "الدورة" or "الدوره" => "coursename",
             "الفئة" or "الفئه" => "category",
-            "المدرب" or "اسم المدرب" => "instructor",
+            "المدرب" or "اسم المدرب" or "المدربون" or "اسماء المدربين" or "أسماء المدربين" => "instructors",
             "السعر" or "سعر الدورة" or "سعر الدوره" => "price",
             "نوع الخصم" => "discounttype",
             "قيمة الخصم" => "discountvalue",
@@ -412,6 +435,66 @@ public class CoursesManageController : Controller
         return value is not null && (value.Equals("true", StringComparison.OrdinalIgnoreCase) || value.Equals("yes", StringComparison.OrdinalIgnoreCase) || value.Equals("نعم") || value == "1");
     }
 
+    private static IQueryable<Course> IncludeCourseInstructors(IQueryable<Course> query)
+        => query.Include(c => c.Instructor)
+            .Include(c => c.CourseInstructors)
+            .ThenInclude(ci => ci.Instructor);
+
+    private static List<int> NormalizeInstructorIds(IEnumerable<int>? instructorIds)
+        => (instructorIds ?? Array.Empty<int>())
+            .Where(id => id > 0)
+            .Distinct()
+            .ToList();
+
+    private async Task ValidateSelectedInstructorsAsync(IReadOnlyCollection<int> instructorIds)
+    {
+        if (instructorIds.Count == 0)
+        {
+            ModelState.AddModelError(nameof(Course.SelectedInstructorIds), "اختر مدرباً واحداً على الأقل.");
+            return;
+        }
+
+        var activeCount = await _db.Instructors.CountAsync(i => i.IsActive && instructorIds.Contains(i.InstructorId));
+        if (activeCount != instructorIds.Count)
+            ModelState.AddModelError(nameof(Course.SelectedInstructorIds), "بعض المدربين المحددين غير موجودين أو غير نشطين.");
+    }
+
+    private async Task SyncCourseInstructorsAsync(int courseId, IReadOnlyList<int> instructorIds)
+    {
+        var normalizedIds = NormalizeInstructorIds(instructorIds);
+        var existingRows = await _db.CourseInstructors.Where(ci => ci.CourseId == courseId).ToListAsync();
+        var incoming = normalizedIds.ToHashSet();
+
+        var toRemove = existingRows.Where(ci => !incoming.Contains(ci.InstructorId)).ToList();
+        if (toRemove.Count > 0)
+            _db.CourseInstructors.RemoveRange(toRemove);
+
+        for (var index = 0; index < normalizedIds.Count; index++)
+        {
+            var instructorId = normalizedIds[index];
+            var row = existingRows.FirstOrDefault(ci => ci.InstructorId == instructorId);
+            if (row == null)
+            {
+                _db.CourseInstructors.Add(new CourseInstructor
+                {
+                    CourseId = courseId,
+                    InstructorId = instructorId,
+                    SortOrder = index
+                });
+            }
+            else
+            {
+                row.SortOrder = index;
+            }
+        }
+    }
+
+    private static IEnumerable<string> SplitInstructorNames(string? raw)
+        => (raw ?? string.Empty)
+            .Split(new[] { ',', '،', ';', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(Course course, IFormFile? image)
@@ -421,11 +504,14 @@ public class CoursesManageController : Controller
         course.CourseNameEnglish = course.CourseNameEnglish?.Trim() ?? string.Empty;
         course.CourseNameArabic = course.CourseNameArabic?.Trim() ?? string.Empty;
         course.CourseName = course.CourseNameArabic;
+        course.SelectedInstructorIds = NormalizeInstructorIds(course.SelectedInstructorIds);
+        await ValidateSelectedInstructorsAsync(course.SelectedInstructorIds);
+        if (course.SelectedInstructorIds.Count > 0)
+            course.InstructorId = course.SelectedInstructorIds[0];
 
         if (!ModelState.IsValid)
         {
-            ViewBag.Categories = await _db.Categories.Where(c => c.IsActive).ToListAsync();
-            ViewBag.Instructors = await _db.Instructors.Where(i => i.IsActive).ToListAsync();
+            await LoadCourseFormOptions();
             return View(course);
         }
 
@@ -433,6 +519,8 @@ public class CoursesManageController : Controller
         var imgPath = await SaveImage(image);
         if (imgPath != null) course.ImageUrl = imgPath;
         _db.Courses.Add(course);
+        await _db.SaveChangesAsync();
+        await SyncCourseInstructorsAsync(course.CourseId, course.SelectedInstructorIds);
         await _db.SaveChangesAsync();
         await _audit.LogAsync(User.Identity?.Name ?? "", "Create", "Course", course.CourseId, null, $"{course.CourseNameEnglish} / {course.CourseNameArabic}");
         TempData["Success"] = "تمت إضافة الدورة بنجاح.";
@@ -443,8 +531,19 @@ public class CoursesManageController : Controller
     public async Task<IActionResult> Edit(int id)
     {
         if (!HasPermission("manage-courses")) return Forbid();
-        var course = await _db.Courses.FindAsync(id);
+        var course = await _db.Courses
+            .Include(c => c.Instructor)
+            .Include(c => c.CourseInstructors).ThenInclude(ci => ci.Instructor)
+            .FirstOrDefaultAsync(c => c.CourseId == id);
         if (course == null) return NotFound();
+        course.SelectedInstructorIds = course.CourseInstructors
+            .OrderBy(ci => ci.SortOrder)
+            .ThenBy(ci => ci.CourseInstructorId)
+            .Select(ci => ci.InstructorId)
+            .Distinct()
+            .ToList();
+        if (course.SelectedInstructorIds.Count == 0 && course.InstructorId > 0)
+            course.SelectedInstructorIds.Add(course.InstructorId);
         await LoadCourseFormOptions();
         return View(course);
     }
@@ -458,11 +557,14 @@ public class CoursesManageController : Controller
         course.CourseNameEnglish = course.CourseNameEnglish?.Trim() ?? string.Empty;
         course.CourseNameArabic = course.CourseNameArabic?.Trim() ?? string.Empty;
         course.CourseName = course.CourseNameArabic;
+        course.SelectedInstructorIds = NormalizeInstructorIds(course.SelectedInstructorIds);
+        await ValidateSelectedInstructorsAsync(course.SelectedInstructorIds);
+        if (course.SelectedInstructorIds.Count > 0)
+            course.InstructorId = course.SelectedInstructorIds[0];
 
         if (!ModelState.IsValid)
         {
-            ViewBag.Categories = await _db.Categories.Where(c => c.IsActive).ToListAsync();
-            ViewBag.Instructors = await _db.Instructors.Where(i => i.IsActive).ToListAsync();
+            await LoadCourseFormOptions();
             return View(course);
         }
 
@@ -491,7 +593,6 @@ public class CoursesManageController : Controller
         var imgPath = await SaveImage(image);
         if (imgPath != null)
         {
-            // Delete old image if exists
             if (!string.IsNullOrEmpty(existing.ImageUrl))
             {
                 var oldImgPath = Path.Combine(_env.WebRootPath, existing.ImageUrl.TrimStart('/'));
@@ -501,6 +602,7 @@ public class CoursesManageController : Controller
             existing.ImageUrl = imgPath;
         }
 
+        await SyncCourseInstructorsAsync(existing.CourseId, course.SelectedInstructorIds);
         await _db.SaveChangesAsync();
         await _audit.LogAsync(User.Identity?.Name ?? "", "Update", "Course", course.CourseId, null, $"{course.CourseNameEnglish} / {course.CourseNameArabic}");
         TempData["Success"] = "تم تعديل الدورة بنجاح.";

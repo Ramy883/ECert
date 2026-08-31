@@ -30,7 +30,7 @@ public class HomeController : Controller
 
         // Latest courses
         ViewBag.LatestCourses = await _db.Courses
-            .Include(c => c.Instructor).Include(c => c.Category)
+            .Include(c => c.Instructor).Include(c => c.CourseInstructors).ThenInclude(ci => ci.Instructor).Include(c => c.Category)
             .Where(c => c.Status == "OpenForRegistration" || c.Status == "Published")
             .OrderByDescending(c => c.CreatedAt).Take(6).ToListAsync();
 

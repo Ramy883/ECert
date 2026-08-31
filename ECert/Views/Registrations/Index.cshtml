@@ -60,6 +60,10 @@
                 <i class="bi bi-arrow-left-short" aria-hidden="true"></i><span>بحث</span>
             </button>
 
+            <a asp-action="Import" class="btn btn-outline-primary registration-export-button" title="استيراد متدربين من Excel">
+                <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i><span>استيراد</span>
+            </a>
+
             <a asp-action="ExportXlsx" asp-route-status="@activeStatus" asp-route-search="@activeSearch" asp-route-courseId="@selectedCourseId" asp-route-dateFrom="@(activeDateFrom?.ToString("yyyy-MM-dd"))" asp-route-dateTo="@(activeDateTo?.ToString("yyyy-MM-dd"))" class="btn btn-outline-success registration-export-button" title="تصدير النتائج الحالية إلى Excel">
                 <i class="bi bi-file-earmark-excel" aria-hidden="true"></i><span>Excel</span>
             </a>

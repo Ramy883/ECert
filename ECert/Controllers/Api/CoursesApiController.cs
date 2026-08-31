@@ -33,14 +33,14 @@ public class CoursesApiController : ControllerBase
                 c.CourseId, c.CourseName, c.ShortDescription, c.Price,
                 c.Status, c.StartDate, c.EndDate, c.Location,
                 categoryName = c.Category!.CategoryName,
-                instructorName = c.Instructor!.FullName
+                instructorName = c.InstructorNamesDisplay
             }).ToListAsync();
         return Ok(ApiResponse<object>.Ok(courses));
     }
 
     public record CreateCourseRequest(
         string CourseName, string? ShortDescription, string? FullDescription,
-        int CategoryId, int InstructorId, DateTime? StartDate, DateTime? EndDate,
+        int CategoryId, int? InstructorId, List<int>? InstructorIds, DateTime? StartDate, DateTime? EndDate,
         string? Location, decimal Price, string Status);
 
     [HttpPost]
@@ -52,13 +52,17 @@ public class CoursesApiController : ControllerBase
         if (string.IsNullOrWhiteSpace(req.CourseName))
             return Ok(ApiResponse.Fail("اسم الدورة مطلوب"));
 
+        var instructorIds = ResolveInstructorIds(req.InstructorId, req.InstructorIds);
+        if (instructorIds.Count == 0)
+            return Ok(ApiResponse.Fail("اختر مدرباً واحداً على الأقل"));
+
         var course = new Course
         {
             CourseName = req.CourseName,
             ShortDescription = req.ShortDescription,
             FullDescription = req.FullDescription,
             CategoryId = req.CategoryId,
-            InstructorId = req.InstructorId,
+            InstructorId = instructorIds[0],
             StartDate = req.StartDate,
             EndDate = req.EndDate,
             Location = req.Location,
@@ -69,6 +73,8 @@ public class CoursesApiController : ControllerBase
 
         _db.Courses.Add(course);
         await _db.SaveChangesAsync();
+        await SyncCourseInstructorsAsync(course.CourseId, instructorIds);
+        await _db.SaveChangesAsync();
         await _audit.LogAsync(User.Identity?.Name ?? "", "Create", "Course", course.CourseId, null, req.CourseName);
 
         return Ok(ApiResponse<object>.Ok(new { id = course.CourseId }, "تمت إضافة الدورة بنجاح"));
@@ -76,7 +82,7 @@ public class CoursesApiController : ControllerBase
 
     public record UpdateCourseRequest(
         string CourseName, string? ShortDescription, string? FullDescription,
-        int CategoryId, int InstructorId, DateTime? StartDate, DateTime? EndDate,
+        int CategoryId, int? InstructorId, List<int>? InstructorIds, DateTime? StartDate, DateTime? EndDate,
         string? Location, decimal Price, string Status);
 
     [HttpPut("{id}")]
@@ -88,16 +94,21 @@ public class CoursesApiController : ControllerBase
         var course = await _db.Courses.FindAsync(id);
         if (course == null) return NotFound(ApiResponse.Fail("الدورة غير موجودة"));
 
+        var instructorIds = ResolveInstructorIds(req.InstructorId, req.InstructorIds);
+        if (instructorIds.Count == 0)
+            return Ok(ApiResponse.Fail("اختر مدرباً واحداً على الأقل"));
+
         course.CourseName = req.CourseName;
         course.ShortDescription = req.ShortDescription;
         course.FullDescription = req.FullDescription;
         course.CategoryId = req.CategoryId;
-        course.InstructorId = req.InstructorId;
+        course.InstructorId = instructorIds[0];
         course.StartDate = req.StartDate;
         course.EndDate = req.EndDate;
         course.Location = req.Location;
         course.Price = req.Price;
         course.Status = req.Status;
+        await SyncCourseInstructorsAsync(course.CourseId, instructorIds);
         await _db.SaveChangesAsync();
         await _audit.LogAsync(User.Identity?.Name ?? "", "Update", "Course", id, null, req.CourseName);
 
@@ -105,6 +116,42 @@ public class CoursesApiController : ControllerBase
     }
 
     public record CourseStatusRequest(string Status);
+
+    private static List<int> ResolveInstructorIds(int? instructorId, List<int>? instructorIds)
+        => (instructorIds ?? new List<int>())
+            .Append(instructorId ?? 0)
+            .Where(id => id > 0)
+            .Distinct()
+            .ToList();
+
+    private async Task SyncCourseInstructorsAsync(int courseId, IReadOnlyList<int> instructorIds)
+    {
+        var existingRows = await _db.CourseInstructors.Where(ci => ci.CourseId == courseId).ToListAsync();
+        var incoming = instructorIds.Where(id => id > 0).Distinct().ToList();
+        var incomingSet = incoming.ToHashSet();
+        var toRemove = existingRows.Where(ci => !incomingSet.Contains(ci.InstructorId)).ToList();
+        if (toRemove.Count > 0)
+            _db.CourseInstructors.RemoveRange(toRemove);
+
+        for (var index = 0; index < incoming.Count; index++)
+        {
+            var instructorIdToApply = incoming[index];
+            var existing = existingRows.FirstOrDefault(ci => ci.InstructorId == instructorIdToApply);
+            if (existing == null)
+            {
+                _db.CourseInstructors.Add(new CourseInstructor
+                {
+                    CourseId = courseId,
+                    InstructorId = instructorIdToApply,
+                    SortOrder = index
+                });
+            }
+            else
+            {
+                existing.SortOrder = index;
+            }
+        }
+    }
 
     [HttpPut("{id}/status")]
     public async Task<IActionResult> ChangeStatus(int id, [FromBody] CourseStatusRequest req)

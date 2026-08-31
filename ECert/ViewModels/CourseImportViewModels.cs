@@ -25,7 +25,7 @@ public sealed class CourseImportRow
     public int RowNumber { get; set; }
     public string CourseName { get; set; } = string.Empty;
     public string Category { get; set; } = string.Empty;
-    public string Instructor { get; set; } = string.Empty;
+    public string Instructors { get; set; } = string.Empty;
     public decimal Price { get; set; }
     public decimal DiscountValue { get; set; }
     public string? DiscountType { get; set; }
@@ -40,7 +40,7 @@ public sealed class CourseImportRow
     public string? Objectives { get; set; }
     public string? Content { get; set; }
     public int? CategoryId { get; set; }
-    public int? InstructorId { get; set; }
+    public List<int> InstructorIds { get; set; } = new();
     public List<string> Errors { get; set; } = new();
     public bool IsValid => Errors.Count == 0;
 }

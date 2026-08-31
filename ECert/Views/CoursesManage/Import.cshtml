@@ -15,7 +15,7 @@
 
 <div class="alert alert-info d-flex gap-2 align-items-start">
     <i class="bi bi-shield-check fs-5"></i>
-    <div><strong>استيراد آمن قبل الحفظ.</strong> يجب أن تكون كل الصفوف صحيحة؛ إذا وُجد خطأ واحد فلن يتم حفظ أي دورة حتى تتم مراجعته.</div>
+    <div><strong>استيراد آمن قبل الحفظ.</strong> يجب أن تكون كل الصفوف صحيحة؛ إذا وُجد خطأ واحد فلن يتم حفظ أي دورة حتى تتم مراجعته. يدعم القالب الآن أكثر من مدرب داخل العمود نفسه مع الفصل بفاصلة.</div>
 </div>
 
 @if (!ViewData.ModelState.IsValid)
@@ -61,12 +61,12 @@ else
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light"><tr><th>الصف</th><th>الدورة</th><th>الفئة</th><th>المدرب</th><th>السعر</th><th>الحالة</th><th>التحقق</th></tr></thead>
+                    <thead class="table-light"><tr><th>الصف</th><th>الدورة</th><th>الفئة</th><th>المدربون</th><th>السعر</th><th>الحالة</th><th>التحقق</th></tr></thead>
                     <tbody>
                     @foreach (var row in Model.Preview.Rows)
                     {
                         <tr class="@(row.IsValid ? "" : "table-danger")">
-                            <td>@row.RowNumber</td><td><strong>@row.CourseName</strong></td><td>@row.Category</td><td>@row.Instructor</td><td>@row.Price.ToString("N0") ريال</td><td>@row.Status</td>
+                            <td>@row.RowNumber</td><td><strong>@row.CourseName</strong></td><td>@row.Category</td><td>@row.Instructors</td><td>@row.Price.ToString("N0") ريال</td><td>@row.Status</td>
                             <td>@if (row.IsValid) { <span class="badge bg-success">سليم</span> } else { <span class="text-danger small">@string.Join("، ", row.Errors)</span> }</td>
                         </tr>
                     }

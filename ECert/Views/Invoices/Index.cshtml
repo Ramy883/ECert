@@ -53,10 +53,18 @@
                                 <td>
                                     @switch (inv.Status)
                                     {
-                                        case "Unpaid": <span class="badge bg-danger">غير مدفوعة</span> break;
-                                        case "PartiallyPaid": <span class="badge bg-warning text-dark">جزئية</span> break;
-                                        case "Paid": <span class="badge bg-success">مدفوعة</span> break;
-                                        case "Cancelled": <span class="badge bg-secondary">ملغية</span> break;
+                                        case "Unpaid":
+                                            @:<span class="badge bg-danger">غير مدفوعة</span>
+                                            break;
+                                        case "PartiallyPaid":
+                                            @:<span class="badge bg-warning text-dark">جزئية</span>
+                                            break;
+                                        case "Paid":
+                                            @:<span class="badge bg-success">مدفوعة</span>
+                                            break;
+                                        case "Cancelled":
+                                            @:<span class="badge bg-secondary">ملغية</span>
+                                            break;
                                     }
                                 </td>
                                 <td>

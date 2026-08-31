@@ -83,9 +83,15 @@
                                 <td>
                                     @switch (p.Status)
                                     {
-                                        case "Published": <span class="badge bg-success">منشور</span> break;
-                                        case "Draft": <span class="badge bg-warning text-dark">مسودة</span> break;
-                                        case "Archived": <span class="badge bg-secondary">مؤرشف</span> break;
+                                        case "Published":
+                                            @:<span class="badge bg-success">منشور</span>
+                                            break;
+                                        case "Draft":
+                                            @:<span class="badge bg-warning text-dark">مسودة</span>
+                                            break;
+                                        case "Archived":
+                                            @:<span class="badge bg-secondary">مؤرشف</span>
+                                            break;
                                     }
                                 </td>
                                 <td>@p.CreatedAt.ToString("MM-dd")</td>

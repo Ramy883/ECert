@@ -1,0 +1,131 @@
+@model ECert.ViewModels.RegistrationImportPageViewModel
+@{
+    ViewData["Title"] = "استيراد المتدربين";
+    ViewData["PageIcon"] = "bi-person-vcard";
+    ViewData["PageDesc"] = "رفع بيانات متدربين لدورة معينة من ملف Excel مع تحقق ومراجعة قبل الحفظ";
+    Layout = "_AdminLayout";
+}
+<div class="page-header">
+    <partial name="_PageHeader" />
+    <div class="page-actions d-flex gap-2 flex-wrap">
+        <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-right"></i> العودة للتسجيلات</a>
+        <a asp-action="DownloadImportTemplate" asp-route-courseId="@Model.CourseId" class="btn btn-outline-primary"><i class="bi bi-download"></i> تنزيل القالب</a>
+    </div>
+</div>
+
+<div class="alert alert-info d-flex gap-2 align-items-start">
+    <i class="bi bi-shield-check fs-5"></i>
+    <div>
+        <strong>استيراد آمن قبل الحفظ.</strong>
+        اختر الدورة أولاً ثم ارفع ملف XLSX. إذا كانت الدورة جامعية فسيتم التحقق من الجامعة والكلية والتخصص والمستوى الدراسي طبقاً للبيانات الموجودة داخل النظام.
+    </div>
+</div>
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger"><div asp-validation-summary="All"></div></div>
+}
+
+@if (Model.Preview is null)
+{
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+            <h5 class="mb-3"><i class="bi bi-cloud-arrow-up text-primary"></i> رفع ملف المتدربين</h5>
+            <form asp-action="Import" method="post" enctype="multipart/form-data" class="row g-3">
+                @Html.AntiForgeryToken()
+                <div class="col-lg-6">
+                    <label asp-for="CourseId" class="form-label fw-bold">الدورة المستهدفة</label>
+                    <select asp-for="CourseId" class="form-select" required>
+                        <option value="">-- اختر الدورة --</option>
+                        @foreach (var course in Model.Courses)
+                        {
+                            <option value="@course.CourseId">@course.CourseName@(course.RequiresAcademicDetails ? " — تتطلب بيانات جامعية" : string.Empty)</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-lg-3">
+                    <label asp-for="ImportStatus" class="form-label fw-bold">الحالة بعد الاستيراد</label>
+                    <select asp-for="ImportStatus" class="form-select">
+                        <option value="Pending">معلق</option>
+                        <option value="Accepted">مقبول مباشرة</option>
+                    </select>
+                </div>
+                <div class="col-lg-3">
+                    <label class="form-label fw-bold">الدورة الجامعية</label>
+                    <div class="form-control bg-light">@(Model.CourseRequiresAcademicDetails ? "نعم، يلزم التحقق الأكاديمي" : "لا")</div>
+                </div>
+                <div class="col-12">
+                    <label asp-for="File" class="form-label fw-bold">ملف XLSX</label>
+                    <input asp-for="File" type="file" class="form-control" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required />
+                    <div class="form-text">الحد الأقصى 10 ميجابايت. استخدم القالب المرفق، ويمكنك تنزيل قالب مخصص بعد اختيار الدورة.</div>
+                </div>
+                <div class="col-12 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> فحص ومعاينة الملف</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row g-3 mb-3">
+        <div class="col-md-3"><div class="card shadow-sm border-0"><div class="card-body"><div class="text-muted small">الدورة</div><div class="fw-bold">@Model.Preview.CourseName</div></div></div></div>
+        <div class="col-md-3"><div class="card shadow-sm border-0"><div class="card-body"><div class="text-muted small">إجمالي الصفوف</div><div class="fs-3 fw-bold">@Model.Preview.TotalRows</div></div></div></div>
+        <div class="col-md-3"><div class="card shadow-sm border-0"><div class="card-body"><div class="text-muted small">صفوف سليمة</div><div class="fs-3 fw-bold text-success">@Model.Preview.ValidRows</div></div></div></div>
+        <div class="col-md-3"><div class="card shadow-sm border-0"><div class="card-body"><div class="text-muted small">صفوف تحتاج مراجعة</div><div class="fs-3 fw-bold text-danger">@Model.Preview.InvalidRows</div></div></div></div>
+    </div>
+
+    @if (Model.Preview.InvalidRows > 0)
+    {
+        <div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> لا يمكن الاعتماد قبل إصلاح جميع الصفوف المعلّمة. عدّل الملف ثم ارفعه مرة أخرى.</div>
+    }
+    else
+    {
+        <div class="alert alert-success"><i class="bi bi-check-circle"></i> جميع الصفوف اجتازت التحقق. راجع البيانات ثم اعتمد الاستيراد بحالة <strong>@(Model.Preview.ImportStatus == "Accepted" ? "مقبول مباشرة" : "معلق")</strong>.</div>
+    }
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>الصف</th>
+                            <th>الاسم بالعربية</th>
+                            <th>الاسم بالإنجليزية</th>
+                            <th>الجوال</th>
+                            <th>البيانات الجامعية</th>
+                            <th>التحقق</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var row in Model.Preview.Rows)
+                    {
+                        var academicSummary = string.Join(" / ", new[] { row.University, row.College, row.Specialization, row.AcademicLevel }.Where(v => !string.IsNullOrWhiteSpace(v)));
+                        <tr class="@(row.IsValid ? "" : "table-danger")">
+                            <td>@row.RowNumber</td>
+                            <td>@row.FullNameArabic</td>
+                            <td dir="ltr">@row.FullNameEnglish</td>
+                            <td dir="ltr">@(row.NormalizedPhone ?? row.Phone)</td>
+                            <td>@(string.IsNullOrWhiteSpace(academicSummary) ? "—" : academicSummary)</td>
+                            <td>@if (row.IsValid) { <span class="badge bg-success">سليم</span> } else { <span class="text-danger small">@string.Join("، ", row.Errors)</span> }</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <a asp-action="Import" class="btn btn-outline-secondary"><i class="bi bi-arrow-repeat"></i> رفع ملف آخر</a>
+        @if (Model.Preview.CanCommit)
+        {
+            <form asp-action="ConfirmImport" method="post" onsubmit="return confirm('سيتم إنشاء جميع التسجيلات المعروضة دفعة واحدة. هل تريد المتابعة؟');">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="token" value="@Model.Preview.Token" />
+                <button type="submit" class="btn btn-success"><i class="bi bi-check2-circle"></i> اعتماد استيراد @Model.Preview.ValidRows متدرب</button>
+            </form>
+        }
+    </div>
+}

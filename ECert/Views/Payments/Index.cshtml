@@ -85,10 +85,18 @@
                                 <td>
                                     @switch (p.PaymentMethod)
                                     {
-                                        case "Cash": <span><i class="bi bi-cash"></i> نقد</span> break;
-                                        case "BankTransfer": <span><i class="bi bi-wallet2"></i> محافظ إلكترونية</span> break;
-                                        case "EWallet": <span><i class="bi bi-wallet2"></i> محفظة</span> break;
-                                        case "Card": <span><i class="bi bi-wallet2"></i> محافظ إلكترونية</span> break;
+                                        case "Cash":
+                                            @:<span><i class="bi bi-cash"></i> نقد</span>
+                                            break;
+                                        case "BankTransfer":
+                                            @:<span><i class="bi bi-wallet2"></i> محافظ إلكترونية</span>
+                                            break;
+                                        case "EWallet":
+                                            @:<span><i class="bi bi-wallet2"></i> محفظة</span>
+                                            break;
+                                        case "Card":
+                                            @:<span><i class="bi bi-wallet2"></i> محافظ إلكترونية</span>
+                                            break;
                                         default: <span>@p.PaymentMethod</span> break;
                                     }
                                     @if (!string.IsNullOrEmpty(p.ReferenceNumber))

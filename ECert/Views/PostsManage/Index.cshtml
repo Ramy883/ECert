@@ -50,9 +50,15 @@
                                 <td>
                                     @switch (post.Status)
                                     {
-                                        case "Draft": <span class="badge bg-secondary">مسودة</span> break;
-                                        case "Published": <span class="badge bg-success">منشور</span> break;
-                                        case "Archived": <span class="badge bg-warning text-dark">مؤرشف</span> break;
+                                        case "Draft":
+                                            @:<span class="badge bg-secondary">مسودة</span>
+                                            break;
+                                        case "Published":
+                                            @:<span class="badge bg-success">منشور</span>
+                                            break;
+                                        case "Archived":
+                                            @:<span class="badge bg-warning text-dark">مؤرشف</span>
+                                            break;
                                     }
                                 </td>
                                 <td>@(post.PublishedAt?.ToString("yyyy-MM-dd") ?? "-")</td>

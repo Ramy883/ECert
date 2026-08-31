@@ -45,7 +45,7 @@ public class InstructorsApiController : ControllerBase
             {
                 i.InstructorId, i.FullName, i.PhotoUrl, i.Specialization,
                 i.Phone, i.Email, i.IsActive, i.CreatedAt,
-                coursesCount = i.Courses.Count
+                coursesCount = i.CourseInstructors.Select(ci => ci.CourseId).Distinct().Count()
             }).ToListAsync();
         return Ok(ApiResponse<object>.Ok(instructors));
     }

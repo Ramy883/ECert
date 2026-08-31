@@ -36,7 +36,7 @@
                     <tr>
                         <th>الدورة</th>
                         <th>الفئة</th>
-                        <th>المدرب</th>
+                        <th>المدربون</th>
                         <th>السعر</th>
                         <th>الحالة</th>
                         <th>التاريخ</th>
@@ -54,17 +54,29 @@
                                     @if (course.IsFeatured) { <i class="bi bi-star-fill text-warning" title="مميزة"></i> }
                                 </td>
                                 <td>@course.Category?.CategoryName</td>
-                                <td>@course.Instructor?.FullName</td>
+                                <td>@course.InstructorNamesDisplay</td>
                                 <td>@course.Price.ToString("N0") ريال</td>
                                 <td>
                                     @switch (course.Status)
                                     {
-                                        case "Draft": <span class="badge bg-secondary">مسودة</span> break;
-                                        case "Published": <span class="badge bg-info">منشورة</span> break;
-                                        case "OpenForRegistration": <span class="badge bg-success">مفتوحة للتسجيل</span> break;
-                                        case "InProgress": <span class="badge bg-primary">جارية</span> break;
-                                        case "Completed": <span class="badge bg-dark">مكتملة</span> break;
-                                        case "Archived": <span class="badge bg-warning text-dark">مؤرشفة</span> break;
+                                        case "Draft":
+                                            @:<span class="badge bg-secondary">مسودة</span>
+                                            break;
+                                        case "Published":
+                                            @:<span class="badge bg-info">منشورة</span>
+                                            break;
+                                        case "OpenForRegistration":
+                                            @:<span class="badge bg-success">مفتوحة للتسجيل</span>
+                                            break;
+                                        case "InProgress":
+                                            @:<span class="badge bg-primary">جارية</span>
+                                            break;
+                                        case "Completed":
+                                            @:<span class="badge bg-dark">مكتملة</span>
+                                            break;
+                                        case "Archived":
+                                            @:<span class="badge bg-warning text-dark">مؤرشفة</span>
+                                            break;
                                     }
                                 </td>
                                 <td>@(course.StartDate?.ToString("yyyy-MM-dd") ?? "-")</td>
@@ -80,8 +92,7 @@
                                             <li><form asp-action="ChangeStatus" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@course.CourseId" /><input type="hidden" name="status" value="OpenForRegistration" /><button class="dropdown-item">فتح التسجيل</button></form></li>
                                             <li><form asp-action="ChangeStatus" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@course.CourseId" /><input type="hidden" name="status" value="InProgress" /><button class="dropdown-item">جارية</button></form></li>
                                             <li><form asp-action="ChangeStatus" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@course.CourseId" /><input type="hidden" name="status" value="Completed" /><button class="dropdown-item">مكتملة</button></form></li>
-                                            <li><hr class="dropdown-divider" /></li>
-                                            <li><form asp-action="Delete" method="post" onsubmit="return confirm('هل أنت متأكد من أرشفة هذه الدورة؟')">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@course.CourseId" /><button class="dropdown-item text-danger">أرشفة</button></form></li>
+                                            <li><form asp-action="ChangeStatus" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@course.CourseId" /><input type="hidden" name="status" value="Archived" /><button class="dropdown-item">أرشفة</button></form></li>
                                         </ul>
                                     </div>
                                 </td>
@@ -90,7 +101,7 @@
                     }
                     else
                     {
-                        <tr><td colspan="7" class="text-center text-muted py-4">لا توجد دورات بعد</td></tr>
+                        <tr><td colspan="7" class="text-center text-muted py-4">لا توجد دورات</td></tr>
                     }
                 </tbody>
             </table>
