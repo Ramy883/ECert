@@ -6,6 +6,8 @@
     var instructors = ViewBag.Instructors as List<Instructor> ?? new();
     var certificateDesigns = ViewBag.CertificateDesigns as List<CertificateDesign> ?? new();
     var selectedInstructorIds = Model?.SelectedInstructorIds ?? new List<int>();
+    var instructorOptionsJson = System.Text.Json.JsonSerializer.Serialize(instructors.Select(i => new { value = i.InstructorId, label = i.FullName }).OrderBy(x => x.label));
+    var selectedInstructorIdsJson = System.Text.Json.JsonSerializer.Serialize(selectedInstructorIds);
 }
 <div class="row justify-content-center">
     <div class="col-md-8">
@@ -28,7 +30,7 @@
                         </div>
                         <div class="col-md-4">
                             <label asp-for="Price" class="form-label"></label>
-                            <input asp-for="Price" type="number" step="0.01" class="form-control" />
+                            <input asp-for="Price" type="number" step="0.01" asp-format="{0:0.################}" class="form-control" />
                             <span asp-validation-for="Price" class="text-danger"></span>
                         </div>
                         <div class="col-md-4">
@@ -41,7 +43,7 @@
                         </div>
                         <div class="col-md-4">
                             <label asp-for="DiscountValue" class="form-label"></label>
-                            <input asp-for="DiscountValue" type="number" step="0.01" class="form-control" id="discountValue" />
+                            <input asp-for="DiscountValue" type="number" step="0.01" asp-format="{0:0.################}" class="form-control" id="discountValue" />
                             <span asp-validation-for="DiscountValue" class="text-danger"></span>
                         </div>
                         <div class="col-12">
@@ -73,20 +75,13 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">المدربون</label>
-                            <div class="border rounded-3 p-3 bg-light" style="max-height: 240px; overflow:auto;">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="small fw-semibold text-dark">يمكن اختيار أكثر من مدرب وتعديلهم في أي وقت</span>
-                                    <span class="badge text-bg-primary">متعدد</span>
-                                </div>
-                                @foreach (var inst in instructors)
-                                {
-                                    var isChecked = selectedInstructorIds.Contains(inst.InstructorId);
-                                    <div class="form-check mb-2">
-                                        <input class="form-check-input" type="checkbox" name="SelectedInstructorIds" value="@inst.InstructorId" id="inst_@inst.InstructorId" @(isChecked ? "checked" : null) />
-                                        <label class="form-check-label" for="inst_@inst.InstructorId">@inst.FullName</label>
-                                    </div>
-                                }
+                            <div class="search-select">
+                                <input type="text" id="instructorSearch" class="form-control" placeholder="اكتب اسم المدرب للبحث ثم اختر من القائمة..." autocomplete="off" role="combobox" aria-expanded="false" aria-controls="instructorResults" />
+                                <div id="instructorResults" class="list-group position-absolute w-100 shadow-sm search-results" role="listbox" hidden></div>
                             </div>
+                            <div class="form-text">بحث ذكي — اكتب جزءاً من اسم المدرب واختر من القائمة. يمكن تعديل المدربين في أي وقت.</div>
+                            <div id="instructorHidden"></div>
+                            <div id="selectedInstructors" class="d-flex flex-wrap gap-2 mt-2"></div>
                             <span asp-validation-for="SelectedInstructorIds" class="text-danger"></span>
                         </div>
                         <div class="col-md-6">
@@ -160,6 +155,114 @@
 </div>
 
 @section Scripts {
+<style>
+    .search-select { position: relative; }
+    .search-results { z-index: 1050; max-height: 220px; overflow-y: auto; }
+    .search-results .list-group-item { text-align: right; cursor: pointer; }
+    .search-results .list-group-item:hover { background-color: #eef2ff; }
+</style>
+<script>
+const instructorOptions = @Html.Raw(instructorOptionsJson);
+const initialSelectedInstructorIds = @Html.Raw(selectedInstructorIdsJson);
+(function () {
+    const all = instructorOptions;
+    const selected = new Set(initialSelectedInstructorIds);
+    const searchInput = document.getElementById('instructorSearch');
+    const resultsBox = document.getElementById('instructorResults');
+    const chipsBox = document.getElementById('selectedInstructors');
+    const hiddenBox = document.getElementById('instructorHidden');
+
+    function syncHidden() {
+        hiddenBox.replaceChildren();
+        selected.forEach(function (id) {
+            const h = document.createElement('input');
+            h.type = 'hidden';
+            h.name = 'SelectedInstructorIds';
+            h.value = id;
+            hiddenBox.appendChild(h);
+        });
+    }
+
+    function renderChips() {
+        chipsBox.replaceChildren();
+        selected.forEach(function (id) {
+            const instr = all.find(function (x) { return x.value === id; });
+            if (!instr) return;
+            const chip = document.createElement('span');
+            chip.className = 'badge text-bg-primary d-inline-flex align-items-center gap-2';
+            chip.style.fontSize = '0.9rem';
+            chip.style.padding = '0.45rem 0.75rem';
+            const name = document.createElement('span');
+            name.textContent = instr.label;
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'btn-close btn-close-white';
+            remove.style.fontSize = '0.55rem';
+            remove.setAttribute('aria-label', 'إزالة المدرب');
+            remove.addEventListener('click', function () {
+                selected.delete(id);
+                syncHidden();
+                renderChips();
+            });
+            chip.append(name, remove);
+            chipsBox.appendChild(chip);
+        });
+    }
+
+    function hideResults() {
+        resultsBox.hidden = true;
+        resultsBox.replaceChildren();
+        searchInput.setAttribute('aria-expanded', 'false');
+    }
+
+    function runSearch() {
+        const q = searchInput.value.trim().toLowerCase();
+        const matches = all
+            .filter(function (x) { return !selected.has(x.value) && x.label.toLowerCase().indexOf(q) !== -1; })
+            .slice(0, 15);
+        resultsBox.replaceChildren();
+        if (!matches.length) {
+            const empty = document.createElement('div');
+            empty.className = 'list-group-item text-muted small';
+            empty.textContent = q ? 'لا توجد نتائج مطابقة.' : 'لا يوجد مدربون متاحون.';
+            resultsBox.append(empty);
+        } else {
+            matches.forEach(function (instr) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+                btn.setAttribute('role', 'option');
+                const txt = document.createElement('span');
+                txt.textContent = instr.label;
+                const icon = document.createElement('i');
+                icon.className = 'bi bi-plus-circle text-success';
+                btn.append(txt, icon);
+                btn.addEventListener('mousedown', function (e) {
+                    e.preventDefault();
+                    if (!selected.has(instr.value)) {
+                        selected.add(instr.value);
+                        syncHidden();
+                        renderChips();
+                    }
+                    hideResults();
+                });
+                resultsBox.append(btn);
+            });
+        }
+        resultsBox.hidden = false;
+        searchInput.setAttribute('aria-expanded', 'true');
+    }
+
+    searchInput.addEventListener('input', runSearch);
+    searchInput.addEventListener('focus', function () {
+        if (resultsBox.hidden) runSearch();
+    });
+    searchInput.addEventListener('blur', function () { setTimeout(hideResults, 180); });
+
+    syncHidden();
+    renderChips();
+})();
+</script>
 <script>
 function previewImage(input, previewId) {
     var preview = document.getElementById(previewId);
