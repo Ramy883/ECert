@@ -62,9 +62,11 @@ public class RegistrationsController : Controller
         ViewBag.CourseId = courseId;
         ViewBag.DateFrom = dateFrom;
         ViewBag.DateTo = dateTo;
+        // Pass the public Course entity rather than an anonymous projection.
+        // Razor iterates ViewBag values as dynamic; anonymous-type properties are
+        // inaccessible to the generated view and cause RuntimeBinderException.
         ViewBag.Courses = await _db.Courses
             .OrderBy(c => c.CourseName)
-            .Select(c => new { c.CourseId, c.CourseName })
             .ToListAsync();
         ViewBag.TotalCount = registrations.Count;
         ViewBag.PendingCount = registrations.Count(r => r.Status == "Pending");
