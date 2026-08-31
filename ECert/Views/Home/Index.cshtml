@@ -170,7 +170,7 @@
                                             }
                                         </div>
                                         <h6 class="fw-bold mb-1 text-dark">@cat.CategoryName</h6>
-                                        <small class="text-muted">@cat.CourseCount دورة متاحة</small>
+                                        <small class="text-muted">@(cat.Courses?.Count ?? 0) دورة متاحة</small>
                                     </div>
                                 </a>
                             </div>
