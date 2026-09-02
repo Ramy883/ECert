@@ -45,16 +45,12 @@ public class CertificateSchemaMigrationService
         await EnsureUniqueIndexAsync("IX_Certificates_VerificationCode", "VerificationCode");
     }
 
-    private async Task RemoveLegacyTemplateSchemaAsync()
+    private Task RemoveLegacyTemplateSchemaAsync()
     {
-        if (await TableExistsAsync("CertificateTemplates"))
-            await _db.Database.ExecuteSqlRawAsync("DROP TABLE `CertificateTemplates`;");
-
-        foreach (var columnName in new[] { "TemplateSnapshotJson", "TemplateVersion" })
-        {
-            if (await ColumnExistsAsync("Certificates", columnName))
-                await _db.Database.ExecuteSqlRawAsync($"ALTER TABLE `Certificates` DROP COLUMN `{columnName}`;");
-        }
+        // Legacy tables/columns are intentionally retained. Automatic startup code must
+        // never delete user data; unused legacy schema is harmless and can be removed
+        // later through a reviewed, backed-up migration.
+        return Task.CompletedTask;
     }
 
     private Task EnsureColumnAsync(string columnName, string definitionSql)

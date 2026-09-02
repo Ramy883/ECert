@@ -315,7 +315,7 @@ static string ConvertMySqlUrlToAdoNet(string url)
         ? MapSslMode(ssl)
         : options.TryGetValue("ssl-mode", out var sslDash)
             ? MapSslMode(sslDash)
-            : "None";
+            : "Preferred";
 
     var parts = new List<string>
     {
@@ -364,6 +364,6 @@ static string MapSslMode(string value)
         "disabled" => "None",
         "disable" => "None",
         "none" => "None",
-        _ => "None"
+        _ => "Preferred"
     };
 }
